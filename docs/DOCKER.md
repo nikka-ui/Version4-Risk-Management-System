@@ -13,7 +13,7 @@ Run the RMS stack locally or in production using Docker Compose.
 ### 1. Environment file
 
 ```powershell
-cd C:\dev\Version3-Risk-Management-System
+cd C:\dev\Version4-Risk-Management-System
 Copy-Item .env.example .env
 ```
 
