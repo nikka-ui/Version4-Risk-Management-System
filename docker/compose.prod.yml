@@ -40,8 +40,11 @@ services:
       - /tmp
       - /var/cache/nginx
       - /var/run
+      - /var/www/html/storage
+      - /var/www/html/bootstrap/cache
     environment:
       APP_ENV: production
+      APP_DEBUG: "false"
     deploy:
       resources:
         limits:

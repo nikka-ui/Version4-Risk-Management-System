@@ -94,20 +94,36 @@ services:
     container_name: rms-api
     restart: unless-stopped
     environment:
+      APP_NAME: RMS API
       APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
       APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_KEY_FILE: /run/secrets/app_key
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: pgsql
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
       DB_DATABASE: ${DB_DATABASE:-rms}
       DB_USERNAME: ${DB_USERNAME:-rms}
       DB_PASSWORD_FILE: /run/secrets/db_password
-      APP_KEY_FILE: /run/secrets/app_key
+      REDIS_CLIENT: phpredis
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: file
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080,127.0.0.1:8080}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:5000}
+      # Phase 1: path for `php artisan rms:import-users` (Express store remains SoT for live auth)
+      STORE_JSON_PATH: ${STORE_JSON_PATH:-/import/store.json}
+      # Optional future Express→Laravel service token (empty = disabled). Not used for browser login.
+      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-}
     secrets:
       - db_password
       - app_key
+    volumes:
+      # Read-only Express store for user import only — never written by Laravel.
+      - ./web/data/store.json:/import/store.json:ro
     networks:
       - rms_app
       - rms_data

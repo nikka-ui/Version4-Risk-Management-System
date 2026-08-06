@@ -80,10 +80,15 @@ Change before sharing dev environments.
 | Secret / variable | Location | Used by |
 |-------------------|----------|---------|
 | `SESSION_SECRET` | `.env` | **Express web** (`docker/web`) — cookie session signing. Set a long random value for any shared/production deploy. |
-| `APP_KEY` | `docker/secrets/app_key.txt` | Planned Laravel `api` |
-| `SANCTUM_STATEFUL_DOMAINS` | `.env` | Planned Laravel Sanctum — e.g. `localhost:8080` |
+| `APP_KEY` | `docker/secrets/app_key.txt` | Laravel `api` (via `APP_KEY_FILE`) |
+| `SANCTUM_STATEFUL_DOMAINS` | `.env` | Laravel Sanctum stateful hosts — e.g. `localhost:8080` |
+| `STORE_JSON_PATH` | compose / `.env` | Laravel import path (default `/import/store.json` in Docker) |
+| `RMS_INTERNAL_SERVICE_TOKEN` | `.env` | Optional future Express→Laravel service header (`X-RMS-Service-Token`). Empty = disabled. **Not used for browser login.** |
+| `USE_LARAVEL_AUTH` / `USE_LARAVEL_API` | web env | Inert flags in `docker/web/config/features.js` — default OFF; not wired into login |
 
-Generate Laravel key when scaffolding the API: `php artisan key:generate` (inside `api` container).
+`APP_KEY` must be a Laravel key (`base64:...`). Generate with `php artisan key:generate --show` and place the value in `docker/secrets/app_key.txt`.
+
+Browser authentication remains on Express. Laravel `POST /api/v1/auth/token` issues Sanctum tokens for API/clients only — see [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
 
 ### Object storage (web attachments)
 

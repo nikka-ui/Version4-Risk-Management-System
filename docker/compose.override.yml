@@ -23,6 +23,10 @@ services:
   api:
     environment:
       APP_ENV: local
+      STORE_JSON_PATH: /import/store.json
+    volumes:
+      # Ensure import path is available in dev even if base compose is overridden.
+      - ./web/data/store.json:/import/store.json:ro
 
   ai-service:
     environment:

@@ -10,7 +10,7 @@ The AI Risk Management System (RMS) is an ISO **31000:2018**-aligned risk workfl
 |-------|----------------------|----------------------|
 | Edge | nginx reverse proxy | Same |
 | Application UI + workflow | **Express (Node 20)** in `docker/web` — sessions, tickets, RBAC | Next.js frontend (future) |
-| API | PHP stub / future Laravel under `docker/api` | Laravel 11 + Sanctum ([ADR 001](adr/001-backend-laravel.md)) |
+| API | Laravel 11 in `backend/` (Phase 1: identity + Sanctum tokens; no browser auth cutover) | Laravel 11 + Sanctum owns REST ([ADR 001](adr/001-backend-laravel.md)) |
 | AI | Flask health/classify service | Expanded NLP pipeline |
 | Persistence | `store.json` (tickets/users/org) + PostgreSQL (`risk_attachments`) + MinIO/S3 | Full relational model in PostgreSQL |
 | Cache | Redis (compose) | Queues / cache for Laravel |
@@ -29,7 +29,7 @@ flowchart TB
   end
   subgraph app [Application tier]
     Web[Express RMS web]
-    API[API placeholder / Laravel]
+    API[Laravel API Phase 1 identity]
     AI[AI service Flask]
   end
   subgraph data [Data tier]
@@ -108,23 +108,32 @@ Statuses from [`docker/web/config/tickets.js`](../docker/web/config/tickets.js):
 
 Ticket references: `RISK-{YEAR}-{#####}` (e.g. `RISK-2026-00001`), assigned as max existing sequence for the year + 1.
 
-## API surface (planned)
+## API surface (Phase 1 + planned)
 
-Versioned REST under `/api/v1/` (Laravel target):
+Versioned REST under `/api/v1/` (Laravel). **Express still owns browser login and workflow HTTP.**
 
-- Authentication (Sanctum / JWT)
+**Phase 1 (live on Laravel, not used by browser UI):**
+
+- `GET /api/v1/health` — API health
+- `POST /api/v1/auth/token` — Sanctum personal access token (username/password)
+- `GET /api/v1/users/me` — current user (Bearer token)
+- `php artisan rms:import-users` — import identity from `store.json` into Postgres
+
+**Planned later:**
+
 - Risk tickets CRUD and workflow transitions
 - Attachments and evidence
 - AI classify/summarize (proxied to `ai-service`)
 - Dashboards and reporting
 
-Today, workflow HTTP routes live on the **Express web** service; nginx still proxies `/api/` to the `api` container stub.
+Today, workflow HTTP routes live on the **Express web** service; nginx proxies `/api/` to Laravel for the endpoints above. See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
 
 ## Data model
 
 ### Current
 
-- **`docker/web/data/store.json`** — users, departments, positions, `riskTickets`, accomplishments, notifications, report/audit/credential logs, settings
+- **`docker/web/data/store.json`** — users, departments, positions, `riskTickets`, accomplishments, notifications, report/audit/credential logs, settings (**source of truth for live app**)
+- **PostgreSQL `users`** — Laravel copy of identity (bcrypt passwords) for Sanctum tokens; optional import from store.json
 - **PostgreSQL `risk_attachments`** — evidence metadata keyed by `ticket_ref`
 - **MinIO/S3** — file bytes under `{ticketRef}/...`
 
@@ -137,7 +146,7 @@ Today, workflow HTTP routes live on the **Express web** service; nginx still pro
 | Layer | Current | Target |
 |-------|---------|--------|
 | Web / workflow | Node 20, Express, server-rendered HTML | React / Next.js UI |
-| API | Placeholder PHP/nginx | Laravel 11, Sanctum, PHP 8.3 |
+| API | Laravel 11 Phase 1 (identity + Sanctum) | Laravel 11, Sanctum, PHP 8.3 |
 | Database | PostgreSQL 16 (attachments + future API) | Same |
 | Cache/queue | Redis 7 | Same |
 | AI | Python 3.11, Flask | Expanded models |
@@ -161,7 +170,7 @@ See [Docker Guide](DOCKER.md) and [Port Registry](PORT_REGISTRY.md).
 ## Security architecture
 
 - TLS at nginx (production)
-- **RBAC enforced in Express** (`docker/web/lib/auth.js`) for the live app; Laravel API RBAC when the API owns workflow
+- **RBAC enforced in Express** (`docker/web/lib/auth.js`) for the live app; Laravel holds a mirror of roles/users for API tokens only (Phase 1)
 - Secrets via Docker secrets files (not in git)
 - Network segmentation: `rms_edge`, `rms_app`, `rms_data`
 - nginx re-resolves Docker DNS for upstreams (avoids stale IP **502** after container recreate)

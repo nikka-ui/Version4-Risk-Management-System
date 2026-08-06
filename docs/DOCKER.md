@@ -75,7 +75,7 @@ Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, pr
 |-----|---------|
 | http://localhost:8080/ | Express RMS web app (login + role consoles) |
 | http://localhost:8080/login | Sign-in — see [LOGIN.md](LOGIN.md) |
-| http://localhost:8080/api/ | API stub / future Laravel |
+| http://localhost:8080/api/ | Laravel 11 API (Phase 1 identity; routes under `/api/v1`) |
 | http://localhost:8080/health | nginx health |
 | http://localhost:8080/ai-health | AI health (proxied) |
 | http://127.0.0.1:5433 | PostgreSQL (host only) |
@@ -102,16 +102,36 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml down -v
 ## Application images
 
 - **web** — Express RMS application on port 3000 (tickets, RBAC consoles, sessions)
-- **api** — PHP/nginx stub with `/health` on port 8080 (Laravel target — [ADR 001](adr/001-backend-laravel.md))
+- **api** — Laravel 11 + PHP 8.3-FPM + nginx on port 8080 ([ADR 001](adr/001-backend-laravel.md)); source in `backend/`
 - **ai-service** — Flask service on port 5000
 
 ### Evolving the stack
 
-#### Laravel API
+#### Laravel API (Phase 1 — identity foundation)
 
-1. Create Laravel 11 app in `backend/` or project root.
-2. Update `docker/api/Dockerfile` to copy application code and run `composer install`.
-3. Run migrations: `docker compose exec api php artisan migrate`
+Application code lives in [`backend/`](../backend/). The `api` image copies it and runs `composer install`. Express still owns `/` (login + role consoles). Details: [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
+
+```powershell
+# Rebuild API after backend changes
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d api
+
+# Migrations (risk_attachments is create-if-missing; never dropped)
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan migrate --force
+
+# Import users from mounted store.json (read-only) into Postgres
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-users
+
+# Smoke checks (Express still owns /)
+curl http://localhost:8080/health
+curl http://localhost:8080/api/v1/health
+curl http://localhost:8080/api/v1
+curl http://localhost:8080/login
+curl http://localhost:8080/
+```
+
+Nginx still strips `/api` before proxying: public `/api/v1` → container `/v1`. Product UI/login remain on Express (`/`).
+
+`store.json` is mounted read-only into the API container at `/import/store.json` for import only.
 
 #### Next.js frontend (optional future UI)
 

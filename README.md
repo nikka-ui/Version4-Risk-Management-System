@@ -50,7 +50,7 @@ curl http://localhost:8080/health
 - Application URL: http://localhost:8080
 - **Login:** http://localhost:8080/login — [docs/LOGIN.md](docs/LOGIN.md)
 - **Examples:** `admin` / `a3c1993` · `reporter` / `a3c2026` · `it-head` / `dept2026` · `rm-officer` / `a3c2026` · `president` / `a3c2026`
-- API stub: http://localhost:8080/api/
+- API (Laravel Phase 0): http://localhost:8080/api/ and http://localhost:8080/api/v1
 - PostgreSQL (dev, localhost only): `127.0.0.1:5433`
 
 Optional dev services (MinIO, Mailpit):
@@ -68,12 +68,13 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml --profile de
 ## Repository structure
 
 ```
+backend/          # Laravel 11 API (Phase 0 scaffold; served by docker/api)
 docker/           # Compose, Dockerfiles, nginx, Express web app, secrets templates
 docs/             # Architecture, login, ports, security, operations
 .env.example      # Environment template
 ```
 
-The live product UI and ticket workflow run in **`docker/web`** (Express). Laravel (`docker/api`) and expanded AI remain scaffold/target layers — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The live product UI and ticket workflow run in **`docker/web`** (Express). Laravel (`backend/` → `api` container) is scaffolded with no domain cutover — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## License
 
