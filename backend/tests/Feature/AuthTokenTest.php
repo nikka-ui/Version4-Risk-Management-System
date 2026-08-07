@@ -16,7 +16,8 @@ class AuthTokenTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('status', 'ok')
-            ->assertJsonPath('phase', 3);
+            ->assertJsonPath('phase', 3)
+            ->assertJsonPath('slice', 5);
     }
 
     public function test_token_and_me(): void

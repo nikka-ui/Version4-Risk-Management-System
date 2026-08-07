@@ -85,10 +85,6 @@ const {
   listActionTickets,
   listAccomplishments,
   peekNextTicketRef,
-  createTicket,
-  updateTicketDraft,
-  deleteDraftTicket,
-  submitTicket,
   addEvidence,
   submitAccomplishment,
   assignMitigationForDemo,
@@ -118,15 +114,8 @@ const {
   listDeptHeadReturned,
   listDeptHeadPendingClosure,
   getDeptHeadStats,
-  acceptOwnership,
-  rejectOwnership,
-  returnTicketForRevision,
-  reassignTicket,
-  saveActionPlan,
   assignPersonnel,
   uploadDeptDocuments,
-  submitFinalResolution,
-  closeTicketAsDeptHead,
   reopenTicketAsOfficer,
   addDeptHeadThreadComment,
   editThreadComment,
@@ -144,7 +133,6 @@ const {
   listPresidentPendingQueue,
   getTicketByRefForPresident,
   findAttachmentForPresident,
-  recordPresidentDecision,
   addPresidentThreadComment,
   publicTicket,
   listTicketsForAdmin,
@@ -154,6 +142,19 @@ const {
   ticketRiskLevelId,
   checkAndNotifyOverdueTickets,
 } = require('./lib/tickets');
+const {
+  createTicket,
+  updateTicketDraft,
+  deleteDraftTicket,
+  submitTicket,
+  acceptOwnership,
+  rejectOwnership,
+  saveActionPlan,
+  returnTicketForRevision,
+  reassignTicket,
+  closeTicketAsDeptHead,
+  recordPresidentDecision,
+} = require('./lib/ticketDraftBridge');
 const { logCredential } = require('./lib/logger');
 const { logAdminAction, notifyAdmin, getAdminDashboardData } = require('./lib/admin');
 const { layoutNotifications } = require('./lib/notifications');
@@ -1033,7 +1034,7 @@ app.post('/dept/tickets/:ref/documents', requireDeptHead, handleEvidenceUpload, 
 
 app.post('/dept/tickets/:ref/resolution', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
-  const result = submitFinalResolution(ref, req.session.user, req.body);
+  const result = closeTicketAsDeptHead(ref, req.session.user, req.body);
   if (result.error) {
     return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
   }

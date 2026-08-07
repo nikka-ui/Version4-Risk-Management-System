@@ -12,6 +12,8 @@ services:
     user: root
     environment:
       NODE_ENV: development
+      USE_LARAVEL_API: ${USE_LARAVEL_API:-false}
+      LARAVEL_API_BASE_URL: http://api:8080
     volumes:
       - ./web/data:/app/data
       # Mount app source so role consoles update without image rebuild

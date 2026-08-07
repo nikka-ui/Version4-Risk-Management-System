@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'rms.service_token' => \App\Http\Middleware\VerifyInternalServiceToken::class,
             'rms.admin' => \App\Http\Middleware\EnsureAdminRole::class,
+            'rms.dept_head' => \App\Http\Middleware\EnsureDeptHeadRole::class,
+            'rms.president' => \App\Http\Middleware\EnsurePresidentRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
