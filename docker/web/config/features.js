@@ -1,8 +1,9 @@
 /**
  * Feature flags for gradual Laravel migration.
  *
- * Phase 3 slice 6: dept return/reassign/close + president decision APIs + Express mirror when
- * USE_LARAVEL_API=true. Default remains false — live UI uses Express only.
+ * Phase 3 slice 10: Laravel attachment upload/download over the SHARED MinIO bucket
+ * (same keys + risk_attachments rows as Express). Default remains false — Express is
+ * still the live upload/download path; Laravel can read/serve the same objects.
  */
 module.exports = {
   /** When true (future), Express may call Laravel for identity — unused today. */

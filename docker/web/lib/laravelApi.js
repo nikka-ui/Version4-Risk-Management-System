@@ -59,6 +59,12 @@ async function getTokenForUsername(username) {
   return data.token;
 }
 
+/** System token for role-wide / author-less mirrors (notifications, report logs). */
+async function getSystemToken() {
+  const username = process.env.LARAVEL_SYSTEM_USERNAME || 'admin';
+  return getTokenForUsername(username);
+}
+
 /**
  * Mirror an Express draft into Laravel Postgres (best-effort sync).
  * Passes the Express reference so IDs stay aligned.
@@ -162,6 +168,56 @@ async function mirrorPresidentDecision(reference, username, body = {}) {
   return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/president-decision`, { token, body });
 }
 
+async function mirrorPersonnel(reference, username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/personnel`, { token, body });
+}
+
+async function mirrorDocuments(reference, username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/documents`, { token, body });
+}
+
+async function mirrorComment(reference, username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/comments`, { token, body });
+}
+
+async function mirrorReopen(reference, username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/reopen`, { token, body });
+}
+
+async function mirrorAttachmentRegister(reference, username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/attachments`, { token, body });
+}
+
+async function mirrorAttachmentSync(reference, username) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/tickets/${encodeURIComponent(reference)}/attachments/sync`, { token });
+}
+
+async function mirrorNotificationCreate(notification) {
+  const token = await getSystemToken();
+  return request('POST', '/v1/notifications', { token, body: notification });
+}
+
+async function mirrorNotificationsReadAll(username, body = {}) {
+  const token = await getTokenForUsername(username);
+  return request('POST', '/v1/notifications/read-all', { token, body });
+}
+
+async function mirrorNotificationRead(username, id) {
+  const token = await getTokenForUsername(username);
+  return request('POST', `/v1/notifications/${encodeURIComponent(id)}/read`, { token });
+}
+
+async function mirrorReportLogAppend(entry) {
+  const token = await getSystemToken();
+  return request('POST', '/v1/report-logs', { token, body: entry });
+}
+
 module.exports = {
   BASE_URL,
   mirrorDraftCreate,
@@ -175,4 +231,14 @@ module.exports = {
   mirrorReassign,
   mirrorClose,
   mirrorPresidentDecision,
+  mirrorPersonnel,
+  mirrorDocuments,
+  mirrorComment,
+  mirrorReopen,
+  mirrorAttachmentRegister,
+  mirrorAttachmentSync,
+  mirrorNotificationCreate,
+  mirrorNotificationsReadAll,
+  mirrorNotificationRead,
+  mirrorReportLogAppend,
 };

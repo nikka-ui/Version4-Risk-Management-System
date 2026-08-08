@@ -7,8 +7,10 @@ use App\Models\RiskTicket;
 use App\Models\User;
 use App\Services\DeptTicketService;
 use App\Services\DraftTicketService;
+use App\Services\OfficerTicketService;
 use App\Services\PresidentTicketService;
 use App\Services\SubmitTicketService;
+use App\Services\ThreadCommentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,6 +24,8 @@ class TicketController extends Controller
         private readonly SubmitTicketService $submitter,
         private readonly DeptTicketService $deptTickets,
         private readonly PresidentTicketService $presidentTickets,
+        private readonly OfficerTicketService $officerTickets,
+        private readonly ThreadCommentService $threadComments,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -239,6 +243,62 @@ class TicketController extends Controller
         }
 
         $ticket = $this->presidentTickets->recordDecision($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function assignPersonnel(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->deptTickets->findForDeptHead($reference, $user);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->deptTickets->assignPersonnel($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function recordDocuments(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->deptTickets->findForDeptHead($reference, $user);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->deptTickets->recordDocuments($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function addComment(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->threadComments->findAccessible($reference, $user);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->threadComments->add($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function reopen(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->officerTickets->reopen($ticket, $user, $request->all());
 
         return response()->json(['ticket' => $ticket->toExpressArray()]);
     }

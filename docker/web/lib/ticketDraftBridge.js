@@ -1,5 +1,5 @@
 /**
- * Ticket workflow facade for Phase 3 slice 6.
+ * Ticket workflow facade for Phase 3 slice 8.
  *
  * Default (USE_LARAVEL_API=false): Express tickets.js only — store.json SoT.
  * When USE_LARAVEL_API=true: Express write first, then best-effort Laravel mirror.
@@ -16,10 +16,18 @@ const {
   reassignTicket: expressReassignTicket,
   closeTicketAsDeptHead: expressCloseTicketAsDeptHead,
   recordPresidentDecision: expressRecordPresidentDecision,
+  assignPersonnel: expressAssignPersonnel,
+  uploadDeptDocuments: expressUploadDeptDocuments,
+  addDeptHeadThreadComment: expressAddDeptHeadThreadComment,
+  addReporterThreadComment: expressAddReporterThreadComment,
+  addRmuThreadComment: expressAddRmuThreadComment,
+  reopenTicketAsOfficer: expressReopenTicketAsOfficer,
+  addEvidence: expressAddEvidence,
   getTicketByRef,
 } = require('./tickets');
 const { USE_LARAVEL_API } = require('../config/features');
 const laravelApi = require('./laravelApi');
+const attachmentRepo = require('./attachmentRepository');
 
 function logMirrorError(action, detail, err) {
   console.warn(
@@ -34,11 +42,41 @@ function fireMirror(action, reference, fn) {
     .catch((err) => logMirrorError(action, reference, err));
 }
 
+function toMirrorAttachment(a) {
+  return {
+    id: a.id,
+    originalName: a.originalName || a.name,
+    mimeType: a.mimeType || 'application/octet-stream',
+    size: a.size || 0,
+    storageKey: a.storageKey,
+    uploadedBy: a.uploadedBy || null,
+    uploadedAt: a.uploadedAt || null,
+    legacy: Boolean(a.legacy),
+  };
+}
+
+function fireAttachmentMirror(reference, username, evidenceItems) {
+  fireMirror('attachments', reference, async () => {
+    const items = Array.isArray(evidenceItems) ? evidenceItems.filter((a) => a?.id) : [];
+    if (items.length) {
+      await laravelApi.mirrorAttachmentRegister(reference, username, {
+        attachments: items.map(toMirrorAttachment),
+      });
+      return;
+    }
+    await laravelApi.mirrorAttachmentSync(reference, username);
+  });
+}
+
 async function createTicket(username, displayName, body, options = {}) {
   const result = await expressCreateTicket(username, displayName, body, options);
   if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
   try {
     await laravelApi.mirrorDraftCreate(result.ticket, username);
+    if (options.uploadedFiles?.length || result.ticket.evidenceCount > 0) {
+      const listed = await attachmentRepo.listByTicketRef(result.ticket.reference);
+      fireAttachmentMirror(result.ticket.reference, username, listed);
+    }
   } catch (err) {
     logMirrorError('create', result.ticket.reference, err);
   }
@@ -57,6 +95,10 @@ async function updateTicketDraft(reference, username, body, options = {}) {
     } catch (err2) {
       logMirrorError('update', reference, err2);
     }
+  }
+  if (options.uploadedFiles?.length) {
+    const listed = await attachmentRepo.listByTicketRef(reference).catch(() => []);
+    fireAttachmentMirror(reference, username, listed);
   }
   return result;
 }
@@ -170,6 +212,95 @@ function recordPresidentDecision(reference, user, body = {}) {
   return result;
 }
 
+function assignPersonnel(reference, user, body = {}) {
+  const result = expressAssignPersonnel(reference, user, body);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  fireMirror('personnel', reference, () =>
+    laravelApi.mirrorPersonnel(reference, user.username, {
+      personName: body.personName || '',
+      personRole: body.personRole || '',
+    }),
+  );
+  return result;
+}
+
+async function uploadDeptDocuments(reference, user, options = {}) {
+  const result = await expressUploadDeptDocuments(reference, user, options);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  const files = options.uploadedFiles || [];
+  fireMirror('documents', reference, async () => {
+    await laravelApi.mirrorDocuments(reference, user.username, {
+      fileCount: result.uploaded || files.length || 0,
+      fileNames: files.map((f) => f.originalname || f.name || 'file'),
+    });
+    const listed = await attachmentRepo.listByTicketRef(reference);
+    if (listed.length) {
+      await laravelApi.mirrorAttachmentRegister(reference, user.username, {
+        attachments: listed.map(toMirrorAttachment),
+      });
+    } else {
+      await laravelApi.mirrorAttachmentSync(reference, user.username);
+    }
+  });
+  return result;
+}
+
+async function addEvidence(reference, username, body = {}, options = {}) {
+  const result = await expressAddEvidence(reference, username, body, options);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  const listed = await attachmentRepo.listByTicketRef(reference).catch(() => []);
+  fireAttachmentMirror(reference, username, listed);
+  return result;
+}
+
+function addDeptHeadThreadComment(reference, user, body = {}, options = {}) {
+  const result = expressAddDeptHeadThreadComment(reference, user, body, options);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  fireMirror('comment', reference, () =>
+    laravelApi.mirrorComment(reference, user.username, {
+      comment: body.comment || body.body || '',
+      parentId: body.parentId || '',
+    }),
+  );
+  return result;
+}
+
+function addReporterThreadComment(reference, user, body = {}, options = {}) {
+  const result = expressAddReporterThreadComment(reference, user, body, options);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  fireMirror('comment', reference, () =>
+    laravelApi.mirrorComment(reference, user.username, {
+      comment: body.comment || body.body || '',
+      parentId: body.parentId || '',
+    }),
+  );
+  return result;
+}
+
+function addRmuThreadComment(reference, user, body = {}) {
+  const result = expressAddRmuThreadComment(reference, user, body);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  fireMirror('comment', reference, () =>
+    laravelApi.mirrorComment(reference, user.username, {
+      comment: body.comment || body.body || '',
+      parentId: body.parentId || '',
+    }),
+  );
+  return result;
+}
+
+function reopenTicketAsOfficer(reference, user, body = {}) {
+  const result = expressReopenTicketAsOfficer(reference, user, body);
+  if (!USE_LARAVEL_API || result.error || !result.ticket) return result;
+  fireMirror('reopen', reference, () =>
+    laravelApi.mirrorReopen(reference, user.username, {
+      reason: body.reason || '',
+      department: body.department || body.targetDepartment || '',
+    }),
+  );
+  return result;
+}
+
 module.exports = {
   createTicket,
   updateTicketDraft,
@@ -182,6 +313,13 @@ module.exports = {
   reassignTicket,
   closeTicketAsDeptHead,
   recordPresidentDecision,
+  assignPersonnel,
+  uploadDeptDocuments,
+  addEvidence,
+  addDeptHeadThreadComment,
+  addReporterThreadComment,
+  addRmuThreadComment,
+  reopenTicketAsOfficer,
   isLaravelDraftBridgeEnabled: () => USE_LARAVEL_API,
   getTicketByRef,
 };

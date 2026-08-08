@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'rms.admin' => \App\Http\Middleware\EnsureAdminRole::class,
             'rms.dept_head' => \App\Http\Middleware\EnsureDeptHeadRole::class,
             'rms.president' => \App\Http\Middleware\EnsurePresidentRole::class,
+            'rms.officer' => \App\Http\Middleware\EnsureRmOfficerRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

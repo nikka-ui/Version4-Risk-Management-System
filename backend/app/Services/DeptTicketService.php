@@ -419,6 +419,116 @@ class DeptTicketService
         return $ticket->fresh();
     }
 
+    public function assignPersonnel(RiskTicket $ticket, User $user, array $input = []): RiskTicket
+    {
+        $this->assertDeptHeadAccess($ticket, $user);
+        if (! $this->canExecute($ticket, $user)) {
+            throw ValidationException::withMessages([
+                'status' => ['Accept ownership before assigning personnel.'],
+            ]);
+        }
+
+        $name = trim((string) ($input['personName'] ?? $input['name'] ?? ''));
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'personName' => ['Personnel name is required.'],
+            ]);
+        }
+        $role = trim((string) ($input['personRole'] ?? $input['role'] ?? ''));
+
+        $now = now();
+        $personnel = is_array($ticket->personnel) ? $ticket->personnel : [];
+        $personnel[] = [
+            'id' => 'per-'.(int) round(microtime(true) * 1000).'-'.bin2hex(random_bytes(3)),
+            'name' => $name,
+            'role' => $role !== '' ? $role : null,
+            'assignedAt' => $now->toIso8601String(),
+            'assignedByName' => $user->name ?: $user->username,
+        ];
+
+        $detail = $role !== '' ? "{$name} — {$role}" : $name;
+        $audit = $this->appendAudit($ticket, 'Personnel assigned', $detail, $user, $now);
+
+        $ticket->fill([
+            'personnel' => $personnel,
+            'audit_trail' => $audit,
+            'source_updated_at' => $now,
+        ]);
+        $ticket->save();
+
+        return $ticket->fresh();
+    }
+
+    /**
+     * Metadata-only document mirror (MinIO file ownership remains Express until a later slice).
+     */
+    public function recordDocuments(RiskTicket $ticket, User $user, array $input = []): RiskTicket
+    {
+        $this->assertDeptHeadAccess($ticket, $user);
+        if (! in_array($ticket->status, self::EXECUTION_STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Documents can be uploaded once the ticket is in progress.'],
+            ]);
+        }
+
+        $fileCount = (int) ($input['fileCount'] ?? $input['uploaded'] ?? 0);
+        $fileNames = $input['fileNames'] ?? [];
+        if (! is_array($fileNames)) {
+            $fileNames = [];
+        }
+        $fileNames = array_values(array_filter(array_map(
+            static fn ($n) => trim((string) $n),
+            $fileNames,
+        )));
+
+        if ($fileCount < 1 && $fileNames === []) {
+            throw ValidationException::withMessages([
+                'fileCount' => ['Select at least one document to upload.'],
+            ]);
+        }
+        if ($fileCount < 1) {
+            $fileCount = count($fileNames);
+        }
+
+        $now = now();
+        $payload = is_array($ticket->payload) ? $ticket->payload : [];
+        $docs = is_array($payload['deptDocuments'] ?? null) ? $payload['deptDocuments'] : [];
+        $docs[] = [
+            'at' => $now->toIso8601String(),
+            'byUsername' => $user->username,
+            'byName' => $user->name ?: $user->username,
+            'fileCount' => $fileCount,
+            'fileNames' => $fileNames,
+        ];
+        $payload['deptDocuments'] = $docs;
+
+        $label = $fileCount === 1 ? '1 document' : "{$fileCount} documents";
+        $audit = $this->appendAudit(
+            $ticket,
+            'Documents uploaded',
+            "{$label} added by ".($user->name ?: $user->username).'.',
+            $user,
+            $now,
+        );
+
+        $ticket->fill([
+            'evidence_count' => max((int) $ticket->evidence_count, 0) + $fileCount,
+            'payload' => $payload,
+            'audit_trail' => $audit,
+            'source_updated_at' => $now,
+        ]);
+        $ticket->save();
+
+        return $ticket->fresh();
+    }
+
+    public function addThreadComment(RiskTicket $ticket, User $user, array $input = []): RiskTicket
+    {
+        $this->assertDeptHeadAccess($ticket, $user);
+
+        return app(ThreadCommentService::class)->add($ticket, $user, $input, 'comment');
+    }
+
     private function resolveActiveDepartment(string $raw): ?string
     {
         $raw = trim($raw);

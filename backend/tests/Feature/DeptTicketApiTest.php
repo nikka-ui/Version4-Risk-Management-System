@@ -22,7 +22,7 @@ class DeptTicketApiTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('slice', 10);
     }
 
     public function test_accept_reject_and_action_plan_flow(): void

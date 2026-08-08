@@ -674,14 +674,28 @@ function appendCredentialLog(entry) {
 
 function appendReportLog(entry) {
   const store = loadStore();
-  store.reportLogs.push({
+  const record = {
     id: `rpt-${Date.now()}`,
     at: new Date().toISOString(),
     ...entry,
-  });
+  };
+  store.reportLogs.push(record);
   if (store.reportLogs.length > 500) {
     store.reportLogs = store.reportLogs.slice(-500);
   }
+  mirrorToLaravel('report-log', (laravelApi) =>
+    laravelApi.mirrorReportLogAppend({
+      id: record.id,
+      ticketRef: record.ticketRef || null,
+      title: record.title || null,
+      submittedBy: record.submittedBy || null,
+      submitterRole: record.submitterRole || null,
+      status: record.status || null,
+      action: record.action || null,
+      detail: record.detail || null,
+      at: record.at,
+    }),
+  );
   saveStore();
 }
 
@@ -880,20 +894,57 @@ function getAuditLogsTodayCount() {
   return (store.auditLogs || []).filter((l) => String(l.at).slice(0, 10) === today).length;
 }
 
+/**
+ * Best-effort mirror to Laravel (only when USE_LARAVEL_API is on). Fire-and-forget;
+ * failures are logged and never affect the live Express response. Uses lazy requires
+ * to avoid a circular dependency with laravelApi.js.
+ */
+function mirrorToLaravel(action, fn) {
+  let enabled = false;
+  try {
+    ({ USE_LARAVEL_API: enabled } = require('../config/features'));
+  } catch {
+    enabled = false;
+  }
+  if (!enabled) return;
+  Promise.resolve()
+    .then(() => fn(require('./laravelApi')))
+    .catch((err) => console.warn(`[laravel-bridge] ${action} mirror failed:`, err?.message || err));
+}
+
 function appendNotification(entry) {
   const store = loadStore();
   if (!store.notifications) store.notifications = [];
-  store.notifications.unshift({
+  const record = {
     id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     at: new Date().toISOString(),
     ...entry,
     // Always create as unread so the bell badge can alert recipients.
     read: false,
-  });
+  };
+  store.notifications.unshift(record);
   if (store.notifications.length > 300) {
     store.notifications = store.notifications.slice(0, 300);
   }
   saveStore();
+
+  mirrorToLaravel('notification', (laravelApi) =>
+    laravelApi.mirrorNotificationCreate({
+      id: record.id,
+      recipientUsername: record.recipientUsername || null,
+      recipientRole: record.recipientRole || null,
+      type: record.type || 'notification',
+      title: record.title || '',
+      message: record.message || '',
+      ticketRef: record.ticketRef || null,
+      href: record.href || null,
+      fromUsername: record.fromUsername || null,
+      fromName: record.fromName || null,
+      fromRole: record.fromRole || null,
+      read: false,
+      at: record.at,
+    }),
+  );
 }
 
 function notificationMatchesUser(n, user) {
