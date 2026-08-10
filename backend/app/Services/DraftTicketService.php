@@ -131,6 +131,12 @@ class DraftTicketService
             ->first();
     }
 
+    /** Next RISK-YYYY-##### reference without persisting (Phase 5 slice 13 forms). */
+    public function peekNextReference(): string
+    {
+        return $this->allocateReference();
+    }
+
     private function allocateReference(): string
     {
         $year = (int) now()->year;

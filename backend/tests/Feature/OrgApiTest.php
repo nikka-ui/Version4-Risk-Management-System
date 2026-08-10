@@ -17,8 +17,8 @@ class OrgApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 5);
+            ->assertJsonPath('phase', 5)
+            ->assertJsonPath('slice', 14);
     }
 
     public function test_departments_and_positions_require_auth(): void

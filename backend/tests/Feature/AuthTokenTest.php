@@ -16,8 +16,63 @@ class AuthTokenTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('status', 'ok')
-            ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 5);
+            ->assertJsonPath('phase', 5)
+            ->assertJsonPath('slice', 14);
+    }
+
+    public function test_verify_credentials_without_token(): void
+    {
+        User::factory()->create([
+            'username' => 'reporter',
+            'password' => 'a3c2026',
+            'role' => Roles::SUPERVISOR,
+            'role_label' => Roles::label(Roles::SUPERVISOR),
+        ]);
+
+        $this->postJson('/v1/auth/verify', [
+            'username' => 'reporter',
+            'password' => 'a3c2026',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('user.username', 'reporter')
+            ->assertJsonMissingPath('token');
+
+        $this->postJson('/v1/auth/verify', [
+            'username' => 'reporter',
+            'password' => 'wrong',
+        ])->assertStatus(422);
+    }
+
+    public function test_admin_can_sync_user(): void
+    {
+        User::factory()->create([
+            'username' => 'admin',
+            'password' => 'a3c1993',
+            'role' => Roles::ADMIN,
+            'can_manage_users' => true,
+        ]);
+
+        $token = $this->postJson('/v1/auth/token', [
+            'username' => 'admin',
+            'password' => 'a3c1993',
+        ])->json('token');
+
+        $this->withToken($token)
+            ->postJson('/v1/users/sync', [
+                'username' => 'newhire',
+                'password' => 'NewHire1!',
+                'displayName' => 'New Hire',
+                'role' => Roles::SUPERVISOR,
+                'email' => 'newhire@rms.local',
+            ])
+            ->assertOk()
+            ->assertJsonPath('user.username', 'newhire');
+
+        $this->postJson('/v1/auth/verify', [
+            'username' => 'newhire',
+            'password' => 'NewHire1!',
+        ])->assertOk();
     }
 
     public function test_token_and_me(): void

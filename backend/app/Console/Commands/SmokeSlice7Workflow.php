@@ -120,7 +120,7 @@ class SmokeSlice7Workflow extends Command
         $ref = $ticket->reference;
         $ticket->delete();
         $this->info("cleaned up {$ref}");
-        $this->line('Express store.json was not modified. USE_LARAVEL_API remains OFF by default.');
+        $this->line('Express store.json was not modified. USE_LARAVEL_API defaults ON (Phase 5); Express UI remains browser entry.');
 
         return self::SUCCESS;
     }

@@ -66,7 +66,7 @@ class SmokeSlice9Notifications extends Command
         \App\Models\Notification::query()->whereIn('id', [$direct->id, $roleNote->id])->delete();
         \App\Models\ReportLog::query()->where('id', $log->id)->delete();
         $this->info('cleaned up smoke rows');
-        $this->line('Express store.json was not modified. USE_LARAVEL_API remains OFF by default.');
+        $this->line('Express store.json was not modified. USE_LARAVEL_API defaults ON (Phase 5); Express UI remains browser entry.');
 
         return self::SUCCESS;
     }

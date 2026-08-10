@@ -44,7 +44,7 @@ class SmokeSubmitTicket extends Command
         // Clean up so smoke runs stay idempotent for list noise.
         $ticket->delete();
         $this->info('cleaned up '.$ticket->reference);
-        $this->line('Express store.json was not modified. USE_LARAVEL_API remains OFF by default.');
+        $this->line('Express store.json was not modified. USE_LARAVEL_API defaults ON (Phase 5); Express UI remains browser entry.');
 
         return self::SUCCESS;
     }

@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Phase 3 slice 9: notifications mirror of Express store.notifications.
- * Live UI notifications remain Express-owned until a later cutover.
+ * Phase 5 slice 10: Ticket Reporter Blade UI reads/writes via this service.
  */
 class NotificationService
 {

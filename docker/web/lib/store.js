@@ -1042,6 +1042,23 @@ function markNotificationsReadForUser(user, { ticketRef, ids } = {}) {
     changed = true;
   }
   if (changed) saveStore();
+
+  if (changed && user?.username) {
+    const { USE_LARAVEL_API } = require('../config/features');
+    if (USE_LARAVEL_API) {
+      if (ids?.length === 1) {
+        mirrorToLaravel('notification-read', (laravelApi) =>
+          laravelApi.mirrorNotificationRead(user.username, ids[0]),
+        );
+      } else {
+        mirrorToLaravel('notification-read-all', (laravelApi) =>
+          laravelApi.mirrorNotificationsReadAll(user.username, {
+            ticketRef: ticketRef || undefined,
+          }),
+        );
+      }
+    }
+  }
 }
 
 /** Mark one notification read and return the deep-link for the viewer's console. */
@@ -1053,6 +1070,12 @@ function openNotificationForUser(user, notificationId) {
   if (!n.read) {
     n.read = true;
     saveStore();
+    const { USE_LARAVEL_API } = require('../config/features');
+    if (USE_LARAVEL_API && user?.username) {
+      mirrorToLaravel('notification-read', (laravelApi) =>
+        laravelApi.mirrorNotificationRead(user.username, id),
+      );
+    }
   }
   const href = ticketHrefForUser(user, n.ticketRef) || n.href || ROLE_TICKET_PATH[user.role] || '/';
   return { href };

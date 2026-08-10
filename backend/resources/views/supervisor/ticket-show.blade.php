@@ -1,0 +1,154 @@
+@extends('layouts.supervisor')
+
+@section('content')
+  @php
+    $t = $ticket;
+    $w = $fiveW1H ?? [];
+    $flashLabels = [
+      'submitted' => 'Ticket submitted successfully.',
+      'draft_saved' => 'Draft saved.',
+      'evidence_added' => 'Evidence uploaded.',
+      'not_found' => 'Ticket not found.',
+    ];
+    $flashKey = is_string($flash ?? null) ? $flash : '';
+    $flashMsg = $flashLabels[$flashKey] ?? null;
+  @endphp
+  @if ($flashMsg)
+    <div class="alert alert--ok" role="status">{{ $flashMsg }}</div>
+  @endif
+  @if (!empty($error))
+    <div class="alert" role="alert">{{ urldecode((string) $error) }}</div>
+  @endif
+
+  <div class="sup-page-head">
+    <div>
+      <h1 class="mono">{{ $t['reference'] }}</h1>
+      <p class="sup-page-desc">{{ $t['title'] }} · {{ $t['statusLabel'] }}</p>
+    </div>
+    <div class="sup-page-head__actions">
+      <a href="/laravel/supervisor/tickets" class="btn-outline">Back to list</a>
+      <a href="/supervisor/tickets/{{ urlencode($t['reference']) }}/edit" class="btn-outline">Open Express editor</a>
+    </div>
+  </div>
+
+  <section class="sup-card">
+    <h2>Risk details</h2>
+    <dl class="detail-dl detail-dl--console">
+      <dt>Title</dt><dd>{{ $t['title'] }}</dd>
+      <dt>Status</dt><dd>{{ $t['statusLabel'] }}</dd>
+      <dt>Reporting unit</dt><dd>{{ $t['reporterDepartment'] }} <span class="text-muted">(not used for AI routing)</span></dd>
+      <dt>Responsible department</dt><dd>{{ $t['department'] }}</dd>
+      <dt>Location</dt><dd>{{ $t['location'] }}</dd>
+      <dt>Category</dt><dd>{{ $t['categoryLabel'] }}</dd>
+      <dt>Priority</dt><dd>{{ $t['priority'] ?: '—' }}</dd>
+      <dt>Likelihood × Impact</dt>
+      <dd>
+        @if ($t['likelihood'] && $t['impact'])
+          {{ $t['likelihood'] }} × {{ $t['impact'] }}
+          @if ($t['riskScore']) ({{ $t['riskScore'] }}) @endif
+        @else
+          —
+        @endif
+      </dd>
+      @if (!empty($t['dueAt']))
+        <dt>Target date</dt>
+        <dd>{{ \Illuminate\Support\Carbon::parse($t['dueAt'])->format('Y-m-d') }}</dd>
+      @endif
+      <dt>Submitted</dt>
+      <dd>{{ !empty($t['submittedAt']) ? \Illuminate\Support\Carbon::parse($t['submittedAt'])->format('Y-m-d H:i') : '—' }}</dd>
+      <dt>Updated</dt>
+      <dd>{{ !empty($t['updatedAt']) ? \Illuminate\Support\Carbon::parse($t['updatedAt'])->format('Y-m-d H:i') : '—' }}</dd>
+    </dl>
+    <p style="margin-top:1rem">{{ $t['description'] }}</p>
+  </section>
+
+  @if (!empty($t['aiSummary']) || !empty($t['aiConfidence']))
+    <section class="sup-card">
+      <h2>AI analysis</h2>
+      @if (!empty($t['aiConfidence']))
+        <p class="text-muted">Confidence: {{ $t['aiConfidence'] }}</p>
+      @endif
+      @if (!empty($t['aiSummary']))
+        <p>{{ $t['aiSummary'] }}</p>
+      @endif
+    </section>
+  @endif
+
+  <section class="sup-card">
+    <h2>5W1H</h2>
+    <div class="w1h-grid w1h-grid--readonly">
+      @foreach ([
+        'what' => 'What happened?',
+        'why' => 'Why did it happen?',
+        'where' => 'Where did it occur?',
+        'when' => 'When did it occur?',
+        'who' => 'Who was involved?',
+        'how' => 'How was it discovered?',
+      ] as $key => $label)
+        <div class="w1h-item">
+          <span class="w1h-label">{{ $label }}</span>
+          <p>{{ ($w[$key] ?? '') !== '' ? $w[$key] : '—' }}</p>
+        </div>
+      @endforeach
+    </div>
+  </section>
+
+  <section class="sup-card">
+    <h2>Evidence</h2>
+    @if (count($attachments) === 0)
+      <p class="text-muted">No attachments on this ticket.</p>
+    @else
+      <ul class="evidence-list">
+        @foreach ($attachments as $file)
+          <li>
+            <a href="/supervisor/attachments/{{ urlencode($file['id']) }}" target="_blank" rel="noopener">{{ $file['name'] }}</a>
+            @if (!empty($file['size']))
+              <span class="text-muted">· {{ number_format($file['size'] / 1024 / 1024, 2) }} MB</span>
+            @endif
+          </li>
+        @endforeach
+      </ul>
+    @endif
+    <p class="section-hint text-muted" style="margin-top:0.75rem">Upload and interactive evidence actions remain on Express ticket pages.</p>
+  </section>
+
+  @if ($accomplishment)
+    <section class="sup-card">
+      <h2>Accomplishment</h2>
+      <dl class="detail-dl detail-dl--console">
+        <dt>Submitted</dt>
+        <dd>{{ !empty($accomplishment['submittedAt']) ? \Illuminate\Support\Carbon::parse($accomplishment['submittedAt'])->format('Y-m-d H:i') : '—' }}</dd>
+        <dt>Summary</dt><dd>{{ $accomplishment['summary'] }}</dd>
+        <dt>Outcomes</dt><dd>{{ $accomplishment['outcomes'] }}</dd>
+      </dl>
+    </section>
+  @endif
+
+  <section class="sup-card">
+    <h2>Ticket timeline</h2>
+    @if (count($timeline) === 0)
+      <p class="text-muted">Lifecycle events will appear here after workflow updates sync to Laravel.</p>
+    @else
+      <ul class="ticket-timeline">
+        @foreach ($timeline as $event)
+          <li class="ticket-timeline-item">
+            <div class="ticket-timeline-item__body">
+              <div class="ticket-timeline-item__meta">
+                <strong>{{ $event['action'] }}</strong>
+                @if (!empty($event['at']))
+                  <span class="ticket-timeline-item__time">{{ $event['at'] }}</span>
+                @endif
+              </div>
+              @if (!empty($event['detail']))
+                <p class="ticket-timeline-item__detail">{{ $event['detail'] }}</p>
+              @endif
+              @if (!empty($event['actorName']))
+                <span class="ticket-timeline-item__actor">{{ $event['actorName'] }}</span>
+              @endif
+            </div>
+          </li>
+        @endforeach
+      </ul>
+    @endif
+  </section>
+@endsection

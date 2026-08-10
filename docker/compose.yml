@@ -60,8 +60,32 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-rmsminio}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-rmsminio-dev-change-me}
       S3_USE_PATH_STYLE_ENDPOINT: ${S3_USE_PATH_STYLE_ENDPOINT:-true}
-      # Phase 3 slice 3: draft bridge (default OFF — Express store.json remains SoT)
-      USE_LARAVEL_API: ${USE_LARAVEL_API:-false}
+      # Phase 5 slice 1: dual-write + attachment bridge ON by default.
+      USE_LARAVEL_API: ${USE_LARAVEL_API:-true}
+      # Phase 5 slice 3: Laravel credential verify for browser login ON by default.
+      USE_LARAVEL_AUTH: ${USE_LARAVEL_AUTH:-true}
+      USE_LARAVEL_AUTH_FALLBACK: ${USE_LARAVEL_AUTH_FALLBACK:-false}
+      # Phase 5 slice 4: Blade login UI at /laravel/login (Express cookie via /auth/bridge).
+      USE_LARAVEL_LOGIN_UI: ${USE_LARAVEL_LOGIN_UI:-true}
+      # Phase 5 slice 5: Blade admin profile at /laravel/admin/profile.
+      USE_LARAVEL_PROFILE_UI: ${USE_LARAVEL_PROFILE_UI:-true}
+      # Phase 5 slice 6: Blade Ticket Reporter profile at /laravel/supervisor/profile.
+      USE_LARAVEL_REPORTER_PROFILE_UI: ${USE_LARAVEL_REPORTER_PROFILE_UI:-true}
+      # Phase 5 slice 7: Blade Ticket Reporter dashboard at /laravel/supervisor.
+      USE_LARAVEL_REPORTER_DASHBOARD_UI: ${USE_LARAVEL_REPORTER_DASHBOARD_UI:-true}
+      # Phase 5 slice 8: Blade Ticket Reporter ticket lists.
+      USE_LARAVEL_REPORTER_TICKETS_UI: ${USE_LARAVEL_REPORTER_TICKETS_UI:-true}
+      # Phase 5 slice 9: Blade Ticket Reporter ticket detail.
+      USE_LARAVEL_REPORTER_TICKET_DETAIL_UI: ${USE_LARAVEL_REPORTER_TICKET_DETAIL_UI:-true}
+      # Phase 5 slice 10: Blade Ticket Reporter notifications.
+      USE_LARAVEL_REPORTER_NOTIFICATIONS_UI: ${USE_LARAVEL_REPORTER_NOTIFICATIONS_UI:-true}
+      # Phase 5 slice 11: Blade Ticket Reporter accomplishments.
+      USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI: ${USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI:-true}
+      # Phase 5 slice 12: Blade Ticket Reporter actions queue.
+      USE_LARAVEL_REPORTER_ACTIONS_UI: ${USE_LARAVEL_REPORTER_ACTIONS_UI:-true}
+      USE_LARAVEL_REPORTER_TICKET_FORM_UI: ${USE_LARAVEL_REPORTER_TICKET_FORM_UI:-true}
+      # Phase 5 slice 14: Blade admin dashboard at /laravel/admin.
+      USE_LARAVEL_ADMIN_DASHBOARD_UI: ${USE_LARAVEL_ADMIN_DASHBOARD_UI:-true}
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
     secrets:
       - db_password
@@ -80,7 +104,8 @@ services:
     expose:
       - "3000"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      # Use /health — GET / redirects to /laravel/login when USE_LARAVEL_LOGIN_UI is on.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
       interval: 15s
       timeout: 5s
       retries: 3

@@ -1,8 +1,12 @@
 /**
  * Evidence storage: file bytes in MinIO/S3 (separate container), metadata in PostgreSQL.
+ *
+ * Phase 3 slice 11: when USE_LARAVEL_API=true, browser upload/download is routed
+ * through Laravel (shared MinIO + risk_attachments). Default remains Express-local.
  */
 const attachmentRepo = require('./attachmentRepository');
 const objectStorage = require('./objectStorage');
+const { USE_LARAVEL_API } = require('../config/features');
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES_PER_TICKET = 10;
@@ -45,7 +49,44 @@ function validateUpload(file) {
   return { ok: true };
 }
 
+async function saveUploadedFilesViaLaravel(ticketRef, files, { uploadedBy } = {}) {
+  const list = Array.isArray(files) ? files : [];
+  const validated = [];
+  for (const file of list.slice(0, MAX_FILES_PER_TICKET)) {
+    const check = validateUpload(file);
+    if (!check.ok) return { error: check.error };
+    validated.push(file);
+  }
+  if (!validated.length) return { attachments: [] };
+
+  const laravelApi = require('./laravelApi');
+  const username = uploadedBy || process.env.LARAVEL_SYSTEM_USERNAME || 'admin';
+  try {
+    const data = await laravelApi.uploadAttachments(ticketRef, username, validated);
+    const attachments = (data?.attachments || []).map((a) => ({
+      id: a.id,
+      ticketRef: a.ticketRef || ticketRef,
+      name: a.originalName || a.name,
+      originalName: a.originalName || a.name,
+      mimeType: a.mimeType,
+      size: Number(a.size || 0),
+      storageKey: a.storageKey,
+      uploadedBy: a.uploadedBy || uploadedBy || null,
+      uploadedAt: a.uploadedAt || new Date().toISOString(),
+      legacy: Boolean(a.legacy),
+    }));
+    return { attachments };
+  } catch (err) {
+    console.warn('[laravel-bridge] attachment upload failed:', err?.message || err);
+    return { error: err?.message || 'Laravel attachment upload failed.' };
+  }
+}
+
 async function saveUploadedFiles(ticketRef, files, { uploadedBy } = {}) {
+  if (USE_LARAVEL_API) {
+    return saveUploadedFilesViaLaravel(ticketRef, files, { uploadedBy });
+  }
+
   const saved = [];
   const list = Array.isArray(files) ? files : [];
   const ref = safeTicketRef(ticketRef);
@@ -140,7 +181,40 @@ function resolveAttachmentStorageKey(found) {
   return found?.attachment?.storageKey || null;
 }
 
-async function streamAttachmentToResponse(res, found) {
+async function streamAttachmentViaLaravel(res, found, { username } = {}) {
+  const att = found?.attachment;
+  if (!att?.id) {
+    res.status(404).send('Attachment not found.');
+    return false;
+  }
+  if (att.legacy && String(att.storageKey || '').startsWith('legacy/')) {
+    res.status(404).send('This evidence reference has no stored file.');
+    return false;
+  }
+
+  try {
+    const laravelApi = require('./laravelApi');
+    const actor = username
+      || att.uploadedBy
+      || found?.ticket?.submittedBy
+      || process.env.LARAVEL_SYSTEM_USERNAME
+      || 'admin';
+    const upstream = await laravelApi.downloadAttachment(actor, att.id);
+    const contentType = upstream.headers.get('content-type') || att.mimeType || 'application/octet-stream';
+    const disposition = upstream.headers.get('content-disposition')
+      || `inline; filename="${encodeURIComponent(att.originalName || att.name || 'file')}"`;
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', disposition);
+    const { Readable } = require('stream');
+    Readable.fromWeb(upstream.body).pipe(res);
+    return true;
+  } catch (err) {
+    console.warn('[laravel-bridge] attachment download failed, falling back to MinIO:', err?.message || err);
+    return false;
+  }
+}
+
+async function streamAttachmentToResponse(res, found, { username } = {}) {
   const storageKey = resolveAttachmentStorageKey(found);
   const att = found?.attachment;
   if (!storageKey || !att) {
@@ -150,6 +224,11 @@ async function streamAttachmentToResponse(res, found) {
   if (att.legacy && storageKey.startsWith('legacy/')) {
     res.status(404).send('This evidence reference has no stored file.');
     return false;
+  }
+
+  if (USE_LARAVEL_API) {
+    const ok = await streamAttachmentViaLaravel(res, found, { username });
+    if (ok) return true;
   }
 
   try {

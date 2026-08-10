@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\LoginController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ReportLogController;
@@ -15,8 +16,8 @@ use Illuminate\Support\Facades\Route;
 | API routes (served under /v1 after nginx strips the public /api prefix)
 |--------------------------------------------------------------------------
 |
-| Phase 3 slice 10: attachment file-byte upload/download over shared MinIO;
-| USE_LARAVEL_API defaults OFF. Express owns the live upload/download path.
+| Phase 5 slice 14: Blade admin dashboard + prior Blade pages.
+| Express still owns form POST/uploads; cookie session via /auth/bridge.
 |
 */
 
@@ -26,8 +27,8 @@ Route::get('/', function () {
         'status' => 'ok',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 3,
-        'slice' => 10,
+        'phase' => 5,
+        'slice' => 14,
     ]);
 });
 
@@ -37,16 +38,22 @@ Route::get('/health', function () {
         'service' => 'rms-api',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 3,
-        'slice' => 10,
+        'phase' => 5,
+        'slice' => 14,
     ]);
 });
 
 Route::post('/auth/token', [AuthController::class, 'token']);
+Route::post('/auth/verify', [AuthController::class, 'verify']);
+Route::post('/auth/bridge-exchange', [LoginController::class, 'exchange']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me', [UserController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    Route::middleware('rms.admin')->group(function () {
+        Route::post('/users/sync', [UserController::class, 'sync']);
+    });
 
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::get('/departments/{externalId}', [DepartmentController::class, 'show']);

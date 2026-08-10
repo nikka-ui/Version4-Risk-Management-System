@@ -2,7 +2,8 @@ const path = require('path');
 const express = require('express');
 const cookieSession = require('cookie-session');
 const {
-  authenticate,
+  authenticateAsync,
+  fireUserSync,
   requireAuth,
   requireAdmin,
   requireSupervisor,
@@ -300,24 +301,77 @@ function asyncRoute(handler) {
   };
 }
 
-async function sendAttachment(res, found) {
+async function sendAttachment(res, found, username) {
   const { streamAttachmentToResponse } = require('./lib/attachments');
-  await streamAttachmentToResponse(res, found);
+  await streamAttachmentToResponse(res, found, { username });
 }
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'web' });
+  const {
+    USE_LARAVEL_API,
+    USE_LARAVEL_AUTH,
+    USE_LARAVEL_AUTH_FALLBACK,
+    USE_LARAVEL_LOGIN_UI,
+    USE_LARAVEL_PROFILE_UI,
+    USE_LARAVEL_REPORTER_PROFILE_UI,
+    USE_LARAVEL_REPORTER_DASHBOARD_UI,
+    USE_LARAVEL_REPORTER_TICKETS_UI,
+    USE_LARAVEL_REPORTER_TICKET_DETAIL_UI,
+    USE_LARAVEL_REPORTER_NOTIFICATIONS_UI,
+    USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI,
+    USE_LARAVEL_REPORTER_ACTIONS_UI,
+    USE_LARAVEL_REPORTER_TICKET_FORM_UI,
+    USE_LARAVEL_ADMIN_DASHBOARD_UI,
+    USE_LARAVEL_ORG,
+  } = require('./config/features');
+  res.json({
+    status: 'ok',
+    service: 'web',
+    phase: 5,
+    slice: 14,
+    laravelBridge: {
+      USE_LARAVEL_API: Boolean(USE_LARAVEL_API),
+      USE_LARAVEL_AUTH: Boolean(USE_LARAVEL_AUTH),
+      USE_LARAVEL_AUTH_FALLBACK: Boolean(USE_LARAVEL_AUTH_FALLBACK),
+      USE_LARAVEL_LOGIN_UI: Boolean(USE_LARAVEL_LOGIN_UI),
+      USE_LARAVEL_PROFILE_UI: Boolean(USE_LARAVEL_PROFILE_UI),
+      USE_LARAVEL_REPORTER_PROFILE_UI: Boolean(USE_LARAVEL_REPORTER_PROFILE_UI),
+      USE_LARAVEL_REPORTER_DASHBOARD_UI: Boolean(USE_LARAVEL_REPORTER_DASHBOARD_UI),
+      USE_LARAVEL_REPORTER_TICKETS_UI: Boolean(USE_LARAVEL_REPORTER_TICKETS_UI),
+      USE_LARAVEL_REPORTER_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_REPORTER_TICKET_DETAIL_UI),
+      USE_LARAVEL_REPORTER_NOTIFICATIONS_UI: Boolean(USE_LARAVEL_REPORTER_NOTIFICATIONS_UI),
+      USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI: Boolean(USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI),
+      USE_LARAVEL_REPORTER_ACTIONS_UI: Boolean(USE_LARAVEL_REPORTER_ACTIONS_UI),
+      USE_LARAVEL_REPORTER_TICKET_FORM_UI: Boolean(USE_LARAVEL_REPORTER_TICKET_FORM_UI),
+      USE_LARAVEL_ADMIN_DASHBOARD_UI: Boolean(USE_LARAVEL_ADMIN_DASHBOARD_UI),
+      USE_LARAVEL_ORG: Boolean(USE_LARAVEL_ORG),
+    },
+  });
 });
 
 app.get('/login', (req, res) => {
   if (req.session?.user) {
     return res.redirect(dashboardPath(req.session.user));
   }
+
   const loginErrors = {
     invalid_username: 'Invalid username.',
     invalid_password: 'Invalid password.',
+    inactive_account: 'This account is inactive.',
+    auth_unavailable: 'Authentication service is temporarily unavailable. Try again shortly.',
   };
   const errorKey = typeof req.query.error === 'string' ? req.query.error : '';
+
+  const { USE_LARAVEL_LOGIN_UI } = require('./config/features');
+  if (USE_LARAVEL_LOGIN_UI) {
+    const next = typeof req.query.next === 'string' ? req.query.next : '';
+    const q = new URLSearchParams();
+    if (next) q.set('next', next);
+    if (errorKey && loginErrors[errorKey]) q.set('error', errorKey);
+    const qs = q.toString();
+    return res.redirect(`/laravel/login${qs ? `?${qs}` : ''}`);
+  }
+
   const error = loginErrors[errorKey] || null;
   const next = typeof req.query.next === 'string' ? req.query.next : '';
   const settings = getSystemSettings();
@@ -334,9 +388,47 @@ app.get('/login', (req, res) => {
   );
 });
 
-app.post('/login', (req, res) => {
+/** Phase 5 slice 4: consume Laravel Blade login bridge code → Express cookie session. */
+app.get('/auth/bridge', asyncRoute(async (req, res) => {
+  const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
+  const next = typeof req.query.next === 'string' ? req.query.next : '';
+  if (!code) {
+    return res.redirect('/login?error=auth_unavailable');
+  }
+
+  try {
+    const laravelApi = require('./lib/laravelApi');
+    const { sessionUserFromLaravel } = require('./lib/auth');
+    const data = await laravelApi.exchangeBridgeCode(code);
+    if (!data?.user?.username) {
+      return res.redirect('/login?error=auth_unavailable');
+    }
+
+    const user = sessionUserFromLaravel(data.user);
+    req.session.user = user;
+
+    logCredential(req, {
+      action: 'login_success',
+      username: user.username,
+      actor: user.username,
+      detail: `Signed in via Laravel login UI as ${user.roleLabel}`,
+      success: true,
+    });
+
+    let destination = dashboardPath(user);
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      destination = next;
+    }
+    return res.redirect(destination);
+  } catch (err) {
+    console.warn('[laravel-login-ui] bridge exchange failed:', err?.message || err);
+    return res.redirect('/login?error=auth_unavailable');
+  }
+}));
+
+app.post('/login', asyncRoute(async (req, res) => {
   const { username, password, next } = req.body;
-  const authResult = authenticate(username, password);
+  const authResult = await authenticateAsync(username, password);
 
   if (authResult.error) {
     logCredential(req, {
@@ -403,7 +495,7 @@ app.post('/login', (req, res) => {
     destination = next;
   }
   return res.redirect(destination);
-});
+}));
 
 app.post('/logout', (req, res) => {
   if (req.session?.user) {
@@ -417,6 +509,34 @@ app.post('/logout', (req, res) => {
   }
   req.session = null;
   res.set('Cache-Control', 'no-store');
+  const {
+    USE_LARAVEL_LOGIN_UI,
+    USE_LARAVEL_PROFILE_UI,
+    USE_LARAVEL_REPORTER_PROFILE_UI,
+    USE_LARAVEL_REPORTER_DASHBOARD_UI,
+    USE_LARAVEL_REPORTER_TICKETS_UI,
+    USE_LARAVEL_REPORTER_TICKET_DETAIL_UI,
+    USE_LARAVEL_REPORTER_NOTIFICATIONS_UI,
+    USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI,
+    USE_LARAVEL_REPORTER_ACTIONS_UI,
+    USE_LARAVEL_REPORTER_TICKET_FORM_UI,
+    USE_LARAVEL_ADMIN_DASHBOARD_UI,
+  } = require('./config/features');
+  if (
+    USE_LARAVEL_LOGIN_UI ||
+    USE_LARAVEL_PROFILE_UI ||
+    USE_LARAVEL_REPORTER_PROFILE_UI ||
+    USE_LARAVEL_REPORTER_DASHBOARD_UI ||
+    USE_LARAVEL_REPORTER_TICKETS_UI ||
+    USE_LARAVEL_REPORTER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_REPORTER_NOTIFICATIONS_UI ||
+    USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI ||
+    USE_LARAVEL_REPORTER_ACTIONS_UI ||
+    USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
+    USE_LARAVEL_ADMIN_DASHBOARD_UI
+  ) {
+    return res.redirect('/laravel/logout');
+  }
   res.redirect('/login');
 });
 
@@ -432,6 +552,34 @@ app.get('/logout', (req, res) => {
   }
   req.session = null;
   res.set('Cache-Control', 'no-store');
+  const {
+    USE_LARAVEL_LOGIN_UI,
+    USE_LARAVEL_PROFILE_UI,
+    USE_LARAVEL_REPORTER_PROFILE_UI,
+    USE_LARAVEL_REPORTER_DASHBOARD_UI,
+    USE_LARAVEL_REPORTER_TICKETS_UI,
+    USE_LARAVEL_REPORTER_TICKET_DETAIL_UI,
+    USE_LARAVEL_REPORTER_NOTIFICATIONS_UI,
+    USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI,
+    USE_LARAVEL_REPORTER_ACTIONS_UI,
+    USE_LARAVEL_REPORTER_TICKET_FORM_UI,
+    USE_LARAVEL_ADMIN_DASHBOARD_UI,
+  } = require('./config/features');
+  if (
+    USE_LARAVEL_LOGIN_UI ||
+    USE_LARAVEL_PROFILE_UI ||
+    USE_LARAVEL_REPORTER_PROFILE_UI ||
+    USE_LARAVEL_REPORTER_DASHBOARD_UI ||
+    USE_LARAVEL_REPORTER_TICKETS_UI ||
+    USE_LARAVEL_REPORTER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_REPORTER_NOTIFICATIONS_UI ||
+    USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI ||
+    USE_LARAVEL_REPORTER_ACTIONS_UI ||
+    USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
+    USE_LARAVEL_ADMIN_DASHBOARD_UI
+  ) {
+    return res.redirect('/laravel/logout');
+  }
   res.redirect('/login');
 });
 
@@ -460,6 +608,11 @@ function supervisorStats(username) {
 }
 
 app.get('/supervisor', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_DASHBOARD_UI) {
+    return res.redirect('/laravel/supervisor');
+  }
+
   const user = req.session.user;
   const stats = supervisorStats(user.username);
   res.type('html').send(
@@ -473,6 +626,16 @@ app.get('/supervisor', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/tickets', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKETS_UI) {
+    const filter = typeof req.query.filter === 'string' ? req.query.filter : '';
+    if (filter === 'overdue') {
+      return res.redirect('/laravel/supervisor/overdue');
+    }
+    const qs = filter ? `?filter=${encodeURIComponent(filter)}` : '';
+    return res.redirect(`/laravel/supervisor/tickets${qs}`);
+  }
+
   if (req.query.filter === 'overdue') {
     return res.redirect(302, '/supervisor/overdue');
   }
@@ -487,6 +650,12 @@ app.get('/supervisor/tickets', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/tickets/new', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_FORM_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/supervisor/tickets/new${qs ? `?${qs}` : ''}`);
+  }
+
   const user = req.session.user;
   const ticketRef = peekNextTicketRef();
   res.type('html').send(
@@ -501,8 +670,13 @@ app.get('/supervisor/tickets/new', requireSupervisor, (req, res) => {
 // Step 1 -> Step 2 (AI preview)
 app.post('/supervisor/tickets/new/preview', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
   const user = req.session.user;
+  const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
+  const newPath = USE_LARAVEL_REPORTER_TICKET_FORM_UI ? '/laravel/supervisor/tickets/new' : '/supervisor/tickets/new';
+  const previewPath = USE_LARAVEL_REPORTER_TICKET_FORM_UI
+    ? '/laravel/supervisor/tickets/new/preview'
+    : '/supervisor/tickets/new/preview';
   if (req.uploadError) {
-    return res.redirect(`/supervisor/tickets/new?error=${encodeURIComponent(req.uploadError)}`);
+    return res.redirect(`${newPath}?error=${encodeURIComponent(req.uploadError)}`);
   }
   const referenceOverride = req.body.referenceOverride;
 
@@ -513,13 +687,19 @@ app.post('/supervisor/tickets/new/preview', requireSupervisor, handleEvidenceUpl
   });
 
   if (result.error) {
-    return res.redirect(`/supervisor/tickets/new?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(`${newPath}?error=${encodeURIComponent(result.error)}`);
   }
 
-  return res.redirect(`/supervisor/tickets/new/preview/${result.ticket.reference}?flash=preview_generated`);
+  return res.redirect(`${previewPath}/${result.ticket.reference}?flash=preview_generated`);
 }));
 
 app.get('/supervisor/tickets/:ref/edit', requireSupervisor, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_FORM_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/supervisor/tickets/${encodeURIComponent(req.params.ref)}/edit${qs ? `?${qs}` : ''}`);
+  }
+
   const user = req.session.user;
   const ticket = getTicketByRef(req.params.ref, user.username);
   if (!ticket || !canSupervisorReviseReport(ticket)) {
@@ -544,8 +724,15 @@ app.get('/supervisor/tickets/:ref/edit', requireSupervisor, asyncRoute(async (re
 app.post('/supervisor/tickets/:ref/edit', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
   const user = req.session.user;
   const ref = req.params.ref;
+  const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
+  const editPath = USE_LARAVEL_REPORTER_TICKET_FORM_UI
+    ? `/laravel/supervisor/tickets/${encodeURIComponent(ref)}/edit`
+    : `/supervisor/tickets/${ref}/edit`;
+  const previewPath = USE_LARAVEL_REPORTER_TICKET_FORM_UI
+    ? `/laravel/supervisor/tickets/new/preview/${encodeURIComponent(ref)}`
+    : `/supervisor/tickets/new/preview/${ref}`;
   if (req.uploadError) {
-    return res.redirect(`/supervisor/tickets/${ref}/edit?error=${encodeURIComponent(req.uploadError)}`);
+    return res.redirect(`${editPath}?error=${encodeURIComponent(req.uploadError)}`);
   }
   const ticket = getTicketByRef(ref, user.username);
   const draftOnly = ticket?.status === 'draft';
@@ -554,15 +741,13 @@ app.post('/supervisor/tickets/:ref/edit', requireSupervisor, handleEvidenceUploa
     draftOnly,
   });
   if (result.error) {
-    return res.redirect(`/supervisor/tickets/${ref}/edit?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(`${editPath}?error=${encodeURIComponent(result.error)}`);
   }
   const uploadedCount = req.files?.length || 0;
   if (uploadedCount > 0) {
-    return res.redirect(
-      `/supervisor/tickets/new/preview/${ref}?flash=evidence_uploaded&count=${uploadedCount}`,
-    );
+    return res.redirect(`${previewPath}?flash=evidence_uploaded&count=${uploadedCount}`);
   }
-  return res.redirect(`/supervisor/tickets/new/preview/${ref}?flash=draft_updated`);
+  return res.redirect(`${previewPath}?flash=draft_updated`);
 }));
 
 app.post('/supervisor/tickets/:ref/delete', requireSupervisor, asyncRoute(async (req, res) => {
@@ -575,10 +760,16 @@ app.post('/supervisor/tickets/:ref/delete', requireSupervisor, asyncRoute(async 
 
 app.get('/supervisor/attachments/:id', requireSupervisor, asyncRoute(async (req, res) => {
   const found = await findAttachmentForUser(req.params.id, req.session.user.username);
-  await sendAttachment(res, found);
+  await sendAttachment(res, found, req.session.user.username);
 }));
 
 app.get('/supervisor/tickets/new/preview/:ref', requireSupervisor, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_FORM_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/supervisor/tickets/new/preview/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`);
+  }
+
   const user = req.session.user;
   const ticket = getTicketByRef(req.params.ref, user.username);
   if (!ticket) {
@@ -632,6 +823,12 @@ app.get('/supervisor/tickets/:ref', requireSupervisor, asyncRoute(async (req, re
   if (raw.status === 'returned' || raw.status === 'draft') {
     return res.redirect(`/supervisor/tickets/${raw.reference}/edit`);
   }
+
+  const { USE_LARAVEL_REPORTER_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_DETAIL_UI) {
+    return res.redirect(`/laravel/supervisor/tickets/${encodeURIComponent(raw.reference)}`);
+  }
+
   const ticket = await ticketForRole(raw, 'supervisor');
   res.type('html').send(
     ticketFormPage(user, ticket, {
@@ -704,6 +901,10 @@ app.post('/supervisor/tickets/:ref/accomplishment', requireSupervisor, handleEvi
   if (result.error) {
     return res.redirect(`/supervisor/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
   }
+  const { USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI) {
+    return res.redirect('/laravel/supervisor/accomplishments?flash=accomplishment_submitted');
+  }
   return res.redirect('/supervisor/accomplishments?flash=accomplishment_submitted');
 }));
 
@@ -720,6 +921,11 @@ app.post('/supervisor/tickets/:ref/simulate-mitigation', requireSupervisor, (req
 });
 
 app.get('/supervisor/drafts', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKETS_UI) {
+    return res.redirect('/laravel/supervisor/drafts');
+  }
+
   const user = req.session.user;
   res.type('html').send(
     filteredTicketsPage(user, listTicketsForSupervisor(user.username), flashFromQuery(req.query), {
@@ -733,6 +939,11 @@ app.get('/supervisor/drafts', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/submitted', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKETS_UI) {
+    return res.redirect('/laravel/supervisor/submitted');
+  }
+
   const user = req.session.user;
   res.type('html').send(
     filteredTicketsPage(user, listTicketsForSupervisor(user.username), flashFromQuery(req.query), {
@@ -746,6 +957,11 @@ app.get('/supervisor/submitted', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/returned', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKETS_UI) {
+    return res.redirect('/laravel/supervisor/returned');
+  }
+
   const user = req.session.user;
   res.type('html').send(
     filteredTicketsPage(user, listTicketsForSupervisor(user.username), flashFromQuery(req.query), {
@@ -759,6 +975,11 @@ app.get('/supervisor/returned', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/overdue', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKETS_UI) {
+    return res.redirect('/laravel/supervisor/overdue');
+  }
+
   const user = req.session.user;
   const tickets = listTicketsForSupervisor(user.username);
   res.type('html').send(
@@ -767,6 +988,11 @@ app.get('/supervisor/overdue', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/profile', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_PROFILE_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_PROFILE_UI) {
+    return res.redirect('/laravel/supervisor/profile');
+  }
+
   const user = req.session.user;
   res.type('html').send(
     reporterProfilePage(user, flashFromQuery(req.query), supervisorStats(user.username)),
@@ -774,6 +1000,11 @@ app.get('/supervisor/profile', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/notifications', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_NOTIFICATIONS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_NOTIFICATIONS_UI) {
+    return res.redirect('/laravel/supervisor/notifications');
+  }
+
   const user = req.session.user;
   res.type('html').send(
     reporterNotificationsPage(
@@ -787,6 +1018,10 @@ app.get('/supervisor/notifications', requireSupervisor, (req, res) => {
 
 app.post('/supervisor/notifications/read-all', requireSupervisor, (req, res) => {
   markNotificationsReadForUser(req.session.user);
+  const { USE_LARAVEL_REPORTER_NOTIFICATIONS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_NOTIFICATIONS_UI) {
+    return res.redirect('/laravel/supervisor/notifications?flash=notifications_read');
+  }
   return res.redirect('/supervisor/notifications?flash=notifications_read');
 });
 
@@ -832,6 +1067,12 @@ app.post('/supervisor/tickets/:ref/comment/react', requireSupervisor, (req, res)
 });
 
 app.get('/supervisor/actions', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_ACTIONS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_ACTIONS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/supervisor/actions${qs ? `?${qs}` : ''}`);
+  }
+
   const user = req.session.user;
   res.type('html').send(
     actionsPage(
@@ -844,6 +1085,12 @@ app.get('/supervisor/actions', requireSupervisor, (req, res) => {
 });
 
 app.get('/supervisor/accomplishments', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/supervisor/accomplishments${qs ? `?${qs}` : ''}`);
+  }
+
   const user = req.session.user;
   res.type('html').send(
     accomplishmentsPage(
@@ -963,7 +1210,7 @@ app.get('/dept/tickets/:ref', requireDeptHead, asyncRoute(async (req, res) => {
 
 app.get('/dept/attachments/:id', requireDeptHead, asyncRoute(async (req, res) => {
   const found = await findAttachmentForDeptHead(req.params.id, req.session.user);
-  await sendAttachment(res, found);
+  await sendAttachment(res, found, req.session.user.username);
 }));
 
 app.post('/dept/tickets/:ref/accept', requireDeptHead, (req, res) => {
@@ -1193,7 +1440,7 @@ app.get('/officer/tickets/:ref', requireRmOfficer, asyncRoute(async (req, res) =
 
 app.get('/officer/attachments/:id', requireRmOfficer, asyncRoute(async (req, res) => {
   const found = await findAttachmentForOfficer(req.params.id);
-  await sendAttachment(res, found);
+  await sendAttachment(res, found, req.session.user.username);
 }));
 
 app.post('/officer/tickets/:ref/thread-comment', requireRmOfficer, handleEvidenceUpload, (req, res) => {
@@ -1315,7 +1562,7 @@ app.get('/executive/tickets/:ref', requireExecutive, asyncRoute(async (req, res)
 
 app.get('/executive/attachments/:id', requireExecutive, asyncRoute(async (req, res) => {
   const found = await findAttachmentForExecutive(req.params.id);
-  await sendAttachment(res, found);
+  await sendAttachment(res, found, req.session.user.username);
 }));
 
 app.post('/executive/tickets/:ref/comment', requireExecutive, handleEvidenceUpload, (req, res) => {
@@ -1419,7 +1666,7 @@ app.post('/president/tickets/:ref/comment', requirePresident, handleEvidenceUplo
 
 app.get('/president/attachments/:id', requirePresident, asyncRoute(async (req, res) => {
   const found = await findAttachmentForPresident(req.params.id);
-  await sendAttachment(res, found);
+  await sendAttachment(res, found, req.session.user.username);
 }));
 
 app.post('/president/notifications/read-all', requirePresident, (req, res) => {
@@ -1458,12 +1705,22 @@ function filterUsers(users, query) {
 }
 
 app.get('/admin', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DASHBOARD_UI) {
+    return res.redirect('/laravel/admin');
+  }
+
   const ticketStats = getAdminTicketStats();
   const data = getAdminDashboardData(ticketStats);
   res.type('html').send(adminOverviewPage(req.session.user, data, flashFromQuery(req.query)));
 });
 
 app.get('/admin/profile', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_PROFILE_UI } = require('./config/features');
+  if (USE_LARAVEL_PROFILE_UI) {
+    return res.redirect('/laravel/admin/profile');
+  }
+
   const record = findUserRecord(req.session.user.username);
   const profile = record ? { ...req.session.user, ...require('./lib/store').publicUser(record) } : req.session.user;
   res.type('html').send(profilePage(profile, flashFromQuery(req.query)));
@@ -1531,6 +1788,20 @@ app.post('/admin/users', requireAdmin, (req, res) => {
     title: 'New user created',
     message: `${result.user.displayName} was added to the system.`,
   });
+  fireUserSync(req.session.user.username, {
+    username: result.user.username,
+    password,
+    displayName: result.user.displayName,
+    email: result.user.email,
+    role: result.user.role,
+    roleLabel: result.user.roleLabel,
+    employeeId: result.user.employeeId,
+    department: result.user.department,
+    position: result.user.position,
+    canManageUsers: result.user.canManageUsers,
+    active: true,
+    status: 'active',
+  });
   return res.redirect('/admin/users?flash=created');
 });
 
@@ -1582,6 +1853,19 @@ app.post('/admin/users/:username/activate', requireAdmin, (req, res) => {
     description: `Activated account: ${result.user.displayName}`,
     targetUser: username,
   });
+  fireUserSync(req.session.user.username, {
+    username,
+    displayName: result.user.displayName,
+    email: result.user.email,
+    role: result.user.role,
+    roleLabel: result.user.roleLabel,
+    employeeId: result.user.employeeId,
+    department: result.user.department,
+    position: result.user.position,
+    canManageUsers: result.user.canManageUsers,
+    active: true,
+    status: 'active',
+  });
   return res.redirect('/admin/users?flash=activated');
 });
 
@@ -1594,6 +1878,19 @@ app.post('/admin/users/:username/deactivate', requireAdmin, (req, res) => {
     module: 'User Management',
     description: `Deactivated account: ${result.user.displayName}`,
     targetUser: username,
+  });
+  fireUserSync(req.session.user.username, {
+    username,
+    displayName: result.user.displayName,
+    email: result.user.email,
+    role: result.user.role,
+    roleLabel: result.user.roleLabel,
+    employeeId: result.user.employeeId,
+    department: result.user.department,
+    position: result.user.position,
+    canManageUsers: result.user.canManageUsers,
+    active: false,
+    status: 'inactive',
   });
   return res.redirect('/admin/users?flash=deactivated');
 });
@@ -1624,6 +1921,20 @@ app.post('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
     module: 'User Management',
     description: `Reset password for: ${result.user.displayName}`,
     targetUser: username,
+  });
+  fireUserSync(req.session.user.username, {
+    username,
+    password,
+    displayName: result.user.displayName,
+    email: result.user.email,
+    role: result.user.role,
+    roleLabel: result.user.roleLabel,
+    employeeId: result.user.employeeId,
+    department: result.user.department,
+    position: result.user.position,
+    canManageUsers: result.user.canManageUsers,
+    active: result.user.active !== false,
+    status: result.user.status || 'active',
   });
   return res.redirect('/admin/users?flash=password_reset');
 });

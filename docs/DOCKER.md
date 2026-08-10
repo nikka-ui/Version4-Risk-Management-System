@@ -58,13 +58,26 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 |------|---------|
 | [`docker/compose.yml`](../docker/compose.yml) | Base services, networks, volumes, secrets |
 | [`docker/compose.override.yml`](../docker/compose.override.yml) | Dev: localhost DB/AI ports, optional profiles |
+| [`docker/compose.soak.yml`](../docker/compose.soak.yml) | Phase 5 opt-out: forces Laravel API/auth/login/profile/reporter-profile flags off |
 | [`docker/compose.prod.yml`](../docker/compose.prod.yml) | Prod: resource limits, read-only roots, 80/443 |
 
 ## Development vs production
 
 | Mode | Command |
 |------|---------|
-| **Development** | `docker compose -f docker/compose.yml -f docker/compose.override.yml up -d` |
+| **Development** | `docker compose -f docker/compose.yml -f docker/compose.override.yml up -d` (dual-write ON by default) |
+| **Bridge opt-out** | Add `-f docker/compose.soak.yml` to force API/auth/login-UI flags off |
+| **Blade login** | Phase 5 slice 4: edge `/laravel/` → Laravel; Express `/login` redirects when `USE_LARAVEL_LOGIN_UI=true` |
+| **Blade admin profile** | Phase 5 slice 5: `/admin/profile` → `/laravel/admin/profile` when `USE_LARAVEL_PROFILE_UI=true` |
+| **Blade reporter profile** | Phase 5 slice 6: `/supervisor/profile` → `/laravel/supervisor/profile` when `USE_LARAVEL_REPORTER_PROFILE_UI=true` |
+| **Blade reporter dashboard** | Phase 5 slice 7: `/supervisor` → `/laravel/supervisor` when `USE_LARAVEL_REPORTER_DASHBOARD_UI=true` |
+| **Blade reporter ticket lists** | Phase 5 slice 8: `/supervisor/tickets` (+ drafts/submitted/returned/overdue) → Laravel when `USE_LARAVEL_REPORTER_TICKETS_UI=true` |
+| **Blade reporter ticket detail** | Phase 5 slice 9: `/supervisor/tickets/:ref` → `/laravel/supervisor/tickets/:ref` when `USE_LARAVEL_REPORTER_TICKET_DETAIL_UI=true` |
+| **Blade reporter notifications** | Phase 5 slice 10: `/supervisor/notifications` → `/laravel/supervisor/notifications` when `USE_LARAVEL_REPORTER_NOTIFICATIONS_UI=true` |
+| **Blade reporter accomplishments** | Phase 5 slice 11: `/supervisor/accomplishments` → `/laravel/supervisor/accomplishments` when `USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI=true` |
+| **Blade reporter actions** | Phase 5 slice 12: `/supervisor/actions` → `/laravel/supervisor/actions` when `USE_LARAVEL_REPORTER_ACTIONS_UI=true` |
+| **Blade reporter ticket forms** | Phase 5 slice 13: create/edit/preview GETs → `/laravel/supervisor/tickets/...` when `USE_LARAVEL_REPORTER_TICKET_FORM_UI=true` |
+| **Blade admin dashboard** | Phase 5 slice 14: `GET /admin` → `/laravel/admin` when `USE_LARAVEL_ADMIN_DASHBOARD_UI=true` |
 | **Production** | `docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d` |
 
 Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, privkey.pem) and updated secrets.

@@ -84,7 +84,21 @@ Change before sharing dev environments.
 | `SANCTUM_STATEFUL_DOMAINS` | `.env` | Laravel Sanctum stateful hosts — e.g. `localhost:8080` |
 | `STORE_JSON_PATH` | compose / `.env` | Laravel import path (default `/import/store.json` in Docker) |
 | `RMS_INTERNAL_SERVICE_TOKEN` | `.env` | Optional future Express→Laravel service header (`X-RMS-Service-Token`). Empty = disabled. **Not used for browser login.** |
-| `USE_LARAVEL_AUTH` / `USE_LARAVEL_API` | web env | Inert flags in `docker/web/config/features.js` — default OFF; not wired into login |
+| `USE_LARAVEL_AUTH` | web env | Phase 5 slice 3: defaults **`true`**. Express POST /login verifies via Laravel `/v1/auth/verify`, then sets Express cookie. Set `false` or use `compose.soak.yml` to opt out. |
+| `USE_LARAVEL_LOGIN_UI` | web env | Phase 5 slice 4: defaults **`true`**. Express GET `/login` redirects to Laravel Blade `/laravel/login`; success bridges via `/auth/bridge`. |
+| `USE_LARAVEL_PROFILE_UI` | web env | Phase 5 slice 5: defaults **`true`**. Express GET `/admin/profile` redirects to Laravel Blade `/laravel/admin/profile`. |
+| `USE_LARAVEL_REPORTER_PROFILE_UI` | web env | Phase 5 slice 6: defaults **`true`**. Express GET `/supervisor/profile` redirects to Laravel Blade `/laravel/supervisor/profile`. |
+| `USE_LARAVEL_REPORTER_DASHBOARD_UI` | web env | Phase 5 slice 7: defaults **`true`**. Express GET `/supervisor` redirects to Laravel Blade `/laravel/supervisor` (Postgres KPIs). |
+| `USE_LARAVEL_REPORTER_TICKETS_UI` | web env | Phase 5 slice 8: defaults **`true`**. Express ticket list routes redirect to `/laravel/supervisor/tickets` (and drafts/submitted/returned/overdue). |
+| `USE_LARAVEL_REPORTER_TICKET_DETAIL_UI` | web env | Phase 5 slice 9: defaults **`true`**. Express GET `/supervisor/tickets/:ref` redirects to Blade detail (drafts/returned still go to Express edit). |
+| `USE_LARAVEL_REPORTER_NOTIFICATIONS_UI` | web env | Phase 5 slice 10: defaults **`true`**. Express GET `/supervisor/notifications` redirects to Blade notifications (mark-all-read / open use Laravel). |
+| `USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI` | web env | Phase 5 slice 11: defaults **`true`**. Express GET `/supervisor/accomplishments` redirects to Blade accomplishment history. |
+| `USE_LARAVEL_REPORTER_ACTIONS_UI` | web env | Phase 5 slice 12: defaults **`true`**. Express GET `/supervisor/actions` redirects to Blade action-required queue. |
+| `USE_LARAVEL_REPORTER_TICKET_FORM_UI` | web env | Phase 5 slice 13: defaults **`true`**. Express GET create/edit/preview form routes redirect to Blade; POST + uploads stay on Express. |
+| `USE_LARAVEL_ADMIN_DASHBOARD_UI` | web env | Phase 5 slice 14: defaults **`true`**. Express GET `/admin` redirects to Blade dashboard; management POSTs stay on Express. |
+| `USE_LARAVEL_AUTH_FALLBACK` | web env | If auth flag on and Laravel unreachable, fall back to store.json auth. Default **`false`** (fail closed). |
+| `USE_LARAVEL_ORG` | web env | Unused (admin org UI stays Express). |
+| `USE_LARAVEL_API` | web env | Phase 5 slice 1: defaults **`true`**. Dual-write + attachment routing through Laravel. Set `false` or use `docker/compose.soak.yml` to opt out. |
 
 `APP_KEY` must be a Laravel key (`base64:...`). Generate with `php artisan key:generate --show` and place the value in `docker/secrets/app_key.txt`.
 

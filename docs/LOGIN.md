@@ -1,13 +1,14 @@
 # Login and built-in accounts (development)
 
-The web application provides a side-panel login page at `/login`. Authentication is **session-based** (cookie) in the Express app under `docker/web`.
+The Sign In UI is **Laravel Blade** at `/laravel/login` when `USE_LARAVEL_LOGIN_UI=true` (compose default). Express `/login` redirects there; success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin **Dashboard** and **Profile**, Ticket Reporter **Profile**, **Dashboard**, **ticket lists**, **ticket detail** (read-only), and **create/edit/preview forms** (GET). POST/uploads and other admin management pages remain Express.
 
 ## Access URL
 
 | Environment | URL |
 |-------------|-----|
-| Docker (default) | http://localhost:8080/login |
-| Web container direct | http://localhost:3000/login (internal network only) |
+| Docker (default) | http://localhost:8080/login → `/laravel/login` |
+| Blade login (direct) | http://localhost:8080/laravel/login |
+| Web container direct | http://localhost:3000/login (internal; redirects when flag on) |
 
 ## Roles (canonical)
 
@@ -52,11 +53,11 @@ Sign in as `reporter` / `a3c2026` → http://localhost:8080/supervisor
 |--------|-----|---------|
 | Overview | `/supervisor` | Summary and quick links |
 | Drafts / tickets | `/supervisor/tickets` | Create, edit drafts, track submitted work |
-| New report | `/supervisor/tickets/new` | 5W1H risk report |
+| New report | `/supervisor/tickets/new` (Blade `/laravel/...` when flag on) | 5W1H risk report |
 | Ticket detail | `/supervisor/tickets/:ref` | View, revise returned tickets, implement plans, accomplishments |
-| Returned / action | `/supervisor/actions` (and related queues) | Tickets needing revision or implementation |
-| Accomplishments | `/supervisor/accomplishments` | Accomplishment history |
-| Notifications | `/supervisor/notifications` | In-app alerts |
+| Returned / action | `/supervisor/actions` (Blade `/laravel/...` when flag on) | Tickets needing revision or implementation |
+| Accomplishments | `/supervisor/accomplishments` (Blade `/laravel/...` when flag on) | Accomplishment history |
+| Notifications | `/supervisor/notifications` (Blade `/laravel/...` when flag on) | In-app alerts |
 | Profile | `/supervisor/profile` | Account profile |
 
 **Submit rules:** All 5W1H fields and **at least one evidence file** (PDF/PNG/JPG) are required. Evidence metadata is stored in PostgreSQL (`risk_attachments`); file bytes go to MinIO/S3 (not `store.json`).
@@ -125,7 +126,7 @@ Sign in as `admin` / `a3c1993` (or `sys-admin` / `a3c2026`) → http://localhost
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
-| Overview | `/admin` | Summary and quick links |
+| Overview | `/admin` → `/laravel/admin` when `USE_LARAVEL_ADMIN_DASHBOARD_UI=true` | Summary and quick links |
 | Users | `/admin/users` | Create/edit users, roles, employee IDs (`EMP-###`), password reset |
 | Departments | `/admin/departments` | Department catalog |
 | Positions | `/admin/positions` | Position catalog |

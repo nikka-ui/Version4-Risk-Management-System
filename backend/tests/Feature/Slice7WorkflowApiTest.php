@@ -22,8 +22,8 @@ class Slice7WorkflowApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 10);
+            ->assertJsonPath('phase', 5)
+            ->assertJsonPath('slice', 14);
     }
 
     public function test_personnel_documents_comment_and_reopen(): void

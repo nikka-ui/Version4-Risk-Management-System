@@ -46,7 +46,7 @@ class SmokeDraftTickets extends Command
 
         $ref = $drafts->deleteDraft($ticket, $user);
         $this->info('deleted '.$ref);
-        $this->line('Express store.json was not modified. USE_LARAVEL_API remains OFF.');
+        $this->line('Express store.json was not modified. USE_LARAVEL_API defaults ON (Phase 5); Express UI remains browser entry.');
 
         return self::SUCCESS;
     }

@@ -16,13 +16,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // Edge nginx terminates TLS / sets X-Forwarded-*; trust all private proxies.
         $middleware->trustProxies(at: '*');
 
-        // API-only auth: never redirect guests to a web login route (Express owns /login).
-        $middleware->redirectGuestsTo(fn () => null);
+        // Browser guests → Blade login; API stays JSON (null redirect + shouldRenderJsonWhen).
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('v1') || $request->is('v1/*') || $request->expectsJson()) {
+                return null;
+            }
+
+            return '/laravel/login';
+        });
 
         // Optional future Express→Laravel service calls (not used by browser login).
         $middleware->alias([
             'rms.service_token' => \App\Http\Middleware\VerifyInternalServiceToken::class,
             'rms.admin' => \App\Http\Middleware\EnsureAdminRole::class,
+            'rms.web_admin' => \App\Http\Middleware\EnsureWebAdminRole::class,
+            'rms.web_supervisor' => \App\Http\Middleware\EnsureWebSupervisorRole::class,
             'rms.dept_head' => \App\Http\Middleware\EnsureDeptHeadRole::class,
             'rms.president' => \App\Http\Middleware\EnsurePresidentRole::class,
             'rms.officer' => \App\Http\Middleware\EnsureRmOfficerRole::class,

@@ -1,0 +1,24 @@
+# Phase 5 opt-out overlay — disables Laravel dual-write, auth, and Blade UI flags.
+#
+#   docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d web
+#
+# Restore defaults:
+#   docker compose -f docker/compose.yml -f docker/compose.override.yml up -d web nginx
+
+services:
+  web:
+    environment:
+      USE_LARAVEL_API: "false"
+      USE_LARAVEL_AUTH: "false"
+      USE_LARAVEL_LOGIN_UI: "false"
+      USE_LARAVEL_PROFILE_UI: "false"
+      USE_LARAVEL_REPORTER_PROFILE_UI: "false"
+      USE_LARAVEL_REPORTER_DASHBOARD_UI: "false"
+      USE_LARAVEL_REPORTER_TICKETS_UI: "false"
+      USE_LARAVEL_REPORTER_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_REPORTER_NOTIFICATIONS_UI: "false"
+      USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI: "false"
+      USE_LARAVEL_REPORTER_ACTIONS_UI: "false"
+      USE_LARAVEL_REPORTER_TICKET_FORM_UI: "false"
+      USE_LARAVEL_ADMIN_DASHBOARD_UI: "false"
+      LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}

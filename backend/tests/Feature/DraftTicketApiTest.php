@@ -41,8 +41,8 @@ class DraftTicketApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 5);
+            ->assertJsonPath('phase', 5)
+            ->assertJsonPath('slice', 14);
     }
 
     public function test_create_update_delete_draft(): void

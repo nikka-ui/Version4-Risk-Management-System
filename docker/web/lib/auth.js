@@ -130,6 +130,71 @@ function authenticate(username, password) {
   return { user: sessionUser(record) };
 }
 
+function sessionUserFromLaravel(identity) {
+  return {
+    username: identity.username,
+    role: identity.role,
+    roleLabel: identity.roleLabel,
+    displayName: identity.displayName,
+    email: identity.email || '',
+    department: identity.department || '',
+    position: identity.position || '',
+    employeeId: identity.employeeId || '',
+    canManageUsers: Boolean(identity.canManageUsers),
+  };
+}
+
+/**
+ * Phase 5 slice 2: async login. When USE_LARAVEL_AUTH=true, verify via Laravel;
+ * otherwise use Express store.json plaintext auth.
+ */
+async function authenticateAsync(username, password) {
+  const {
+    USE_LARAVEL_AUTH,
+    USE_LARAVEL_AUTH_FALLBACK,
+  } = require('../config/features');
+
+  if (!USE_LARAVEL_AUTH) {
+    return authenticate(username, password);
+  }
+
+  try {
+    const laravelApi = require('./laravelApi');
+    const data = await laravelApi.verifyCredentials(username, password);
+    if (!data?.user?.username) {
+      return { error: 'invalid_password' };
+    }
+    return { user: sessionUserFromLaravel(data.user) };
+  } catch (err) {
+    const status = err?.status;
+    if (status === 422) {
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('inactive')) return { error: 'inactive_account' };
+      // Laravel collapses unknown/bad password into one message.
+      const record = findUserRecord(username);
+      if (!record) return { error: 'invalid_username' };
+      return { error: 'invalid_password' };
+    }
+    if (USE_LARAVEL_AUTH_FALLBACK && (!status || status >= 500)) {
+      console.warn('[laravel-auth] verify unavailable, falling back to store:', err?.message || err);
+      return authenticate(username, password);
+    }
+    console.warn('[laravel-auth] verify failed:', err?.message || err);
+    return { error: 'auth_unavailable' };
+  }
+}
+
+/**
+ * Best-effort dual-write of user credentials/profile to Laravel when auth flag is on.
+ */
+function fireUserSync(adminUsername, payload) {
+  const { USE_LARAVEL_AUTH } = require('../config/features');
+  if (!USE_LARAVEL_AUTH) return;
+  Promise.resolve()
+    .then(() => require('./laravelApi').syncUser(adminUsername, payload))
+    .catch((err) => console.warn('[laravel-auth] user sync failed:', err?.message || err));
+}
+
 function sessionUser(record) {
   const pub = publicUser(record);
   return {
@@ -163,6 +228,9 @@ module.exports = {
   requirePresident,
   requireRole,
   authenticate,
+  authenticateAsync,
   sessionUser,
+  sessionUserFromLaravel,
   refreshSessionUser,
+  fireUserSync,
 };

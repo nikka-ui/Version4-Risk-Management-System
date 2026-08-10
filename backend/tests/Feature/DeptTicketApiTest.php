@@ -21,8 +21,8 @@ class DeptTicketApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 3)
-            ->assertJsonPath('slice', 10);
+            ->assertJsonPath('phase', 5)
+            ->assertJsonPath('slice', 14);
     }
 
     public function test_accept_reject_and_action_plan_flow(): void

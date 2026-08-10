@@ -218,6 +218,108 @@ async function mirrorReportLogAppend(entry) {
   return request('POST', '/v1/report-logs', { token, body: entry });
 }
 
+/**
+ * Phase 5 slice 2: verify credentials via Laravel (no Sanctum token minted).
+ */
+async function verifyCredentials(username, password) {
+  return request('POST', '/v1/auth/verify', {
+    body: { username, password },
+  });
+}
+
+/** Phase 5 slice 4: exchange one-time Blade-login bridge code for user identity. */
+async function exchangeBridgeCode(code) {
+  return request('POST', '/v1/auth/bridge-exchange', {
+    body: { code },
+  });
+}
+
+/**
+ * Phase 5 slice 2: upsert user into Laravel (admin dual-write after Express store write).
+ */
+async function syncUser(adminUsername, payload) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('POST', '/v1/users/sync', { token, body: payload });
+}
+
+/**
+ * Phase 3 slice 11: multipart upload to Laravel (bytes + metadata).
+ * `files` are multer memory-storage objects: { buffer, originalname, mimetype, size }.
+ */
+async function uploadAttachments(reference, username, files = []) {
+  const token = await getTokenForUsername(username);
+  const form = new FormData();
+  for (const file of files) {
+    if (!file?.buffer) continue;
+    const blob = new Blob([file.buffer], {
+      type: file.mimetype || 'application/octet-stream',
+    });
+    form.append('attachments', blob, file.originalname || 'file');
+  }
+
+  const res = await fetch(
+    `${BASE_URL}/v1/tickets/${encodeURIComponent(reference)}/attachments/upload`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    },
+  );
+
+  let data = null;
+  const text = await res.text();
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
+
+  if (!res.ok) {
+    const message = data?.message || data?.errors
+      ? JSON.stringify(data.errors || data.message)
+      : `Laravel upload ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
+
+/**
+ * Phase 3 slice 11: fetch attachment bytes from Laravel as a Response (streamable body).
+ */
+async function downloadAttachment(username, id) {
+  const token = await getTokenForUsername(username || process.env.LARAVEL_SYSTEM_USERNAME || 'admin');
+  const res = await fetch(
+    `${BASE_URL}/v1/attachments/${encodeURIComponent(id)}/download`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+
+  if (!res.ok) {
+    let message = `Laravel download ${res.status}`;
+    try {
+      const data = await res.json();
+      message = data?.message || message;
+    } catch {
+      /* ignore */
+    }
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+
+  return res;
+}
+
 module.exports = {
   BASE_URL,
   mirrorDraftCreate,
@@ -241,4 +343,9 @@ module.exports = {
   mirrorNotificationsReadAll,
   mirrorNotificationRead,
   mirrorReportLogAppend,
+  uploadAttachments,
+  downloadAttachment,
+  verifyCredentials,
+  exchangeBridgeCode,
+  syncUser,
 };

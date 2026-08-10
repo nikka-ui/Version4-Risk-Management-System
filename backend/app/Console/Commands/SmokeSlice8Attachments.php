@@ -58,7 +58,7 @@ class SmokeSlice8Attachments extends Command
         $attachments->deleteMetadata($att->id);
         $ticket->delete();
         $this->info("cleaned up {$ticket->reference}");
-        $this->line('Express store.json / MinIO were not modified. USE_LARAVEL_API remains OFF by default.');
+        $this->line('Express store.json / MinIO were not modified. USE_LARAVEL_API defaults ON (Phase 5); Express UI remains browser entry.');
 
         return self::SUCCESS;
     }
