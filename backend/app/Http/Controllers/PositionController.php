@@ -37,6 +37,7 @@ class PositionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $fields = $request->validate([
+            'id' => ['sometimes', 'string', 'max:64'],
             'name' => ['required', 'string', 'max:128'],
         ]);
 
@@ -45,8 +46,14 @@ class PositionController extends Controller
             return response()->json(['message' => 'Position name is required.'], 422);
         }
 
+        $externalId = trim((string) ($fields['id'] ?? ''));
+        if ($externalId === '') {
+            $externalId = 'pos-'.(int) round(microtime(true) * 1000);
+        }
+
         $dup = Position::query()
             ->where('active', true)
+            ->where('external_id', '!=', $externalId)
             ->whereRaw('LOWER(name) = ?', [strtolower($name)])
             ->exists();
 
@@ -54,13 +61,15 @@ class PositionController extends Controller
             return response()->json(['message' => 'Position already exists.'], 422);
         }
 
-        $pos = Position::query()->create([
-            'external_id' => 'pos-'.(int) round(microtime(true) * 1000),
-            'name' => $name,
-            'active' => true,
-        ]);
+        $pos = Position::query()->updateOrCreate(
+            ['external_id' => $externalId],
+            [
+                'name' => $name,
+                'active' => true,
+            ],
+        );
 
-        return response()->json(['position' => $pos->toExpressArray()], 201);
+        return response()->json(['position' => $pos->fresh()->toExpressArray()], 201);
     }
 
     public function update(Request $request, string $externalId): JsonResponse

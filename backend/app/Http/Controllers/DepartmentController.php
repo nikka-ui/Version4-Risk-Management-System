@@ -37,6 +37,7 @@ class DepartmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $fields = $request->validate([
+            'id' => ['sometimes', 'string', 'max:64'],
             'name' => ['required', 'string', 'max:128'],
             'code' => ['required', 'string', 'max:32'],
             'description' => ['sometimes', 'string'],
@@ -48,9 +49,14 @@ class DepartmentController extends Controller
         $name = trim($fields['name']);
         $code = strtoupper(trim($fields['code']));
         $status = ($fields['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active';
+        $externalId = trim((string) ($fields['id'] ?? ''));
+        if ($externalId === '') {
+            $externalId = 'dept-'.(int) round(microtime(true) * 1000);
+        }
 
         $dup = Department::query()
             ->where('active', true)
+            ->where('external_id', '!=', $externalId)
             ->where(function ($q) use ($code, $name) {
                 $q->where('code', $code)
                     ->orWhereRaw('LOWER(name) = ?', [strtolower($name)]);
@@ -61,18 +67,20 @@ class DepartmentController extends Controller
             return response()->json(['message' => 'A department with that name or code already exists.'], 422);
         }
 
-        $dept = Department::query()->create([
-            'external_id' => 'dept-'.(int) round(microtime(true) * 1000),
-            'name' => $name,
-            'code' => $code,
-            'description' => trim((string) ($fields['description'] ?? '')),
-            'head' => isset($fields['head']) && $fields['head'] !== '' ? trim((string) $fields['head']) : null,
-            'status' => $status,
-            'active' => $status !== 'inactive',
-            'auto_approve_low_moderate' => (bool) ($fields['autoApproveLowModerate'] ?? false),
-        ]);
+        $dept = Department::query()->updateOrCreate(
+            ['external_id' => $externalId],
+            [
+                'name' => $name,
+                'code' => $code,
+                'description' => trim((string) ($fields['description'] ?? '')),
+                'head' => isset($fields['head']) && $fields['head'] !== '' ? trim((string) $fields['head']) : null,
+                'status' => $status,
+                'active' => $status !== 'inactive',
+                'auto_approve_low_moderate' => (bool) ($fields['autoApproveLowModerate'] ?? false),
+            ],
+        );
 
-        return response()->json(['department' => $dept->toExpressArray()], 201);
+        return response()->json(['department' => $dept->fresh()->toExpressArray()], 201);
     }
 
     public function update(Request $request, string $externalId): JsonResponse

@@ -79,6 +79,11 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade reporter ticket forms** | Phase 5 slice 13: create/edit/preview GETs → `/laravel/supervisor/tickets/...` when `USE_LARAVEL_REPORTER_TICKET_FORM_UI=true` |
 | **Blade admin dashboard** | Phase 5 slice 14: `GET /admin` → `/laravel/admin` when `USE_LARAVEL_ADMIN_DASHBOARD_UI=true` |
 | **Blade admin users** | Phase 5 slice 15: `GET /admin/users` → `/laravel/admin/users` when `USE_LARAVEL_ADMIN_USERS_UI=true` |
+| **Blade admin departments** | Phase 5 slice 16: `GET /admin/departments` → `/laravel/admin/departments` when `USE_LARAVEL_ADMIN_DEPARTMENTS_UI=true` |
+| **Blade admin positions** | Phase 5 slice 17: `GET /admin/positions` → `/laravel/admin/positions` when `USE_LARAVEL_ADMIN_POSITIONS_UI=true` |
+| **Blade admin tickets** | Phase 5 slice 18: `GET /admin/tickets` → `/laravel/admin/tickets` when `USE_LARAVEL_ADMIN_TICKETS_UI=true` |
+| **Blade admin ticket detail** | Phase 5 slice 19: `GET /admin/tickets/:ref` → `/laravel/admin/tickets/:ref` when `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI=true` |
+| **Blade admin audit logs** | Phase 5 slice 20: `GET /admin/audit-logs` → `/laravel/admin/audit-logs` when `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI=true` |
 | **Production** | `docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d` |
 
 Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, privkey.pem) and updated secrets.

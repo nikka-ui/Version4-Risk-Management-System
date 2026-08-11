@@ -17,7 +17,7 @@ class AuthTokenTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('phase', 5)
-            ->assertJsonPath('slice', 15);
+            ->assertJsonPath('slice', 20);
     }
 
     public function test_verify_credentials_without_token(): void

@@ -43,8 +43,22 @@ class AdminDashboardService
             ],
             'recentUsers' => $this->recentUsers(),
             'deletedTickets' => $this->recentDeletedTickets(),
-            'auditLogs' => [],
+            'auditLogs' => $this->recentAuditLogs(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function recentAuditLogs(): array
+    {
+        $storePath = (string) config('rms.store_json_path');
+        $raw = @file_get_contents($storePath);
+        $data = $raw ? json_decode($raw, true) : [];
+        $logs = is_array($data['auditLogs'] ?? null) ? (array) $data['auditLogs'] : [];
+
+        usort($logs, fn (array $a, array $b) => strcmp((string) ($b['at'] ?? ''), (string) ($a['at'] ?? '')));
+        return array_values(array_slice($logs, 0, 8));
     }
 
     /**

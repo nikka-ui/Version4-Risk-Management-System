@@ -20,10 +20,10 @@
     $nav = [
       ['id' => 'dashboard', 'href' => '/laravel/admin', 'label' => 'Dashboard'],
       ['id' => 'users', 'href' => '/laravel/admin/users', 'label' => 'User Management'],
-      ['id' => 'departments', 'href' => '/admin/departments', 'label' => 'Department Management'],
-      ['id' => 'positions', 'href' => '/admin/positions', 'label' => 'Position Management'],
-      ['id' => 'tickets', 'href' => '/admin/tickets', 'label' => 'Ticket Management'],
-      ['id' => 'audit', 'href' => '/admin/audit-logs', 'label' => 'Audit Logs'],
+      ['id' => 'departments', 'href' => '/laravel/admin/departments', 'label' => 'Department Management'],
+      ['id' => 'positions', 'href' => '/laravel/admin/positions', 'label' => 'Position Management'],
+      ['id' => 'tickets', 'href' => '/laravel/admin/tickets', 'label' => 'Ticket Management'],
+      ['id' => 'audit', 'href' => '/laravel/admin/audit-logs', 'label' => 'Audit Logs'],
       ['id' => 'settings', 'href' => '/admin/settings', 'label' => 'System Settings'],
       ['id' => 'profile', 'href' => '/laravel/admin/profile', 'label' => 'Profile'],
     ];

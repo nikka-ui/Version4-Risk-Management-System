@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminDepartmentController;
+use App\Http\Controllers\AdminPositionController;
+use App\Http\Controllers\AdminTicketController;
+use App\Http\Controllers\AdminTicketDetailController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileController;
@@ -20,7 +24,7 @@ Route::get('/', function () {
         'message' => 'API root. Versioned routes live under /v1 (public URL /api/v1). Browser UI under /laravel/*.',
         'version' => 'v1',
         'phase' => 5,
-        'slice' => 15,
+        'slice' => 20,
     ]);
 });
 
@@ -40,6 +44,20 @@ Route::middleware(['auth', 'rms.web_admin'])->group(function () {
     Route::get('/admin/users/{username}/edit', [AdminUserController::class, 'edit'])
         ->where('username', '[A-Za-z0-9._-]+')
         ->name('admin.users.edit');
+    Route::get('/admin/departments', [AdminDepartmentController::class, 'index'])->name('admin.departments');
+    Route::get('/admin/departments/{id}/edit', [AdminDepartmentController::class, 'edit'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('admin.departments.edit');
+    Route::get('/admin/positions', [AdminPositionController::class, 'index'])->name('admin.positions');
+    Route::get('/admin/positions/{id}/edit', [AdminPositionController::class, 'edit'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('admin.positions.edit');
+    Route::get('/admin/tickets', [AdminTicketController::class, 'index'])->name('admin.tickets');
+    Route::get('/admin/tickets/{ref}', [AdminTicketDetailController::class, 'index'])
+        ->where('ref', 'RISK-[A-Za-z0-9\\-]+')
+        ->name('admin.tickets.detail');
+    Route::get('/admin/audit-logs', [\App\Http\Controllers\AdminAuditLogsController::class, 'index'])
+        ->name('admin.audit.logs');
     Route::get('/admin/profile', [ProfileController::class, 'admin'])->name('admin.profile');
 });
 

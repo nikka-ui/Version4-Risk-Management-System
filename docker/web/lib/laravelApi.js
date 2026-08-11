@@ -243,6 +243,74 @@ async function syncUser(adminUsername, payload) {
 }
 
 /**
+ * Phase 5 slice 16: mirror Express department writes into Laravel Postgres.
+ */
+async function syncDepartmentCreate(adminUsername, department) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('POST', '/v1/departments', {
+    token,
+    body: {
+      id: department.id,
+      name: department.name,
+      code: department.code,
+      description: department.description || '',
+      head: department.head,
+      status: department.status || 'active',
+      autoApproveLowModerate: Boolean(department.autoApproveLowModerate),
+    },
+  });
+}
+
+async function syncDepartmentUpdate(adminUsername, department) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('PATCH', `/v1/departments/${encodeURIComponent(department.id)}`, {
+    token,
+    body: {
+      name: department.name,
+      code: department.code,
+      description: department.description || '',
+      head: department.head,
+      status: department.status || 'active',
+      autoApproveLowModerate: Boolean(department.autoApproveLowModerate),
+    },
+  });
+}
+
+async function syncDepartmentDelete(adminUsername, id) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('DELETE', `/v1/departments/${encodeURIComponent(id)}`, { token });
+}
+
+/**
+ * Phase 5 slice 17: mirror Express position writes into Laravel Postgres.
+ */
+async function syncPositionCreate(adminUsername, position) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('POST', '/v1/positions', {
+    token,
+    body: {
+      id: position.id,
+      name: position.name,
+    },
+  });
+}
+
+async function syncPositionUpdate(adminUsername, position) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('PATCH', `/v1/positions/${encodeURIComponent(position.id)}`, {
+    token,
+    body: {
+      name: position.name,
+    },
+  });
+}
+
+async function syncPositionDelete(adminUsername, id) {
+  const token = await getTokenForUsername(adminUsername);
+  return request('DELETE', `/v1/positions/${encodeURIComponent(id)}`, { token });
+}
+
+/**
  * Phase 3 slice 11: multipart upload to Laravel (bytes + metadata).
  * `files` are multer memory-storage objects: { buffer, originalname, mimetype, size }.
  */
@@ -348,4 +416,10 @@ module.exports = {
   verifyCredentials,
   exchangeBridgeCode,
   syncUser,
+  syncDepartmentCreate,
+  syncDepartmentUpdate,
+  syncDepartmentDelete,
+  syncPositionCreate,
+  syncPositionUpdate,
+  syncPositionDelete,
 };

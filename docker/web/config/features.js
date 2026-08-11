@@ -1,6 +1,11 @@
 /**
  * Feature flags for gradual Laravel migration.
  *
+ * Phase 5 slice 20: USE_LARAVEL_ADMIN_AUDIT_LOGS_UI — Express GET /admin/audit-logs redirects to Blade.
+ * Phase 5 slice 19: USE_LARAVEL_ADMIN_TICKET_DETAIL_UI — Express GET /admin/tickets/:ref redirects to Blade.
+ * Phase 5 slice 18: USE_LARAVEL_ADMIN_TICKETS_UI — Express GET /admin/tickets redirects to Blade.
+ * Phase 5 slice 17: USE_LARAVEL_ADMIN_POSITIONS_UI — Express GET /admin/positions redirects to Blade.
+ * Phase 5 slice 16: USE_LARAVEL_ADMIN_DEPARTMENTS_UI — Express GET /admin/departments redirects to Blade.
  * Phase 5 slice 15: USE_LARAVEL_ADMIN_USERS_UI — Express GET /admin/users redirects to Blade.
  * Phase 5 slice 14: USE_LARAVEL_ADMIN_DASHBOARD_UI — Express GET /admin redirects to Blade.
  * Phase 5 slice 13: USE_LARAVEL_REPORTER_TICKET_FORM_UI — Express create/edit/preview
@@ -77,6 +82,31 @@ module.exports = {
    * Compose default true as of Phase 5 slice 15. POSTs stay on Express.
    */
   USE_LARAVEL_ADMIN_USERS_UI: process.env.USE_LARAVEL_ADMIN_USERS_UI === 'true',
+  /**
+   * When true, Express GET /admin/departments (+ edit) redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 16. POSTs stay on Express.
+   */
+  USE_LARAVEL_ADMIN_DEPARTMENTS_UI: process.env.USE_LARAVEL_ADMIN_DEPARTMENTS_UI === 'true',
+  /**
+   * When true, Express GET /admin/positions (+ edit) redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 17. POSTs stay on Express.
+   */
+  USE_LARAVEL_ADMIN_POSITIONS_UI: process.env.USE_LARAVEL_ADMIN_POSITIONS_UI === 'true',
+  /**
+   * When true, Express GET /admin/tickets redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 18. Delete POST stays on Express.
+   */
+  USE_LARAVEL_ADMIN_TICKETS_UI: process.env.USE_LARAVEL_ADMIN_TICKETS_UI === 'true',
+  /**
+   * When true, Express GET /admin/tickets/:ref redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 19. Detail view stays read-only.
+   */
+  USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: process.env.USE_LARAVEL_ADMIN_TICKET_DETAIL_UI === 'true',
+  /**
+   * When true, Express GET /admin/audit-logs redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 20.
+   */
+  USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: process.env.USE_LARAVEL_ADMIN_AUDIT_LOGS_UI === 'true',
   /** When true (future), admin org reads may use Laravel /api/v1 — unused today. */
   USE_LARAVEL_ORG: process.env.USE_LARAVEL_ORG === 'true',
   /**

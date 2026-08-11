@@ -323,13 +323,18 @@ app.get('/health', (req, res) => {
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
     USE_LARAVEL_ADMIN_USERS_UI,
+    USE_LARAVEL_ADMIN_DEPARTMENTS_UI,
+    USE_LARAVEL_ADMIN_POSITIONS_UI,
+    USE_LARAVEL_ADMIN_TICKETS_UI,
+    USE_LARAVEL_ADMIN_TICKET_DETAIL_UI,
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
     USE_LARAVEL_ORG,
   } = require('./config/features');
   res.json({
     status: 'ok',
     service: 'web',
     phase: 5,
-    slice: 15,
+    slice: 20,
     laravelBridge: {
       USE_LARAVEL_API: Boolean(USE_LARAVEL_API),
       USE_LARAVEL_AUTH: Boolean(USE_LARAVEL_AUTH),
@@ -346,6 +351,11 @@ app.get('/health', (req, res) => {
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: Boolean(USE_LARAVEL_REPORTER_TICKET_FORM_UI),
       USE_LARAVEL_ADMIN_DASHBOARD_UI: Boolean(USE_LARAVEL_ADMIN_DASHBOARD_UI),
       USE_LARAVEL_ADMIN_USERS_UI: Boolean(USE_LARAVEL_ADMIN_USERS_UI),
+      USE_LARAVEL_ADMIN_DEPARTMENTS_UI: Boolean(USE_LARAVEL_ADMIN_DEPARTMENTS_UI),
+      USE_LARAVEL_ADMIN_POSITIONS_UI: Boolean(USE_LARAVEL_ADMIN_POSITIONS_UI),
+      USE_LARAVEL_ADMIN_TICKETS_UI: Boolean(USE_LARAVEL_ADMIN_TICKETS_UI),
+      USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_ADMIN_TICKET_DETAIL_UI),
+      USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: Boolean(USE_LARAVEL_ADMIN_AUDIT_LOGS_UI),
       USE_LARAVEL_ORG: Boolean(USE_LARAVEL_ORG),
     },
   });
@@ -524,6 +534,11 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
     USE_LARAVEL_ADMIN_USERS_UI,
+    USE_LARAVEL_ADMIN_DEPARTMENTS_UI,
+    USE_LARAVEL_ADMIN_POSITIONS_UI,
+    USE_LARAVEL_ADMIN_TICKETS_UI,
+    USE_LARAVEL_ADMIN_TICKET_DETAIL_UI,
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -537,7 +552,12 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACTIONS_UI ||
     USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
     USE_LARAVEL_ADMIN_DASHBOARD_UI ||
-    USE_LARAVEL_ADMIN_USERS_UI
+    USE_LARAVEL_ADMIN_USERS_UI ||
+    USE_LARAVEL_ADMIN_DEPARTMENTS_UI ||
+    USE_LARAVEL_ADMIN_POSITIONS_UI ||
+    USE_LARAVEL_ADMIN_TICKETS_UI ||
+    USE_LARAVEL_ADMIN_TICKET_DETAIL_UI ||
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -569,6 +589,10 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
     USE_LARAVEL_ADMIN_USERS_UI,
+    USE_LARAVEL_ADMIN_DEPARTMENTS_UI,
+    USE_LARAVEL_ADMIN_POSITIONS_UI,
+    USE_LARAVEL_ADMIN_TICKETS_UI,
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -582,7 +606,11 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACTIONS_UI ||
     USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
     USE_LARAVEL_ADMIN_DASHBOARD_UI ||
-    USE_LARAVEL_ADMIN_USERS_UI
+    USE_LARAVEL_ADMIN_USERS_UI ||
+    USE_LARAVEL_ADMIN_DEPARTMENTS_UI ||
+    USE_LARAVEL_ADMIN_POSITIONS_UI ||
+    USE_LARAVEL_ADMIN_TICKETS_UI ||
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -1973,7 +2001,27 @@ app.post('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
   return res.redirect(adminUsersListPath('flash=password_reset'));
 });
 
+function adminDepartmentsListPath(query = '') {
+  const { USE_LARAVEL_ADMIN_DEPARTMENTS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_DEPARTMENTS_UI ? '/laravel/admin/departments' : '/admin/departments';
+  return query ? `${base}?${query}` : base;
+}
+
+function adminDepartmentsEditPath(id, query = '') {
+  const { USE_LARAVEL_ADMIN_DEPARTMENTS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_DEPARTMENTS_UI
+    ? `/laravel/admin/departments/${encodeURIComponent(id)}/edit`
+    : `/admin/departments/${encodeURIComponent(id)}/edit`;
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/admin/departments', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DEPARTMENTS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DEPARTMENTS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/departments${qs ? `?${qs}` : ''}`);
+  }
+
   res.type('html').send(
     departmentsPage(
       req.session.user,
@@ -1986,8 +2034,16 @@ app.get('/admin/departments', requireAdmin, (req, res) => {
 });
 
 app.get('/admin/departments/:id/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DEPARTMENTS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DEPARTMENTS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(
+      `/laravel/admin/departments/${encodeURIComponent(req.params.id)}/edit${qs ? `?${qs}` : ''}`,
+    );
+  }
+
   const editDept = findDepartment(req.params.id);
-  if (!editDept) return res.redirect('/admin/departments?flash=not_found');
+  if (!editDept) return res.redirect(adminDepartmentsListPath('flash=not_found'));
   res.type('html').send(
     departmentsPage(
       req.session.user,
@@ -2001,40 +2057,78 @@ app.get('/admin/departments/:id/edit', requireAdmin, (req, res) => {
 
 app.post('/admin/departments', requireAdmin, (req, res) => {
   const result = createDepartment(req.body);
-  if (result.error) return adminError(res, '/admin/departments', result.error);
+  if (result.error) return adminError(res, adminDepartmentsListPath(), result.error);
   logAdminAction(req, {
     action: 'department_created',
     module: 'Department Management',
     description: `Added department: ${result.department.name}`,
   });
   notifyAdmin({ type: 'department_added', title: 'Department added', message: result.department.name });
-  return res.redirect('/admin/departments?flash=created');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncDepartmentCreate(req.session.user.username, result.department))
+      .catch((err) => console.warn('[laravel-api] department create sync failed:', err?.message || err));
+  }
+  return res.redirect(adminDepartmentsListPath('flash=created'));
 });
 
 app.post('/admin/departments/:id/edit', requireAdmin, (req, res) => {
   const result = updateDepartment(req.params.id, req.body);
-  if (result.error) return adminError(res, `/admin/departments/${req.params.id}/edit`, result.error);
+  if (result.error) return adminError(res, adminDepartmentsEditPath(req.params.id), result.error);
   logAdminAction(req, {
     action: 'department_updated',
     module: 'Department Management',
     description: `Updated department: ${result.department.name}`,
   });
-  return res.redirect('/admin/departments?flash=updated');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncDepartmentUpdate(req.session.user.username, result.department))
+      .catch((err) => console.warn('[laravel-api] department update sync failed:', err?.message || err));
+  }
+  return res.redirect(adminDepartmentsListPath('flash=updated'));
 });
 
 app.post('/admin/departments/:id/delete', requireAdmin, (req, res) => {
   const dept = findDepartment(req.params.id);
   const result = deleteDepartment(req.params.id);
-  if (result.error) return adminError(res, '/admin/departments', result.error);
+  if (result.error) return adminError(res, adminDepartmentsListPath(), result.error);
   logAdminAction(req, {
     action: 'department_deleted',
     module: 'Department Management',
     description: `Deleted department: ${dept?.name || req.params.id}`,
   });
-  return res.redirect('/admin/departments?flash=deleted');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncDepartmentDelete(req.session.user.username, req.params.id))
+      .catch((err) => console.warn('[laravel-api] department delete sync failed:', err?.message || err));
+  }
+  return res.redirect(adminDepartmentsListPath('flash=deleted'));
 });
 
+function adminPositionsListPath(query = '') {
+  const { USE_LARAVEL_ADMIN_POSITIONS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_POSITIONS_UI ? '/laravel/admin/positions' : '/admin/positions';
+  return query ? `${base}?${query}` : base;
+}
+
+function adminPositionsEditPath(id, query = '') {
+  const { USE_LARAVEL_ADMIN_POSITIONS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_POSITIONS_UI
+    ? `/laravel/admin/positions/${encodeURIComponent(id)}/edit`
+    : `/admin/positions/${encodeURIComponent(id)}/edit`;
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/admin/positions', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_POSITIONS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_POSITIONS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/positions${qs ? `?${qs}` : ''}`);
+  }
+
   res.type('html').send(
     positionsPage(
       req.session.user,
@@ -2047,9 +2141,17 @@ app.get('/admin/positions', requireAdmin, (req, res) => {
 });
 
 app.get('/admin/positions/:id/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_POSITIONS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_POSITIONS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(
+      `/laravel/admin/positions/${encodeURIComponent(req.params.id)}/edit${qs ? `?${qs}` : ''}`,
+    );
+  }
+
   const positions = listPositions();
   const editPos = positions.find((p) => p.id === req.params.id);
-  if (!editPos) return res.redirect('/admin/positions?flash=not_found');
+  if (!editPos) return res.redirect(adminPositionsListPath('flash=not_found'));
   res.type('html').send(
     positionsPage(
       req.session.user,
@@ -2063,40 +2165,70 @@ app.get('/admin/positions/:id/edit', requireAdmin, (req, res) => {
 
 app.post('/admin/positions', requireAdmin, (req, res) => {
   const result = createPosition(req.body.name);
-  if (result.error) return adminError(res, '/admin/positions', result.error);
+  if (result.error) return adminError(res, adminPositionsListPath(), result.error);
   logAdminAction(req, {
     action: 'position_created',
     module: 'Position Management',
     description: `Added position: ${result.position.name}`,
   });
-  return res.redirect('/admin/positions?flash=created');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncPositionCreate(req.session.user.username, result.position))
+      .catch((err) => console.warn('[laravel-api] position create sync failed:', err?.message || err));
+  }
+  return res.redirect(adminPositionsListPath('flash=created'));
 });
 
 app.post('/admin/positions/:id/edit', requireAdmin, (req, res) => {
   const result = updatePosition(req.params.id, req.body.name);
-  if (result.error) return adminError(res, `/admin/positions/${req.params.id}/edit`, result.error);
+  if (result.error) return adminError(res, adminPositionsEditPath(req.params.id), result.error);
   logAdminAction(req, {
     action: 'position_updated',
     module: 'Position Management',
     description: `Updated position: ${result.position.name}`,
   });
-  return res.redirect('/admin/positions?flash=updated');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncPositionUpdate(req.session.user.username, result.position))
+      .catch((err) => console.warn('[laravel-api] position update sync failed:', err?.message || err));
+  }
+  return res.redirect(adminPositionsListPath('flash=updated'));
 });
 
 app.post('/admin/positions/:id/delete', requireAdmin, (req, res) => {
   const positions = listPositions();
   const pos = positions.find((p) => p.id === req.params.id);
   const result = deletePosition(req.params.id);
-  if (result.error) return adminError(res, '/admin/positions', result.error);
+  if (result.error) return adminError(res, adminPositionsListPath(), result.error);
   logAdminAction(req, {
     action: 'position_deleted',
     module: 'Position Management',
     description: `Deleted position: ${pos?.name || req.params.id}`,
   });
-  return res.redirect('/admin/positions?flash=deleted');
+  const { USE_LARAVEL_API } = require('./config/features');
+  if (USE_LARAVEL_API) {
+    Promise.resolve()
+      .then(() => require('./lib/laravelApi').syncPositionDelete(req.session.user.username, req.params.id))
+      .catch((err) => console.warn('[laravel-api] position delete sync failed:', err?.message || err));
+  }
+  return res.redirect(adminPositionsListPath('flash=deleted'));
 });
 
+function adminTicketsListPath(query = '') {
+  const { USE_LARAVEL_ADMIN_TICKETS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_TICKETS_UI ? '/laravel/admin/tickets' : '/admin/tickets';
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/admin/tickets', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_TICKETS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_TICKETS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/tickets${qs ? `?${qs}` : ''}`);
+  }
+
   let status = req.query.status;
   if (status === 'open') status = '';
   const filters = {
@@ -2131,8 +2263,14 @@ app.get('/admin/tickets', requireAdmin, (req, res) => {
 });
 
 app.get('/admin/tickets/:ref', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_TICKET_DETAIL_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/tickets/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`);
+  }
+
   const ticket = getTicketByRefForAdmin(req.params.ref);
-  if (!ticket) return res.redirect('/admin/tickets?flash=not_found');
+  if (!ticket) return res.redirect(adminTicketsListPath('flash=not_found'));
   const pub = publicTicket(ticket);
   pub.riskLevel = ticketRiskLevelId(ticket);
   pub.deleted = Boolean(ticket.deleted);
@@ -2142,7 +2280,7 @@ app.get('/admin/tickets/:ref', requireAdmin, (req, res) => {
 
 app.post('/admin/tickets/:ref/delete', requireAdmin, (req, res) => {
   const result = softDeleteTicketForAdmin(req.params.ref, req.session.user, req.body.reason);
-  if (result.error) return adminError(res, '/admin/tickets', result.error);
+  if (result.error) return adminError(res, adminTicketsListPath(), result.error);
   logAdminAction(req, {
     action: 'ticket_deleted',
     module: 'Ticket Management',
@@ -2153,10 +2291,15 @@ app.post('/admin/tickets/:ref/delete', requireAdmin, (req, res) => {
     title: 'Ticket deleted',
     message: `Ticket ${req.params.ref} was soft-deleted.`,
   });
-  return res.redirect('/admin/tickets?flash=ticket_deleted');
+  return res.redirect(adminTicketsListPath('flash=ticket_deleted'));
 });
 
 app.get('/admin/audit-logs', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_AUDIT_LOGS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_AUDIT_LOGS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/audit-logs${qs ? `?${qs}` : ''}`);
+  }
   const filters = {
     q: req.query.q,
     date: req.query.date,

@@ -97,6 +97,11 @@ Change before sharing dev environments.
 | `USE_LARAVEL_REPORTER_TICKET_FORM_UI` | web env | Phase 5 slice 13: defaults **`true`**. Express GET create/edit/preview form routes redirect to Blade; POST + uploads stay on Express. |
 | `USE_LARAVEL_ADMIN_DASHBOARD_UI` | web env | Phase 5 slice 14: defaults **`true`**. Express GET `/admin` redirects to Blade dashboard; management POSTs stay on Express. |
 | `USE_LARAVEL_ADMIN_USERS_UI` | web env | Phase 5 slice 15: defaults **`true`**. Express GET `/admin/users` (+ edit) redirects to Blade; create/edit/status/reset POSTs stay on Express. |
+| `USE_LARAVEL_ADMIN_DEPARTMENTS_UI` | web env | Phase 5 slice 16: defaults **`true`**. Express GET `/admin/departments` (+ edit) redirects to Blade; create/edit/delete POSTs stay on Express. |
+| `USE_LARAVEL_ADMIN_POSITIONS_UI` | web env | Phase 5 slice 17: defaults **`true`**. Express GET `/admin/positions` (+ edit) redirects to Blade; create/edit/delete POSTs stay on Express. |
+| `USE_LARAVEL_ADMIN_TICKETS_UI` | web env | Phase 5 slice 18: defaults **`true`**. Express GET `/admin/tickets` redirects to Blade; delete POST stays on Express; ticket detail still Express. |
+| `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI` | web env | Phase 5 slice 19: defaults **`true`**. Express GET `/admin/tickets/:ref` redirects to Blade; detail view now read-only on Laravel. |
+| `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI` | web env | Phase 5 slice 20: defaults **`true`**. Express GET `/admin/audit-logs` redirects to Blade; export remains on Express. |
 | `USE_LARAVEL_AUTH_FALLBACK` | web env | If auth flag on and Laravel unreachable, fall back to store.json auth. Default **`false`** (fail closed). |
 | `USE_LARAVEL_ORG` | web env | Unused (admin org UI stays Express). |
 | `USE_LARAVEL_API` | web env | Phase 5 slice 1: defaults **`true`**. Dual-write + attachment routing through Laravel. Set `false` or use `docker/compose.soak.yml` to opt out. |

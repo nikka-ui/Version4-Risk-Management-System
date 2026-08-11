@@ -88,6 +88,16 @@ services:
       USE_LARAVEL_ADMIN_DASHBOARD_UI: ${USE_LARAVEL_ADMIN_DASHBOARD_UI:-true}
       # Phase 5 slice 15: Blade admin user management at /laravel/admin/users.
       USE_LARAVEL_ADMIN_USERS_UI: ${USE_LARAVEL_ADMIN_USERS_UI:-true}
+      # Phase 5 slice 16: Blade admin departments at /laravel/admin/departments.
+      USE_LARAVEL_ADMIN_DEPARTMENTS_UI: ${USE_LARAVEL_ADMIN_DEPARTMENTS_UI:-true}
+      # Phase 5 slice 17: Blade admin positions at /laravel/admin/positions.
+      USE_LARAVEL_ADMIN_POSITIONS_UI: ${USE_LARAVEL_ADMIN_POSITIONS_UI:-true}
+      # Phase 5 slice 18: Blade admin tickets at /laravel/admin/tickets.
+      USE_LARAVEL_ADMIN_TICKETS_UI: ${USE_LARAVEL_ADMIN_TICKETS_UI:-true}
+      # Phase 5 slice 19: Blade admin ticket detail at /laravel/admin/tickets/:ref.
+      USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: ${USE_LARAVEL_ADMIN_TICKET_DETAIL_UI:-true}
+      # Phase 5 slice 20: Blade admin audit logs at /laravel/admin/audit-logs.
+      USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: ${USE_LARAVEL_ADMIN_AUDIT_LOGS_UI:-true}
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
     secrets:
       - db_password

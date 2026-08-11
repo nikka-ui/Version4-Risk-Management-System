@@ -40,7 +40,7 @@ class AttachmentUploadApiTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('phase', 5)
-            ->assertJsonPath('slice', 15);
+            ->assertJsonPath('slice', 20);
     }
 
     public function test_upload_and_download_roundtrip(): void
