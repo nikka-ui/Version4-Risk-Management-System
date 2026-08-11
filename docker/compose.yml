@@ -86,6 +86,8 @@ services:
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: ${USE_LARAVEL_REPORTER_TICKET_FORM_UI:-true}
       # Phase 5 slice 14: Blade admin dashboard at /laravel/admin.
       USE_LARAVEL_ADMIN_DASHBOARD_UI: ${USE_LARAVEL_ADMIN_DASHBOARD_UI:-true}
+      # Phase 5 slice 15: Blade admin user management at /laravel/admin/users.
+      USE_LARAVEL_ADMIN_USERS_UI: ${USE_LARAVEL_ADMIN_USERS_UI:-true}
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
     secrets:
       - db_password

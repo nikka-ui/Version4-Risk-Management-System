@@ -19,7 +19,7 @@
     $positionLine = $user['position'] ?: 'System Administrator';
     $nav = [
       ['id' => 'dashboard', 'href' => '/laravel/admin', 'label' => 'Dashboard'],
-      ['id' => 'users', 'href' => '/admin/users', 'label' => 'User Management'],
+      ['id' => 'users', 'href' => '/laravel/admin/users', 'label' => 'User Management'],
       ['id' => 'departments', 'href' => '/admin/departments', 'label' => 'Department Management'],
       ['id' => 'positions', 'href' => '/admin/positions', 'label' => 'Position Management'],
       ['id' => 'tickets', 'href' => '/admin/tickets', 'label' => 'Ticket Management'],

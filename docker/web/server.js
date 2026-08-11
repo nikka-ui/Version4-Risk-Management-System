@@ -322,13 +322,14 @@ app.get('/health', (req, res) => {
     USE_LARAVEL_REPORTER_ACTIONS_UI,
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
+    USE_LARAVEL_ADMIN_USERS_UI,
     USE_LARAVEL_ORG,
   } = require('./config/features');
   res.json({
     status: 'ok',
     service: 'web',
     phase: 5,
-    slice: 14,
+    slice: 15,
     laravelBridge: {
       USE_LARAVEL_API: Boolean(USE_LARAVEL_API),
       USE_LARAVEL_AUTH: Boolean(USE_LARAVEL_AUTH),
@@ -344,6 +345,7 @@ app.get('/health', (req, res) => {
       USE_LARAVEL_REPORTER_ACTIONS_UI: Boolean(USE_LARAVEL_REPORTER_ACTIONS_UI),
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: Boolean(USE_LARAVEL_REPORTER_TICKET_FORM_UI),
       USE_LARAVEL_ADMIN_DASHBOARD_UI: Boolean(USE_LARAVEL_ADMIN_DASHBOARD_UI),
+      USE_LARAVEL_ADMIN_USERS_UI: Boolean(USE_LARAVEL_ADMIN_USERS_UI),
       USE_LARAVEL_ORG: Boolean(USE_LARAVEL_ORG),
     },
   });
@@ -521,6 +523,7 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACTIONS_UI,
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
+    USE_LARAVEL_ADMIN_USERS_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -533,7 +536,8 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI ||
     USE_LARAVEL_REPORTER_ACTIONS_UI ||
     USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
-    USE_LARAVEL_ADMIN_DASHBOARD_UI
+    USE_LARAVEL_ADMIN_DASHBOARD_UI ||
+    USE_LARAVEL_ADMIN_USERS_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -564,6 +568,7 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACTIONS_UI,
     USE_LARAVEL_REPORTER_TICKET_FORM_UI,
     USE_LARAVEL_ADMIN_DASHBOARD_UI,
+    USE_LARAVEL_ADMIN_USERS_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -576,7 +581,8 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI ||
     USE_LARAVEL_REPORTER_ACTIONS_UI ||
     USE_LARAVEL_REPORTER_TICKET_FORM_UI ||
-    USE_LARAVEL_ADMIN_DASHBOARD_UI
+    USE_LARAVEL_ADMIN_DASHBOARD_UI ||
+    USE_LARAVEL_ADMIN_USERS_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -1726,7 +1732,27 @@ app.get('/admin/profile', requireAdmin, (req, res) => {
   res.type('html').send(profilePage(profile, flashFromQuery(req.query)));
 });
 
+function adminUsersListPath(query = '') {
+  const { USE_LARAVEL_ADMIN_USERS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_USERS_UI ? '/laravel/admin/users' : '/admin/users';
+  return query ? `${base}?${query}` : base;
+}
+
+function adminUsersEditPath(username, query = '') {
+  const { USE_LARAVEL_ADMIN_USERS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_USERS_UI
+    ? `/laravel/admin/users/${encodeURIComponent(username)}/edit`
+    : `/admin/users/${encodeURIComponent(username)}/edit`;
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/admin/users', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USERS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USERS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/users${qs ? `?${qs}` : ''}`);
+  }
+
   const users = filterUsers(listUsers({ includeInactive: true }), req.query);
   res.type('html').send(
     usersPage(
@@ -1741,8 +1767,16 @@ app.get('/admin/users', requireAdmin, (req, res) => {
 });
 
 app.get('/admin/users/:username/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USERS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USERS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(
+      `/laravel/admin/users/${encodeURIComponent(req.params.username)}/edit${qs ? `?${qs}` : ''}`,
+    );
+  }
+
   const editUser = findUserRecord(req.params.username.toLowerCase(), { includeInactive: true });
-  if (!editUser) return res.redirect('/admin/users?flash=not_found');
+  if (!editUser) return res.redirect(adminUsersListPath('flash=not_found'));
   res.type('html').send(
     usersPage(
       req.session.user,
@@ -1757,7 +1791,7 @@ app.get('/admin/users/:username/edit', requireAdmin, (req, res) => {
 
 app.post('/admin/users', requireAdmin, (req, res) => {
   const { username, password, displayName, role, employeeId, email, department, position, confirmPassword } = req.body;
-  if (!isAssignableRole(role)) return adminError(res, '/admin/users', 'Invalid role selected.');
+  if (!isAssignableRole(role)) return adminError(res, adminUsersListPath(), 'Invalid role selected.');
   const result = createUser({
     username,
     password,
@@ -1769,7 +1803,7 @@ app.post('/admin/users', requireAdmin, (req, res) => {
     position,
     confirmPassword,
   });
-  if (result.error) return adminError(res, '/admin/users', result.error);
+  if (result.error) return adminError(res, adminUsersListPath(), result.error);
   logCredential(req, {
     action: 'account_created',
     username: result.user.username,
@@ -1802,17 +1836,17 @@ app.post('/admin/users', requireAdmin, (req, res) => {
     active: true,
     status: 'active',
   });
-  return res.redirect('/admin/users?flash=created');
+  return res.redirect(adminUsersListPath('flash=created'));
 });
 
 app.post('/admin/users/:username/edit', requireAdmin, (req, res) => {
   const username = req.params.username.toLowerCase();
   const { displayName, email, employeeId, department, position, role, status } = req.body;
   const result = updateUser(username, { displayName, email, employeeId, department, position, role });
-  if (result.error) return adminError(res, `/admin/users/${username}/edit`, result.error);
+  if (result.error) return adminError(res, adminUsersEditPath(username), result.error);
   if (status && username !== 'admin') {
     const statusResult = setUserStatus(username, status === 'active');
-    if (statusResult.error) return adminError(res, `/admin/users/${username}/edit`, statusResult.error);
+    if (statusResult.error) return adminError(res, adminUsersEditPath(username), statusResult.error);
   }
   logAdminAction(req, {
     action: 'user_updated',
@@ -1820,13 +1854,13 @@ app.post('/admin/users/:username/edit', requireAdmin, (req, res) => {
     description: `Updated account: ${result.user.displayName}`,
     targetUser: username,
   });
-  return res.redirect('/admin/users?flash=updated');
+  return res.redirect(adminUsersListPath('flash=updated'));
 });
 
 app.post('/admin/users/:username/delete', requireAdmin, (req, res) => {
   const username = req.params.username.toLowerCase();
   const result = deleteUser(username);
-  if (result.error) return adminError(res, '/admin/users', result.error);
+  if (result.error) return adminError(res, adminUsersListPath(), result.error);
   logCredential(req, {
     action: 'account_deleted',
     username,
@@ -1840,13 +1874,13 @@ app.post('/admin/users/:username/delete', requireAdmin, (req, res) => {
     description: `Deleted account: ${result.user.displayName}`,
     targetUser: username,
   });
-  return res.redirect('/admin/users?flash=deleted');
+  return res.redirect(adminUsersListPath('flash=deleted'));
 });
 
 app.post('/admin/users/:username/activate', requireAdmin, (req, res) => {
   const username = req.params.username.toLowerCase();
   const result = setUserStatus(username, true);
-  if (result.error) return adminError(res, '/admin/users', result.error);
+  if (result.error) return adminError(res, adminUsersListPath(), result.error);
   logAdminAction(req, {
     action: 'user_activated',
     module: 'User Management',
@@ -1866,13 +1900,13 @@ app.post('/admin/users/:username/activate', requireAdmin, (req, res) => {
     active: true,
     status: 'active',
   });
-  return res.redirect('/admin/users?flash=activated');
+  return res.redirect(adminUsersListPath('flash=activated'));
 });
 
 app.post('/admin/users/:username/deactivate', requireAdmin, (req, res) => {
   const username = req.params.username.toLowerCase();
   const result = setUserStatus(username, false);
-  if (result.error) return adminError(res, '/admin/users', result.error);
+  if (result.error) return adminError(res, adminUsersListPath(), result.error);
   logAdminAction(req, {
     action: 'user_deactivated',
     module: 'User Management',
@@ -1892,12 +1926,12 @@ app.post('/admin/users/:username/deactivate', requireAdmin, (req, res) => {
     active: false,
     status: 'inactive',
   });
-  return res.redirect('/admin/users?flash=deactivated');
+  return res.redirect(adminUsersListPath('flash=deactivated'));
 });
 
 app.get('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
   const target = findUserRecord(req.params.username.toLowerCase());
-  if (!target) return res.redirect('/admin/users?flash=not_found');
+  if (!target) return res.redirect(adminUsersListPath('flash=not_found'));
   res.type('html').send(
     resetPasswordPage(
       req.session.user,
@@ -1936,7 +1970,7 @@ app.post('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
     active: result.user.active !== false,
     status: result.user.status || 'active',
   });
-  return res.redirect('/admin/users?flash=password_reset');
+  return res.redirect(adminUsersListPath('flash=password_reset'));
 });
 
 app.get('/admin/departments', requireAdmin, (req, res) => {

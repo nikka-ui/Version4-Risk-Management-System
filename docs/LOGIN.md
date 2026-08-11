@@ -1,6 +1,6 @@
 # Login and built-in accounts (development)
 
-The Sign In UI is **Laravel Blade** at `/laravel/login` when `USE_LARAVEL_LOGIN_UI=true` (compose default). Express `/login` redirects there; success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin **Dashboard** and **Profile**, Ticket Reporter **Profile**, **Dashboard**, **ticket lists**, **ticket detail** (read-only), and **create/edit/preview forms** (GET). POST/uploads and other admin management pages remain Express.
+The Sign In UI is **Laravel Blade** at `/laravel/login` when `USE_LARAVEL_LOGIN_UI=true` (compose default). Express `/login` redirects there; success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin **Dashboard**, **User Management**, and **Profile**, Ticket Reporter **Profile**, **Dashboard**, **ticket lists**, **ticket detail** (read-only), and **create/edit/preview forms** (GET). POST/uploads and other admin management pages remain Express.
 
 ## Access URL
 
@@ -127,7 +127,7 @@ Sign in as `admin` / `a3c1993` (or `sys-admin` / `a3c2026`) → http://localhost
 | Screen | URL | Purpose |
 |--------|-----|---------|
 | Overview | `/admin` → `/laravel/admin` when `USE_LARAVEL_ADMIN_DASHBOARD_UI=true` | Summary and quick links |
-| Users | `/admin/users` | Create/edit users, roles, employee IDs (`EMP-###`), password reset |
+| Users | `/admin/users` → `/laravel/admin/users` when `USE_LARAVEL_ADMIN_USERS_UI=true` | Create/edit users, roles, employee IDs (`EMP-###`), password reset |
 | Departments | `/admin/departments` | Department catalog |
 | Positions | `/admin/positions` | Position catalog |
 | Tickets | `/admin/tickets` | View / soft-delete tickets (no workflow approve/close) |

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SupervisorAccomplishmentController;
@@ -19,7 +20,7 @@ Route::get('/', function () {
         'message' => 'API root. Versioned routes live under /v1 (public URL /api/v1). Browser UI under /laravel/*.',
         'version' => 'v1',
         'phase' => 5,
-        'slice' => 14,
+        'slice' => 15,
     ]);
 });
 
@@ -35,6 +36,10 @@ Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->na
 */
 Route::middleware(['auth', 'rms.web_admin'])->group(function () {
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users');
+    Route::get('/admin/users/{username}/edit', [AdminUserController::class, 'edit'])
+        ->where('username', '[A-Za-z0-9._-]+')
+        ->name('admin.users.edit');
     Route::get('/admin/profile', [ProfileController::class, 'admin'])->name('admin.profile');
 });
 

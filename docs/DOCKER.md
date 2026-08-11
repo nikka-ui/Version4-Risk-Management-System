@@ -78,6 +78,7 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade reporter actions** | Phase 5 slice 12: `/supervisor/actions` → `/laravel/supervisor/actions` when `USE_LARAVEL_REPORTER_ACTIONS_UI=true` |
 | **Blade reporter ticket forms** | Phase 5 slice 13: create/edit/preview GETs → `/laravel/supervisor/tickets/...` when `USE_LARAVEL_REPORTER_TICKET_FORM_UI=true` |
 | **Blade admin dashboard** | Phase 5 slice 14: `GET /admin` → `/laravel/admin` when `USE_LARAVEL_ADMIN_DASHBOARD_UI=true` |
+| **Blade admin users** | Phase 5 slice 15: `GET /admin/users` → `/laravel/admin/users` when `USE_LARAVEL_ADMIN_USERS_UI=true` |
 | **Production** | `docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d` |
 
 Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, privkey.pem) and updated secrets.

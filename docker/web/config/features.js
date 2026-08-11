@@ -1,6 +1,7 @@
 /**
  * Feature flags for gradual Laravel migration.
  *
+ * Phase 5 slice 15: USE_LARAVEL_ADMIN_USERS_UI — Express GET /admin/users redirects to Blade.
  * Phase 5 slice 14: USE_LARAVEL_ADMIN_DASHBOARD_UI — Express GET /admin redirects to Blade.
  * Phase 5 slice 13: USE_LARAVEL_REPORTER_TICKET_FORM_UI — Express create/edit/preview
  * forms redirect to Laravel Blade; POST handlers remain on Express.
@@ -71,6 +72,11 @@ module.exports = {
    * Compose default true as of Phase 5 slice 14.
    */
   USE_LARAVEL_ADMIN_DASHBOARD_UI: process.env.USE_LARAVEL_ADMIN_DASHBOARD_UI === 'true',
+  /**
+   * When true, Express GET /admin/users (+ edit) redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 15. POSTs stay on Express.
+   */
+  USE_LARAVEL_ADMIN_USERS_UI: process.env.USE_LARAVEL_ADMIN_USERS_UI === 'true',
   /** When true (future), admin org reads may use Laravel /api/v1 — unused today. */
   USE_LARAVEL_ORG: process.env.USE_LARAVEL_ORG === 'true',
   /**
