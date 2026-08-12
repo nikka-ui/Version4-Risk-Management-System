@@ -1,7 +1,15 @@
 /**
  * Feature flags for gradual Laravel migration.
  *
- * Phase 5 slice 20: USE_LARAVEL_ADMIN_AUDIT_LOGS_UI — Express GET /admin/audit-logs redirects to Blade.
+ * Phase 5 slice 31: USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI — Express GET /president/tickets/:ref redirect to Blade.
+ * Phase 5 slice 30: USE_LARAVEL_PRESIDENT_QUEUES_UI — Express GET /president/{pending,high,critical,trends} redirect to Blade.
+ * Phase 5 slice 29: USE_LARAVEL_PRESIDENT_DASHBOARD_UI — Express GET /president redirects to Blade.
+ * Phase 5 slice 26: USE_LARAVEL_OFFICER_QUEUES_UI — Express GET /officer/{tickets,overdue,monitoring,action-plans} redirect to Blade.
+ * Phase 5 slice 25: USE_LARAVEL_OFFICER_DASHBOARD_UI — Express GET /officer redirects to Blade.
+ * Phase 5 slice 24: USE_LARAVEL_DEPT_TICKET_DETAIL_UI — Express GET /dept/tickets/:ref redirects to Blade.
+ * Phase 5 slice 23: USE_LARAVEL_DEPT_QUEUES_UI — Express GET /dept/* queues redirect to Blade.
+ * Phase 5 slice 22: USE_LARAVEL_DEPT_DASHBOARD_UI — Express GET /dept redirects to Blade.
+ * Phase 5 slice 21: USE_LARAVEL_ADMIN_SETTINGS_UI — Express GET /admin/settings redirects to Blade.
  * Phase 5 slice 19: USE_LARAVEL_ADMIN_TICKET_DETAIL_UI — Express GET /admin/tickets/:ref redirects to Blade.
  * Phase 5 slice 18: USE_LARAVEL_ADMIN_TICKETS_UI — Express GET /admin/tickets redirects to Blade.
  * Phase 5 slice 17: USE_LARAVEL_ADMIN_POSITIONS_UI — Express GET /admin/positions redirects to Blade.
@@ -107,6 +115,62 @@ module.exports = {
    * Compose default true as of Phase 5 slice 20.
    */
   USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: process.env.USE_LARAVEL_ADMIN_AUDIT_LOGS_UI === 'true',
+  /**
+   * When true, Express GET /admin/settings redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 21. Save/reset POSTs stay on Express.
+   */
+  USE_LARAVEL_ADMIN_SETTINGS_UI: process.env.USE_LARAVEL_ADMIN_SETTINGS_UI === 'true',
+  /**
+   * When true, Express GET /dept redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 22. Queues/detail stay on Express.
+   */
+  USE_LARAVEL_DEPT_DASHBOARD_UI: process.env.USE_LARAVEL_DEPT_DASHBOARD_UI === 'true',
+  /**
+   * When true, Express GET /dept/{inbox,active,drafts,returned,overdue,closure,tickets}
+   * redirects to Laravel Blade. Compose default true as of Phase 5 slice 23.
+   * Ticket detail stays on Express.
+   */
+  USE_LARAVEL_DEPT_QUEUES_UI: process.env.USE_LARAVEL_DEPT_QUEUES_UI === 'true',
+  /**
+   * When true, Express GET /dept/tickets/:ref redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 24. Ownership/action POSTs stay on Express.
+   */
+  USE_LARAVEL_DEPT_TICKET_DETAIL_UI: process.env.USE_LARAVEL_DEPT_TICKET_DETAIL_UI === 'true',
+  /**
+   * When true, Express GET /officer redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 25. Queues/detail stay on Express.
+   */
+  USE_LARAVEL_OFFICER_DASHBOARD_UI: process.env.USE_LARAVEL_OFFICER_DASHBOARD_UI === 'true',
+  /**
+   * When true, Express GET /officer/{tickets,overdue,monitoring,action-plans} redirect to Laravel Blade.
+   * Compose default true as of Phase 5 slice 26. Ticket detail stays on Express.
+   */
+  USE_LARAVEL_OFFICER_QUEUES_UI: process.env.USE_LARAVEL_OFFICER_QUEUES_UI === 'true',
+  /**
+   * When true, Express GET /officer/tickets/:ref redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 27. Thread/reopen POSTs stay on Express.
+   */
+  USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: process.env.USE_LARAVEL_OFFICER_TICKET_DETAIL_UI === 'true',
+  /**
+   * When true, Express GET /executive redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 28.
+   */
+  USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: process.env.USE_LARAVEL_EXECUTIVE_DASHBOARD_UI === 'true',
+  /**
+   * When true, Express GET /president redirects to Laravel Blade.
+   * Compose default true as of Phase 5 slice 29.
+   */
+  USE_LARAVEL_PRESIDENT_DASHBOARD_UI: process.env.USE_LARAVEL_PRESIDENT_DASHBOARD_UI === 'true',
+  /**
+   * When true, Express GET /president/{pending,high,critical,trends} redirect to Blade.
+   * Compose default true as of Phase 5 slice 30.
+   */
+  USE_LARAVEL_PRESIDENT_QUEUES_UI: process.env.USE_LARAVEL_PRESIDENT_QUEUES_UI === 'true',
+  /**
+   * When true, Express GET /president/tickets/:ref redirects to Blade.
+   * Compose default true as of Phase 5 slice 31. Decision/comment POSTs stay on Express.
+   */
+  USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: process.env.USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI === 'true',
   /** When true (future), admin org reads may use Laravel /api/v1 — unused today. */
   USE_LARAVEL_ORG: process.env.USE_LARAVEL_ORG === 'true',
   /**

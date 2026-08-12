@@ -24,7 +24,7 @@
       ['id' => 'positions', 'href' => '/laravel/admin/positions', 'label' => 'Position Management'],
       ['id' => 'tickets', 'href' => '/laravel/admin/tickets', 'label' => 'Ticket Management'],
       ['id' => 'audit', 'href' => '/laravel/admin/audit-logs', 'label' => 'Audit Logs'],
-      ['id' => 'settings', 'href' => '/admin/settings', 'label' => 'System Settings'],
+      ['id' => 'settings', 'href' => '/laravel/admin/settings', 'label' => 'System Settings'],
       ['id' => 'profile', 'href' => '/laravel/admin/profile', 'label' => 'Profile'],
     ];
   @endphp

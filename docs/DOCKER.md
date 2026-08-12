@@ -84,6 +84,17 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade admin tickets** | Phase 5 slice 18: `GET /admin/tickets` → `/laravel/admin/tickets` when `USE_LARAVEL_ADMIN_TICKETS_UI=true` |
 | **Blade admin ticket detail** | Phase 5 slice 19: `GET /admin/tickets/:ref` → `/laravel/admin/tickets/:ref` when `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI=true` |
 | **Blade admin audit logs** | Phase 5 slice 20: `GET /admin/audit-logs` → `/laravel/admin/audit-logs` when `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI=true` |
+| **Blade admin settings** | Phase 5 slice 21: `GET /admin/settings` → `/laravel/admin/settings` when `USE_LARAVEL_ADMIN_SETTINGS_UI=true` |
+| **Blade dept dashboard** | Phase 5 slice 22: `GET /dept` → `/laravel/dept` when `USE_LARAVEL_DEPT_DASHBOARD_UI=true` |
+| **Blade dept queues** | Phase 5 slice 23: `GET /dept/{inbox,…,tickets}` → `/laravel/dept/…` when `USE_LARAVEL_DEPT_QUEUES_UI=true` |
+| **Blade dept ticket detail** | Phase 5 slice 24: `GET /dept/tickets/:ref` → `/laravel/dept/tickets/:ref` when `USE_LARAVEL_DEPT_TICKET_DETAIL_UI=true` |
+| **Blade officer dashboard** | Phase 5 slice 25: `GET /officer` → `/laravel/officer` when `USE_LARAVEL_OFFICER_DASHBOARD_UI=true` |
+| **Blade officer queues** | Phase 5 slice 26: `GET /officer/{tickets,overdue,monitoring,action-plans}` → `/laravel/officer/…` when `USE_LARAVEL_OFFICER_QUEUES_UI=true` |
+| **Blade officer ticket detail** | Phase 5 slice 27: `GET /officer/tickets/:ref` → `/laravel/officer/tickets/:ref` when `USE_LARAVEL_OFFICER_TICKET_DETAIL_UI=true` |
+| **Blade executive dashboard** | Phase 5 slice 28: `GET /executive` → `/laravel/executive` when `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI=true` |
+| **Blade president dashboard** | Phase 5 slice 29: `GET /president` → `/laravel/president` when `USE_LARAVEL_PRESIDENT_DASHBOARD_UI=true` |
+| **Blade president ticket detail** | Phase 5 slice 31: `GET /president/tickets/:ref` → `/laravel/president/tickets/…` when `USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI=true` |
+| **Blade president queues** | Phase 5 slice 30: `GET /president/{pending,high,critical,trends}` → `/laravel/president/…` when `USE_LARAVEL_PRESIDENT_QUEUES_UI=true` |
 | **Production** | `docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d` |
 
 Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, privkey.pem) and updated secrets.

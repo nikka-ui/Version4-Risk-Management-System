@@ -161,7 +161,7 @@ class PresidentTicketService
         );
     }
 
-    private function needsActionPlanDecision(RiskTicket $ticket): bool
+    public function needsActionPlanDecision(RiskTicket $ticket): bool
     {
         if (! Departments::requiresPresidentApproval(
             is_array($ticket->ai) ? $ticket->ai : null,

@@ -98,6 +98,28 @@ services:
       USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: ${USE_LARAVEL_ADMIN_TICKET_DETAIL_UI:-true}
       # Phase 5 slice 20: Blade admin audit logs at /laravel/admin/audit-logs.
       USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: ${USE_LARAVEL_ADMIN_AUDIT_LOGS_UI:-true}
+      # Phase 5 slice 21: Blade admin system settings at /laravel/admin/settings.
+      USE_LARAVEL_ADMIN_SETTINGS_UI: ${USE_LARAVEL_ADMIN_SETTINGS_UI:-true}
+      # Phase 5 slice 22: Blade dept dashboard at /laravel/dept.
+      USE_LARAVEL_DEPT_DASHBOARD_UI: ${USE_LARAVEL_DEPT_DASHBOARD_UI:-true}
+      # Phase 5 slice 23: Blade dept queues at /laravel/dept/*.
+      USE_LARAVEL_DEPT_QUEUES_UI: ${USE_LARAVEL_DEPT_QUEUES_UI:-true}
+      # Phase 5 slice 24: Blade dept ticket detail at /laravel/dept/tickets/:ref.
+      USE_LARAVEL_DEPT_TICKET_DETAIL_UI: ${USE_LARAVEL_DEPT_TICKET_DETAIL_UI:-true}
+      # Phase 5 slice 25: Blade officer dashboard at /laravel/officer.
+      USE_LARAVEL_OFFICER_DASHBOARD_UI: ${USE_LARAVEL_OFFICER_DASHBOARD_UI:-true}
+      # Phase 5 slice 26: Blade officer queues at /laravel/officer/*.
+      USE_LARAVEL_OFFICER_QUEUES_UI: ${USE_LARAVEL_OFFICER_QUEUES_UI:-true}
+      # Phase 5 slice 27: Blade officer ticket detail at /laravel/officer/tickets/:ref.
+      USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: ${USE_LARAVEL_OFFICER_TICKET_DETAIL_UI:-true}
+      # Phase 5 slice 28: Blade Executive Committee dashboard at /laravel/executive.
+      USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: ${USE_LARAVEL_EXECUTIVE_DASHBOARD_UI:-true}
+      # Phase 5 slice 29: Blade President dashboard at /laravel/president.
+      USE_LARAVEL_PRESIDENT_DASHBOARD_UI: ${USE_LARAVEL_PRESIDENT_DASHBOARD_UI:-true}
+      # Phase 5 slice 31: Blade President ticket detail at /laravel/president/tickets/:ref.
+      USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: ${USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI:-true}
+      # Phase 5 slice 30: Blade President queues at /laravel/president/*.
+      USE_LARAVEL_PRESIDENT_QUEUES_UI: ${USE_LARAVEL_PRESIDENT_QUEUES_UI:-true}
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
     secrets:
       - db_password

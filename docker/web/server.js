@@ -328,13 +328,24 @@ app.get('/health', (req, res) => {
     USE_LARAVEL_ADMIN_TICKETS_UI,
     USE_LARAVEL_ADMIN_TICKET_DETAIL_UI,
     USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
+    USE_LARAVEL_ADMIN_SETTINGS_UI,
+    USE_LARAVEL_DEPT_DASHBOARD_UI,
+    USE_LARAVEL_DEPT_QUEUES_UI,
+    USE_LARAVEL_DEPT_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_DASHBOARD_UI,
+    USE_LARAVEL_OFFICER_QUEUES_UI,
+    USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_QUEUES_UI,
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
     USE_LARAVEL_ORG,
   } = require('./config/features');
   res.json({
     status: 'ok',
     service: 'web',
     phase: 5,
-    slice: 20,
+    slice: 31,
     laravelBridge: {
       USE_LARAVEL_API: Boolean(USE_LARAVEL_API),
       USE_LARAVEL_AUTH: Boolean(USE_LARAVEL_AUTH),
@@ -356,6 +367,17 @@ app.get('/health', (req, res) => {
       USE_LARAVEL_ADMIN_TICKETS_UI: Boolean(USE_LARAVEL_ADMIN_TICKETS_UI),
       USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_ADMIN_TICKET_DETAIL_UI),
       USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: Boolean(USE_LARAVEL_ADMIN_AUDIT_LOGS_UI),
+      USE_LARAVEL_ADMIN_SETTINGS_UI: Boolean(USE_LARAVEL_ADMIN_SETTINGS_UI),
+      USE_LARAVEL_DEPT_DASHBOARD_UI: Boolean(USE_LARAVEL_DEPT_DASHBOARD_UI),
+      USE_LARAVEL_DEPT_QUEUES_UI: Boolean(USE_LARAVEL_DEPT_QUEUES_UI),
+      USE_LARAVEL_DEPT_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_DEPT_TICKET_DETAIL_UI),
+      USE_LARAVEL_OFFICER_DASHBOARD_UI: Boolean(USE_LARAVEL_OFFICER_DASHBOARD_UI),
+      USE_LARAVEL_OFFICER_QUEUES_UI: Boolean(USE_LARAVEL_OFFICER_QUEUES_UI),
+      USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_OFFICER_TICKET_DETAIL_UI),
+      USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: Boolean(USE_LARAVEL_EXECUTIVE_DASHBOARD_UI),
+      USE_LARAVEL_PRESIDENT_DASHBOARD_UI: Boolean(USE_LARAVEL_PRESIDENT_DASHBOARD_UI),
+      USE_LARAVEL_PRESIDENT_QUEUES_UI: Boolean(USE_LARAVEL_PRESIDENT_QUEUES_UI),
+      USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI),
       USE_LARAVEL_ORG: Boolean(USE_LARAVEL_ORG),
     },
   });
@@ -539,6 +561,17 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_ADMIN_TICKETS_UI,
     USE_LARAVEL_ADMIN_TICKET_DETAIL_UI,
     USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
+    USE_LARAVEL_ADMIN_SETTINGS_UI,
+    USE_LARAVEL_DEPT_DASHBOARD_UI,
+    USE_LARAVEL_DEPT_QUEUES_UI,
+    USE_LARAVEL_DEPT_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_DASHBOARD_UI,
+    USE_LARAVEL_OFFICER_QUEUES_UI,
+    USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_QUEUES_UI,
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -557,7 +590,18 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_ADMIN_POSITIONS_UI ||
     USE_LARAVEL_ADMIN_TICKETS_UI ||
     USE_LARAVEL_ADMIN_TICKET_DETAIL_UI ||
-    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI ||
+    USE_LARAVEL_ADMIN_SETTINGS_UI ||
+    USE_LARAVEL_DEPT_DASHBOARD_UI ||
+    USE_LARAVEL_DEPT_QUEUES_UI ||
+    USE_LARAVEL_DEPT_TICKET_DETAIL_UI ||
+    USE_LARAVEL_OFFICER_DASHBOARD_UI ||
+    USE_LARAVEL_OFFICER_QUEUES_UI ||
+    USE_LARAVEL_OFFICER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_EXECUTIVE_DASHBOARD_UI ||
+    USE_LARAVEL_PRESIDENT_DASHBOARD_UI ||
+    USE_LARAVEL_PRESIDENT_QUEUES_UI ||
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -592,7 +636,19 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_ADMIN_DEPARTMENTS_UI,
     USE_LARAVEL_ADMIN_POSITIONS_UI,
     USE_LARAVEL_ADMIN_TICKETS_UI,
+    USE_LARAVEL_ADMIN_TICKET_DETAIL_UI,
     USE_LARAVEL_ADMIN_AUDIT_LOGS_UI,
+    USE_LARAVEL_ADMIN_SETTINGS_UI,
+    USE_LARAVEL_DEPT_DASHBOARD_UI,
+    USE_LARAVEL_DEPT_QUEUES_UI,
+    USE_LARAVEL_DEPT_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_DASHBOARD_UI,
+    USE_LARAVEL_OFFICER_QUEUES_UI,
+    USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
+    USE_LARAVEL_PRESIDENT_QUEUES_UI,
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -610,7 +666,19 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_ADMIN_DEPARTMENTS_UI ||
     USE_LARAVEL_ADMIN_POSITIONS_UI ||
     USE_LARAVEL_ADMIN_TICKETS_UI ||
-    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI
+    USE_LARAVEL_ADMIN_TICKET_DETAIL_UI ||
+    USE_LARAVEL_ADMIN_AUDIT_LOGS_UI ||
+    USE_LARAVEL_ADMIN_SETTINGS_UI ||
+    USE_LARAVEL_DEPT_DASHBOARD_UI ||
+    USE_LARAVEL_DEPT_QUEUES_UI ||
+    USE_LARAVEL_DEPT_TICKET_DETAIL_UI ||
+    USE_LARAVEL_OFFICER_DASHBOARD_UI ||
+    USE_LARAVEL_OFFICER_QUEUES_UI ||
+    USE_LARAVEL_OFFICER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_EXECUTIVE_DASHBOARD_UI ||
+    USE_LARAVEL_PRESIDENT_DASHBOARD_UI ||
+    USE_LARAVEL_PRESIDENT_QUEUES_UI ||
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -1150,13 +1218,28 @@ function deptStats(user) {
 }
 
 app.get('/dept', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_DEPT_DASHBOARD_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/dept${qs ? `?${qs}` : ''}`);
+  }
   const user = req.session.user;
   res.type('html').send(
     deptHeadOverviewPage(user, deptStats(user), flashFromQuery(req.query), listTicketsForDeptHead(user)),
   );
 });
 
+function redirectDeptQueueIfEnabled(req, res, laravelPath) {
+  const { USE_LARAVEL_DEPT_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_DEPT_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`${laravelPath}${qs ? `?${qs}` : ''}`);
+  }
+  return null;
+}
+
 app.get('/dept/inbox', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/inbox')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadInboxPage(user, listDeptHeadInbox(user), flashFromQuery(req.query), {
@@ -1167,6 +1250,7 @@ app.get('/dept/inbox', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/active', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/active')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadActivePage(user, listDeptHeadActive(user), flashFromQuery(req.query), {
@@ -1177,6 +1261,7 @@ app.get('/dept/active', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/drafts', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/drafts')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadDraftsPage(user, listDeptHeadActionPlanDrafts(user), flashFromQuery(req.query), {
@@ -1187,6 +1272,7 @@ app.get('/dept/drafts', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/returned', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/returned')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadReturnedPage(user, listDeptHeadReturned(user), flashFromQuery(req.query), {
@@ -1197,6 +1283,7 @@ app.get('/dept/returned', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/overdue', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/overdue')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadOverduePage(user, listDeptHeadOverdue(user), flashFromQuery(req.query), {
@@ -1207,6 +1294,7 @@ app.get('/dept/overdue', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/closure', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/closure')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadPendingClosurePage(user, listDeptHeadPendingClosure(user), flashFromQuery(req.query), {
@@ -1217,6 +1305,7 @@ app.get('/dept/closure', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/tickets', requireDeptHead, (req, res) => {
+  if (redirectDeptQueueIfEnabled(req, res, '/laravel/dept/tickets')) return;
   const user = req.session.user;
   res.type('html').send(
     deptHeadAllTicketsPage(user, listTicketsForDeptHead(user), flashFromQuery(req.query), {
@@ -1227,10 +1316,15 @@ app.get('/dept/tickets', requireDeptHead, (req, res) => {
 });
 
 app.get('/dept/tickets/:ref', requireDeptHead, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_DETAIL_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`);
+  }
   const user = req.session.user;
   const raw = getTicketByRefForDeptHead(req.params.ref, user);
   if (!raw) {
-    return res.redirect('/dept/tickets?flash=not_found');
+    return res.redirect(deptTicketsListPath('flash=not_found'));
   }
   const ticket = await ticketForRole(raw, 'dept_head');
   res.type('html').send(
@@ -1242,6 +1336,26 @@ app.get('/dept/tickets/:ref', requireDeptHead, asyncRoute(async (req, res) => {
   );
 }));
 
+function deptTicketDetailPath(ref, query = '') {
+  const { USE_LARAVEL_DEPT_TICKET_DETAIL_UI } = require('./config/features');
+  const base = USE_LARAVEL_DEPT_TICKET_DETAIL_UI
+    ? `/laravel/dept/tickets/${encodeURIComponent(ref)}`
+    : `/dept/tickets/${encodeURIComponent(ref)}`;
+  return query ? `${base}?${query}` : base;
+}
+
+function deptTicketsListPath(query = '') {
+  const { USE_LARAVEL_DEPT_QUEUES_UI } = require('./config/features');
+  const base = USE_LARAVEL_DEPT_QUEUES_UI ? '/laravel/dept/tickets' : '/dept/tickets';
+  return query ? `${base}?${query}` : base;
+}
+
+function deptInboxPath(query = '') {
+  const { USE_LARAVEL_DEPT_QUEUES_UI } = require('./config/features');
+  const base = USE_LARAVEL_DEPT_QUEUES_UI ? '/laravel/dept/inbox' : '/dept/inbox';
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/dept/attachments/:id', requireDeptHead, asyncRoute(async (req, res) => {
   const found = await findAttachmentForDeptHead(req.params.id, req.session.user);
   await sendAttachment(res, found, req.session.user.username);
@@ -1251,98 +1365,98 @@ app.post('/dept/tickets/:ref/accept', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = acceptOwnership(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=ownership_accepted`);
+  return res.redirect(deptTicketDetailPath(ref, 'flash=ownership_accepted'));
 });
 
 app.post('/dept/tickets/:ref/reject', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = rejectOwnership(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect('/dept/inbox?flash=ownership_rejected');
+  return res.redirect(deptInboxPath('flash=ownership_rejected'));
 });
 
 app.post('/dept/tickets/:ref/return', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = returnTicketForRevision(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets?flash=${result.flashKey || 'report_returned'}`);
+  return res.redirect(deptTicketsListPath(`flash=${result.flashKey || 'report_returned'}`));
 });
 
 app.post('/dept/tickets/:ref/reassign', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = reassignTicket(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect('/dept/inbox?flash=ticket_reassigned');
+  return res.redirect(deptInboxPath('flash=ticket_reassigned'));
 });
 
 app.post('/dept/tickets/:ref/action-plan', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = saveActionPlan(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=${result.flashKey || 'action_plan_saved'}`);
+  return res.redirect(deptTicketDetailPath(ref, `flash=${result.flashKey || 'action_plan_saved'}`));
 });
 
 app.post('/dept/tickets/:ref/personnel', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = assignPersonnel(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=personnel_assigned`);
+  return res.redirect(deptTicketDetailPath(ref, 'flash=personnel_assigned'));
 });
 
 app.post('/dept/tickets/:ref/documents', requireDeptHead, handleEvidenceUpload, asyncRoute(async (req, res) => {
   const ref = req.params.ref;
   if (req.uploadError) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(req.uploadError)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
   }
   const result = await uploadDeptDocuments(ref, req.session.user, { uploadedFiles: req.files });
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=documents_uploaded_dept`);
+  return res.redirect(deptTicketDetailPath(ref, 'flash=documents_uploaded_dept'));
 }));
 
 app.post('/dept/tickets/:ref/resolution', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = closeTicketAsDeptHead(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=${result.flashKey || 'resolution_submitted'}`);
+  return res.redirect(deptTicketDetailPath(ref, `flash=${result.flashKey || 'resolution_submitted'}`));
 });
 
 app.post('/dept/tickets/:ref/close', requireDeptHead, (req, res) => {
   const ref = req.params.ref;
   const result = closeTicketAsDeptHead(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=${result.flashKey || 'ticket_closed_dept'}`);
+  return res.redirect(deptTicketDetailPath(ref, `flash=${result.flashKey || 'ticket_closed_dept'}`));
 });
 
 app.post('/dept/tickets/:ref/comment', requireDeptHead, handleEvidenceUpload, (req, res) => {
   const ref = req.params.ref;
   if (req.uploadError) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(req.uploadError)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
   }
   const result = addDeptHeadThreadComment(ref, req.session.user, req.body, {
     uploadedFiles: req.files,
   });
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=dept_comment_posted`);
+  return res.redirect(deptTicketDetailPath(ref, 'flash=dept_comment_posted'));
 });
 
 app.post('/dept/tickets/:ref/comment/edit', requireDeptHead, (req, res) => {
@@ -1351,9 +1465,9 @@ app.post('/dept/tickets/:ref/comment/edit', requireDeptHead, (req, res) => {
     ticketGetter: (r, u) => getTicketByRefForDeptHead(r, u),
   });
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}?flash=dept_comment_posted`);
+  return res.redirect(deptTicketDetailPath(ref, 'flash=dept_comment_posted'));
 });
 
 app.post('/dept/tickets/:ref/comment/react', requireDeptHead, (req, res) => {
@@ -1362,9 +1476,9 @@ app.post('/dept/tickets/:ref/comment/react', requireDeptHead, (req, res) => {
     ticketGetter: (r, u) => getTicketByRefForDeptHead(r, u),
   });
   if (result.error) {
-    return res.redirect(`/dept/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/dept/tickets/${ref}#comment-${encodeURIComponent(req.body.commentId || '')}`);
+  return res.redirect(`${deptTicketDetailPath(ref)}#comment-${encodeURIComponent(req.body.commentId || '')}`);
 });
 
 app.post('/dept/notifications/read-all', requireDeptHead, (req, res) => {
@@ -1391,6 +1505,11 @@ function officerNoCache(req, res, next) {
 app.use('/officer', officerNoCache);
 
 app.get('/officer', requireRmOfficer, (req, res) => {
+  const { USE_LARAVEL_OFFICER_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_DASHBOARD_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/officer${qs ? `?${qs}` : ''}`);
+  }
   const user = req.session.user;
   res.type('html').send(
     officerOverviewPage(user, getOfficerDashboardData(), flashFromQuery(req.query)),
@@ -1405,7 +1524,17 @@ app.get('/officer/review', requireRmOfficer, (req, res) => {
   return res.redirect('/officer/tickets');
 });
 
+function redirectOfficerQueueIfEnabled(req, res, laravelPath) {
+  const { USE_LARAVEL_OFFICER_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`${laravelPath}${qs ? `?${qs}` : ''}`);
+  }
+  return null;
+}
+
 app.get('/officer/action-plans', requireRmOfficer, (req, res) => {
+  if (redirectOfficerQueueIfEnabled(req, res, '/laravel/officer/action-plans')) return;
   res.type('html').send(
     finalValidationQueuePage(
       req.session.user,
@@ -1424,6 +1553,7 @@ app.get('/officer/final-validation', requireRmOfficer, (req, res) => {
 });
 
 app.get('/officer/overdue', requireRmOfficer, (req, res) => {
+  if (redirectOfficerQueueIfEnabled(req, res, '/laravel/officer/overdue')) return;
   res.type('html').send(
     overdueQueuePage(
       req.session.user,
@@ -1438,6 +1568,7 @@ app.get('/officer/overdue', requireRmOfficer, (req, res) => {
 });
 
 app.get('/officer/monitoring', requireRmOfficer, (req, res) => {
+  if (redirectOfficerQueueIfEnabled(req, res, '/laravel/officer/monitoring')) return;
   res.type('html').send(
     monitoringQueuePage(
       req.session.user,
@@ -1449,6 +1580,7 @@ app.get('/officer/monitoring', requireRmOfficer, (req, res) => {
 });
 
 app.get('/officer/tickets', requireRmOfficer, (req, res) => {
+  if (redirectOfficerQueueIfEnabled(req, res, '/laravel/officer/tickets')) return;
   res.type('html').send(
     allTicketsPage(req.session.user, listTicketsForOfficer(), flashFromQuery(req.query), {
       stats: getOfficerStats(),
@@ -1456,11 +1588,32 @@ app.get('/officer/tickets', requireRmOfficer, (req, res) => {
   );
 });
 
+function officerTicketDetailPath(ref, query = '') {
+  const { USE_LARAVEL_OFFICER_TICKET_DETAIL_UI } = require('./config/features');
+  const base = USE_LARAVEL_OFFICER_TICKET_DETAIL_UI
+    ? `/laravel/officer/tickets/${encodeURIComponent(ref)}`
+    : `/officer/tickets/${encodeURIComponent(ref)}`;
+  return query ? `${base}?${query}` : base;
+}
+
+function officerTicketsListPath(query = '') {
+  const { USE_LARAVEL_OFFICER_QUEUES_UI } = require('./config/features');
+  const base = USE_LARAVEL_OFFICER_QUEUES_UI ? '/laravel/officer/tickets' : '/officer/tickets';
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/officer/tickets/:ref', requireRmOfficer, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_OFFICER_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_TICKET_DETAIL_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(
+      `/laravel/officer/tickets/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`,
+    );
+  }
   const ref = req.params.ref;
   const raw = getTicketByRefForOfficer(ref);
   if (!raw) {
-    return res.redirect('/officer/tickets?flash=not_found');
+    return res.redirect(officerTicketsListPath('flash=not_found'));
   }
   const ticket = await ticketForRole(raw, 'rm_officer');
   res.type('html').send(
@@ -1480,22 +1633,22 @@ app.get('/officer/attachments/:id', requireRmOfficer, asyncRoute(async (req, res
 app.post('/officer/tickets/:ref/thread-comment', requireRmOfficer, handleEvidenceUpload, (req, res) => {
   const ref = req.params.ref;
   if (req.uploadError) {
-    return res.redirect(`/officer/tickets/${ref}?error=${encodeURIComponent(req.uploadError)}`);
+    return res.redirect(officerTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
   }
   const result = addRmuThreadComment(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/officer/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(officerTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/officer/tickets/${ref}?flash=rmu_thread_comment`);
+  return res.redirect(officerTicketDetailPath(ref, 'flash=rmu_thread_comment'));
 });
 
 app.post('/officer/tickets/:ref/reopen', requireRmOfficer, (req, res) => {
   const ref = req.params.ref;
   const result = reopenTicketAsOfficer(ref, req.session.user, req.body);
   if (result.error) {
-    return res.redirect(`/officer/tickets/${ref}?error=${encodeURIComponent(result.error)}`);
+    return res.redirect(officerTicketDetailPath(ref, `error=${encodeURIComponent(result.error)}`));
   }
-  return res.redirect(`/officer/tickets/${ref}?flash=${result.flashKey || 'ticket_reopened'}`);
+  return res.redirect(officerTicketDetailPath(ref, `flash=${result.flashKey || 'ticket_reopened'}`));
 });
 
 app.post('/officer/notifications/read-all', requireRmOfficer, (req, res) => {
@@ -1512,6 +1665,11 @@ app.get('/officer/notifications/open/:id', requireRmOfficer, (req, res) => {
 /* —— Executive Committee (view only) —— */
 
 app.get('/executive', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_DASHBOARD_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveOverviewPage(
       req.session.user,
@@ -1625,6 +1783,11 @@ app.get('/executive/notifications/open/:id', requireExecutive, (req, res) => {
 /* —— President —— */
 
 app.get('/president', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_DASHBOARD_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     presidentOverviewPage(
       req.session.user,
@@ -1635,12 +1798,22 @@ app.get('/president', requirePresident, (req, res) => {
 });
 
 app.get('/president/trends', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president/trends${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     presidentTrendsPage(req.session.user, getPresidentDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/president/pending', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president/pending${qs ? `?${qs}` : ''}`);
+  }
   const stats = getPresidentStats();
   const tickets = listPresidentPendingQueue();
   res.type('html').send(
@@ -1649,6 +1822,11 @@ app.get('/president/pending', requirePresident, (req, res) => {
 });
 
 app.get('/president/high', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president/high${qs ? `?${qs}` : ''}`);
+  }
   const stats = getPresidentStats();
   const tickets = listTicketsForPresident({ level: 'high' });
   res.type('html').send(
@@ -1657,6 +1835,11 @@ app.get('/president/high', requirePresident, (req, res) => {
 });
 
 app.get('/president/critical', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_QUEUES_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_QUEUES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president/critical${qs ? `?${qs}` : ''}`);
+  }
   const stats = getPresidentStats();
   const tickets = listTicketsForPresident({ level: 'critical' });
   res.type('html').send(
@@ -1665,6 +1848,11 @@ app.get('/president/critical', requirePresident, (req, res) => {
 });
 
 app.get('/president/tickets/:ref', requirePresident, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/president/tickets/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`);
+  }
   const ref = req.params.ref;
   const raw = getTicketByRefForPresident(ref);
   if (!raw) {
@@ -2334,7 +2522,18 @@ app.get('/admin/audit-logs/export', requireAdmin, (req, res) => {
   res.send(header + rows);
 });
 
+function adminSettingsPath(query = '') {
+  const { USE_LARAVEL_ADMIN_SETTINGS_UI } = require('./config/features');
+  const base = USE_LARAVEL_ADMIN_SETTINGS_UI ? '/laravel/admin/settings' : '/admin/settings';
+  return query ? `${base}?${query}` : base;
+}
+
 app.get('/admin/settings', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_SETTINGS_UI } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_SETTINGS_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/admin/settings${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     settingsPage(
       req.session.user,
@@ -2377,7 +2576,7 @@ app.post('/admin/settings', requireAdmin, (req, res) => {
     module: 'System Settings',
     description: 'System settings were updated',
   });
-  return res.redirect('/admin/settings?flash=settings_saved');
+  return res.redirect(adminSettingsPath('flash=settings_saved'));
 });
 
 app.post('/admin/settings/reset-landing', requireAdmin, (req, res) => {
@@ -2391,7 +2590,7 @@ app.post('/admin/settings/reset-landing', requireAdmin, (req, res) => {
     module: 'System Settings',
     description: 'Landing page text restored to system defaults',
   });
-  return res.redirect('/admin/settings?flash=landing_reset');
+  return res.redirect(adminSettingsPath('flash=landing_reset'));
 });
 
 app.post('/admin/settings/reset-ai', requireAdmin, (req, res) => {
@@ -2403,7 +2602,7 @@ app.post('/admin/settings/reset-ai', requireAdmin, (req, res) => {
     module: 'System Settings',
     description: 'AI configuration restored to system defaults',
   });
-  return res.redirect('/admin/settings?flash=ai_reset');
+  return res.redirect(adminSettingsPath('flash=ai_reset'));
 });
 
 /* Legacy admin routes → redirect */

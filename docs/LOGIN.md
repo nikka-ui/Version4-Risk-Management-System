@@ -70,12 +70,12 @@ Sign in as `it-head` (or other `*-head`) / `dept2026` → http://localhost:8080/
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
-| Overview | `/dept` | Department dashboard |
-| Inbox | `/dept/inbox` (or tickets inbox) | Newly assigned tickets — accept, reject, or reassign |
-| Active / drafts | `/dept/...` | In-progress ownership, action plans, personnel, documents |
-| Returned tickets | `/dept/returned` | Plans or finals returned/rejected by the President |
+| Overview | `/dept` → `/laravel/dept` | Department dashboard |
+| Inbox | `/dept/inbox` → `/laravel/dept/inbox` | Newly assigned tickets — accept, reject, or reassign |
+| Active / drafts | `/dept/active`, `/dept/drafts` → `/laravel/dept/…` | In-progress ownership, action plan drafts |
+| Returned tickets | `/dept/returned` → `/laravel/dept/returned` | Plans or finals returned/rejected by the President |
 | Overdue / pending closure | Dept queues | SLA and closure after accomplishment |
-| Ticket detail | `/dept/tickets/:ref` | Ownership actions, action plan draft/publish, resolution |
+| Ticket detail | `/dept/tickets/:ref` → `/laravel/dept/tickets/:ref` | Ownership actions, action plan draft/publish, resolution |
 
 **Ownership:** After accept (`in_progress`), the head builds and publishes an action plan.
 
@@ -86,15 +86,16 @@ Sign in as `it-head` (or other `*-head`) / `dept2026` → http://localhost:8080/
 
 ## Risk Management Officer — RMO (`rm_officer`)
 
-Sign in as `rm-officer` / `a3c2026` → http://localhost:8080/officer
+Sign in as `rm-officer` / `a3c2026` → http://localhost:8080/officer  
+(With Blade flags on: overview `/laravel/officer`, queues `/laravel/officer/{tickets,overdue,monitoring,action-plans}`.)
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
-| Overview | `/officer` | Governance dashboard |
-| Risk register | `/officer/tickets` | Organization-wide tickets (view) |
-| Overdue & SLA | `/officer/overdue` | SLA / overdue monitoring |
-| Monitoring | `/officer/monitoring` | Lifecycle monitoring |
-| Ticket detail | `/officer/tickets/:ref` | View, thread comments, reopen closed tickets |
+| Overview | `/officer` → `/laravel/officer` | Governance dashboard |
+| Risk register | `/officer/tickets` → `/laravel/officer/tickets` | Organization-wide tickets (view) |
+| Overdue & SLA | `/officer/overdue` → `/laravel/officer/overdue` | SLA / overdue monitoring |
+| Monitoring | `/officer/monitoring` → `/laravel/officer/monitoring` | Lifecycle monitoring |
+| Ticket detail | `/officer/tickets/:ref` → `/laravel/officer/tickets/:ref` | View, thread comments, reopen closed tickets |
 
 RMO **cannot** accept ownership, edit mitigation plans, or close tickets as owner. Reopen of closed tickets (reassign to department) is allowed for governance.
 
@@ -132,7 +133,7 @@ Sign in as `admin` / `a3c1993` (or `sys-admin` / `a3c2026`) → http://localhost
 | Positions | `/admin/positions` → `/laravel/admin/positions` when `USE_LARAVEL_ADMIN_POSITIONS_UI=true` | Position catalog |
 | Tickets | `/admin/tickets` | View / soft-delete tickets (no workflow approve/close) |
 | Audit logs | `/admin/audit-logs` | Administrator and system action trail |
-| Settings | `/admin/settings` | Landing branding, AI, security options; reset helpers |
+| Settings | `/admin/settings` → `/laravel/admin/settings` | Landing branding, AI, security options; reset helpers |
 | Profile | `/admin/profile` | Admin profile |
 
 Administrators **cannot** approve risk reports, publish mitigation as owners, or override RMO/President workflow decisions.

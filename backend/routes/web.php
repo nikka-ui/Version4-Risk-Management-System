@@ -1,12 +1,24 @@
 <?php
 
+use App\Http\Controllers\AdminAuditLogsController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminDepartmentController;
 use App\Http\Controllers\AdminPositionController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminTicketController;
 use App\Http\Controllers\AdminTicketDetailController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\DeptDashboardController;
+use App\Http\Controllers\DeptQueueController;
+use App\Http\Controllers\DeptTicketDetailController;
+use App\Http\Controllers\ExecutiveDashboardController;
+use App\Http\Controllers\OfficerDashboardController;
+use App\Http\Controllers\OfficerQueueController;
+use App\Http\Controllers\OfficerTicketDetailController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PresidentDashboardController;
+use App\Http\Controllers\PresidentQueueController;
+use App\Http\Controllers\PresidentTicketDetailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SupervisorAccomplishmentController;
 use App\Http\Controllers\SupervisorActionController;
@@ -24,7 +36,7 @@ Route::get('/', function () {
         'message' => 'API root. Versioned routes live under /v1 (public URL /api/v1). Browser UI under /laravel/*.',
         'version' => 'v1',
         'phase' => 5,
-        'slice' => 20,
+        'slice' => 31,
     ]);
 });
 
@@ -56,9 +68,67 @@ Route::middleware(['auth', 'rms.web_admin'])->group(function () {
     Route::get('/admin/tickets/{ref}', [AdminTicketDetailController::class, 'index'])
         ->where('ref', 'RISK-[A-Za-z0-9\\-]+')
         ->name('admin.tickets.detail');
-    Route::get('/admin/audit-logs', [\App\Http\Controllers\AdminAuditLogsController::class, 'index'])
+    Route::get('/admin/audit-logs', [AdminAuditLogsController::class, 'index'])
         ->name('admin.audit.logs');
+    Route::get('/admin/settings', [AdminSettingsController::class, 'index'])
+        ->name('admin.settings');
     Route::get('/admin/profile', [ProfileController::class, 'admin'])->name('admin.profile');
+});
+
+/*
+| Phase 5 slice 22–24: Department Head Blade dashboard + queues + ticket detail.
+| Ownership / action-plan / close POSTs remain on Express.
+*/
+Route::middleware(['auth', 'rms.web_dept_head'])->group(function () {
+    Route::get('/dept', [DeptDashboardController::class, 'index'])->name('dept.dashboard');
+    Route::get('/dept/inbox', [DeptQueueController::class, 'inbox'])->name('dept.inbox');
+    Route::get('/dept/active', [DeptQueueController::class, 'active'])->name('dept.active');
+    Route::get('/dept/drafts', [DeptQueueController::class, 'drafts'])->name('dept.drafts');
+    Route::get('/dept/returned', [DeptQueueController::class, 'returned'])->name('dept.returned');
+    Route::get('/dept/overdue', [DeptQueueController::class, 'overdue'])->name('dept.overdue');
+    Route::get('/dept/closure', [DeptQueueController::class, 'closure'])->name('dept.closure');
+    Route::get('/dept/tickets', [DeptQueueController::class, 'tickets'])->name('dept.tickets');
+    Route::get('/dept/tickets/{reference}', [DeptTicketDetailController::class, 'show'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('dept.tickets.show');
+});
+
+/*
+| Phase 5 slice 25–27: Risk Management Officer Blade dashboard + queues + ticket detail.
+| Thread-comment / reopen POSTs remain on Express.
+*/
+Route::middleware(['auth', 'rms.web_officer'])->group(function () {
+    Route::get('/officer', [OfficerDashboardController::class, 'index'])->name('officer.dashboard');
+    Route::get('/officer/tickets', [OfficerQueueController::class, 'tickets'])->name('officer.tickets');
+    Route::get('/officer/overdue', [OfficerQueueController::class, 'overdue'])->name('officer.overdue');
+    Route::get('/officer/monitoring', [OfficerQueueController::class, 'monitoring'])->name('officer.monitoring');
+    Route::get('/officer/action-plans', [OfficerQueueController::class, 'actionPlans'])->name('officer.action-plans');
+    Route::get('/officer/tickets/{reference}', [OfficerTicketDetailController::class, 'show'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('officer.tickets.show');
+});
+
+/*
+| Phase 5 slice 28: Executive Committee Blade dashboard.
+| Overview GET only for now; other executive screens stay on Express.
+*/
+Route::middleware(['auth', 'rms.web_executive'])->group(function () {
+    Route::get('/executive', [ExecutiveDashboardController::class, 'index'])->name('executive.dashboard');
+});
+
+/*
+| Phase 5 slice 29–31: President dashboard + queues + ticket detail (Blade GET).
+| Decision / comment POSTs stay on Express.
+*/
+Route::middleware(['auth', 'rms.web_president'])->group(function () {
+    Route::get('/president', [PresidentDashboardController::class, 'index'])->name('president.dashboard');
+    Route::get('/president/pending', [PresidentQueueController::class, 'pending'])->name('president.pending');
+    Route::get('/president/high', [PresidentQueueController::class, 'high'])->name('president.high');
+    Route::get('/president/critical', [PresidentQueueController::class, 'critical'])->name('president.critical');
+    Route::get('/president/trends', [PresidentQueueController::class, 'trends'])->name('president.trends');
+    Route::get('/president/tickets/{reference}', [PresidentTicketDetailController::class, 'show'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('president.tickets.show');
 });
 
 /*

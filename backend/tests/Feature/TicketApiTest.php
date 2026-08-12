@@ -18,7 +18,7 @@ class TicketApiTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('phase', 5)
-            ->assertJsonPath('slice', 20);
+            ->assertJsonPath('slice', 31);
     }
 
     public function test_tickets_require_auth(): void

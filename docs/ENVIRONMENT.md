@@ -102,6 +102,17 @@ Change before sharing dev environments.
 | `USE_LARAVEL_ADMIN_TICKETS_UI` | web env | Phase 5 slice 18: defaults **`true`**. Express GET `/admin/tickets` redirects to Blade; delete POST stays on Express; ticket detail still Express. |
 | `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI` | web env | Phase 5 slice 19: defaults **`true`**. Express GET `/admin/tickets/:ref` redirects to Blade; detail view now read-only on Laravel. |
 | `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI` | web env | Phase 5 slice 20: defaults **`true`**. Express GET `/admin/audit-logs` redirects to Blade; export remains on Express. |
+| `USE_LARAVEL_ADMIN_SETTINGS_UI` | web env | Phase 5 slice 21: defaults **`true`**. Express GET `/admin/settings` redirects to Blade; save/reset POSTs remain on Express. |
+| `USE_LARAVEL_DEPT_DASHBOARD_UI` | web env | Phase 5 slice 22: defaults **`true`**. Express GET `/dept` redirects to Blade; queues/detail remain on Express. |
+| `USE_LARAVEL_DEPT_QUEUES_UI` | web env | Phase 5 slice 23: defaults **`true`**. Express GET `/dept/{inbox,active,drafts,returned,overdue,closure,tickets}` redirects to Blade; ticket detail remains on Express. |
+| `USE_LARAVEL_DEPT_TICKET_DETAIL_UI` | web env | Phase 5 slice 24: defaults **`true`**. Express GET `/dept/tickets/:ref` redirects to Blade; ownership/action-plan/close POSTs remain on Express. |
+| `USE_LARAVEL_OFFICER_DASHBOARD_UI` | web env | Phase 5 slice 25: defaults **`true`**. Express GET `/officer` redirects to Blade; queues/detail remain on Express. |
+| `USE_LARAVEL_OFFICER_QUEUES_UI` | web env | Phase 5 slice 26: defaults **`true`**. Express GET `/officer/{tickets,overdue,monitoring,action-plans}` redirects to Blade; ticket detail remains on Express. |
+| `USE_LARAVEL_OFFICER_TICKET_DETAIL_UI` | web env | Phase 5 slice 27: defaults **`true`**. Express GET `/officer/tickets/:ref` redirects to Blade; thread-comment/reopen POSTs remain on Express. |
+| `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI` | web env | Phase 5 slice 28: defaults **`true`**. Express GET `/executive` redirects to Blade; remaining `/executive/*` stay on Express for now. |
+| `USE_LARAVEL_PRESIDENT_DASHBOARD_UI` | web env | Phase 5 slice 29: defaults **`true`**. Express GET `/president` redirects to Blade. |
+| `USE_LARAVEL_PRESIDENT_QUEUES_UI` | web env | Phase 5 slice 30: defaults **`true`**. Express GET `/president/{pending,high,critical,trends}` redirect to Blade. |
+| `USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI` | web env | Phase 5 slice 31: defaults **`true`**. Express GET `/president/tickets/:ref` redirects to Blade; decision/comment POSTs stay on Express. |
 | `USE_LARAVEL_AUTH_FALLBACK` | web env | If auth flag on and Laravel unreachable, fall back to store.json auth. Default **`false`** (fail closed). |
 | `USE_LARAVEL_ORG` | web env | Unused (admin org UI stays Express). |
 | `USE_LARAVEL_API` | web env | Phase 5 slice 1: defaults **`true`**. Dual-write + attachment routing through Laravel. Set `false` or use `docker/compose.soak.yml` to opt out. |
