@@ -26,7 +26,7 @@
       <p class="sup-page-desc">{{ $t['title'] }} · {{ $t['statusLabel'] }}</p>
     </div>
     <div class="sup-page-head__actions">
-      <a href="/laravel/supervisor/tickets" class="btn-outline">Back to list</a>
+      <a href="/supervisor/tickets" class="btn-outline">Back to list</a>
       <a href="/supervisor/tickets/{{ urlencode($t['reference']) }}/edit" class="btn-outline">Open Express editor</a>
     </div>
   </div>
@@ -109,18 +109,57 @@
         @endforeach
       </ul>
     @endif
-    <p class="section-hint text-muted" style="margin-top:0.75rem">Upload and interactive evidence actions remain on Express ticket pages.</p>
+    @if (!empty($capabilities['canUploadEvidence']))
+      <form method="post" action="/supervisor/tickets/{{ urlencode($t['reference']) }}/evidence" class="stack-form" enctype="multipart/form-data" style="margin-top:1rem">
+        @csrf
+        <h3>Add evidence</h3>
+        <p class="section-hint text-muted">Upload PDF, PNG, or JPG (max 20MB each).</p>
+        <input name="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg" required>
+        <button type="submit" class="btn-primary btn-primary--auto">Upload files</button>
+      </form>
+    @endif
   </section>
 
   @if ($accomplishment)
-    <section class="sup-card">
+    <section class="sup-card card--accent">
       <h2>Accomplishment</h2>
+      <p class="text-muted">Submitted {{ !empty($accomplishment['submittedAt']) ? \Illuminate\Support\Carbon::parse($accomplishment['submittedAt'])->format('Y-m-d H:i') : '—' }} · sent to your department head for review and closure.</p>
       <dl class="detail-dl detail-dl--console">
-        <dt>Submitted</dt>
-        <dd>{{ !empty($accomplishment['submittedAt']) ? \Illuminate\Support\Carbon::parse($accomplishment['submittedAt'])->format('Y-m-d H:i') : '—' }}</dd>
         <dt>Summary</dt><dd>{{ $accomplishment['summary'] }}</dd>
         <dt>Outcomes</dt><dd>{{ $accomplishment['outcomes'] }}</dd>
       </dl>
+    </section>
+  @elseif (!empty($capabilities['canSubmitAccomplishment']))
+    <section class="sup-card card--accent">
+      <h2>Submit accomplishment report</h2>
+      @if (!empty($actionPlanSummary))
+        <p class="accomplishment-plan-ref"><strong>Department action plan:</strong> {{ $actionPlanSummary }}</p>
+      @endif
+      <form method="post" action="/supervisor/tickets/{{ urlencode($t['reference']) }}/accomplishment" class="stack-form accomplishment-report-form" enctype="multipart/form-data">
+        @csrf
+        <div class="field field--required">
+          <label for="accSummary">Implementation summary <span class="req">*</span></label>
+          <textarea id="accSummary" name="summary" rows="4" required placeholder="What did you implement from the action plan?"></textarea>
+        </div>
+        <div class="field field--required">
+          <label for="accOutcomes">Outcomes and results <span class="req">*</span></label>
+          <textarea id="accOutcomes" name="outcomes" rows="4" required placeholder="What changed as a result?"></textarea>
+        </div>
+        <div class="field field--required">
+          <label for="accAttachments">Accomplishment result evidence <span class="req">*</span></label>
+          <p class="field-hint">Required — at least one file proving the department action plan was applied (PDF, PNG, or JPG, max 20MB). Original ticket attachments do not count.</p>
+          @if (count($implementationEvidence ?? []) > 0)
+            <p class="upload-evidence-status upload-evidence-status--ok">{{ count($implementationEvidence) }} action-plan proof file{{ count($implementationEvidence) === 1 ? '' : 's' }} already attached.</p>
+            <ul class="evidence-list">
+              @foreach ($implementationEvidence as $file)
+                <li><a href="/supervisor/attachments/{{ urlencode($file['id']) }}" target="_blank" rel="noopener">{{ $file['name'] }}</a></li>
+              @endforeach
+            </ul>
+          @endif
+          <input id="accAttachments" name="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg" @if (count($implementationEvidence ?? []) === 0) required @endif>
+        </div>
+        <button type="submit" class="btn-primary btn-primary--auto">Submit accomplishment</button>
+      </form>
     </section>
   @endif
 

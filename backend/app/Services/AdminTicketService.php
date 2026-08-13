@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Department;
 use App\Models\RiskTicket;
+use App\Models\User;
 use App\Support\Departments;
 use Illuminate\Support\Collection;
 
 /**
- * Phase 5 slice 18: System Administrator ticket list from Laravel Postgres.
+ * Phase 5 slice 18 + Phase 7 slice 5: System Administrator tickets (Blade list + soft-delete).
  */
 class AdminTicketService
 {
@@ -89,6 +90,46 @@ class AdminTicketService
                 'level' => $level ?? '',
                 'status' => $status ?? '',
                 'deleted' => $deleted,
+            ],
+        ];
+    }
+
+    /**
+     * @return array{ticket?: array<string, mixed>, error?: string}
+     */
+    public function softDelete(string $reference, User $actor, string $reason): array
+    {
+        $ticket = RiskTicket::query()->where('reference', $reference)->first();
+        if (! $ticket) {
+            return ['error' => 'Ticket not found.'];
+        }
+        if ($ticket->deleted) {
+            return ['error' => 'Ticket is already deleted.'];
+        }
+
+        $deletionReason = trim($reason);
+        if ($deletionReason === '') {
+            return ['error' => 'A reason for deletion is required.'];
+        }
+
+        $now = now();
+        $ticket->deleted = true;
+        $ticket->deleted_at = $now;
+        $ticket->deleted_by = $actor->username;
+        $ticket->deleted_by_name = $actor->name ?: $actor->username;
+        $ticket->deletion_reason = $deletionReason;
+        $ticket->source_updated_at = $now;
+        $ticket->save();
+
+        return [
+            'ticket' => [
+                'reference' => $ticket->reference,
+                'title' => $ticket->title,
+                'deleted' => true,
+                'deletedAt' => optional($ticket->deleted_at)?->toIso8601String(),
+                'deletedBy' => $ticket->deleted_by,
+                'deletedByName' => $ticket->deleted_by_name,
+                'deletionReason' => $ticket->deletion_reason,
             ],
         ];
     }

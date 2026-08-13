@@ -26,4 +26,24 @@ return [
     */
     'internal_service_token' => env('RMS_INTERNAL_SERVICE_TOKEN', ''),
 
+    /*
+    | Phase 7 slice 1: Express base URL for Laravel → store.json org mirror.
+    | Empty disables the mirror (Postgres still updates).
+    */
+    'express_web_url' => env('EXPRESS_WEB_INTERNAL_URL', 'http://web:3000'),
+
+    /*
+    | Phase 6 slice 1: edge nginx `location = /` proxies to Laravel.
+    | When true (compose default), `/` redirects to Blade login or role console.
+    | When false (soak), `/` redirects to Express `/login` or Express role path.
+    */
+    'edge_root' => filter_var(env('USE_LARAVEL_EDGE_ROOT', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    | Phase 6 slice 2: unprefixed Blade URLs (/login, /admin, /supervisor, …).
+    | When true (compose default), nginx GET role consoles → Laravel and redirects omit /laravel.
+    | When false (soak), keep /laravel/* rewrite paths.
+    */
+    'edge_ui' => filter_var(env('USE_LARAVEL_EDGE_UI', true), FILTER_VALIDATE_BOOLEAN),
+
 ];

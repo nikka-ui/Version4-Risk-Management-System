@@ -47,7 +47,7 @@ class LoginController extends Controller
         try {
             $user = $this->bridge->authenticate($credentials['username'], $credentials['password']);
         } catch (ValidationException $e) {
-            return redirect()->away('/laravel/login')
+            return redirect()->away('/login')
                 ->withInput($request->only('username', 'next'))
                 ->with('error', collect($e->errors())->flatten()->first() ?: 'Invalid credentials.');
         }

@@ -45,7 +45,7 @@ class SupervisorNotificationController extends Controller
     {
         $this->notifications->markAllRead($request->user());
 
-        return redirect()->away('/laravel/supervisor/notifications?flash=notifications_read');
+        return redirect()->away('/supervisor/notifications?flash=notifications_read');
     }
 
     public function open(Request $request, string $id): RedirectResponse
@@ -53,12 +53,12 @@ class SupervisorNotificationController extends Controller
         try {
             $notification = $this->notifications->markRead($request->user(), $id);
         } catch (\Illuminate\Validation\ValidationException) {
-            return redirect()->away('/laravel/supervisor/notifications?flash=not_found');
+            return redirect()->away('/supervisor/notifications?flash=not_found');
         }
 
         $href = $this->resolveHref($notification->toExpressArray());
 
-        return redirect()->away($href ?: '/laravel/supervisor');
+        return redirect()->away($href ?: '/supervisor');
     }
 
     /**
@@ -68,7 +68,7 @@ class SupervisorNotificationController extends Controller
     {
         $ref = trim((string) ($n['ticketRef'] ?? ''));
         if ($ref !== '') {
-            return '/laravel/supervisor/tickets/'.rawurlencode($ref);
+            return '/supervisor/tickets/'.rawurlencode($ref);
         }
 
         $href = trim((string) ($n['href'] ?? ''));
@@ -76,6 +76,6 @@ class SupervisorNotificationController extends Controller
             return $href;
         }
 
-        return '/laravel/supervisor/notifications';
+        return '/supervisor/notifications';
     }
 }

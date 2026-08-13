@@ -11,6 +11,7 @@
 <section class="sup-card sup-card--compact admin-form-card">
   <h2>{{ $isEdit ? 'Edit user: '.$editUser['displayName'] : 'Create user' }}</h2>
   <form method="post" action="{{ $formAction }}" class="admin-user-form">
+    @csrf
     <div class="admin-form-grid">
       <div class="field">
         <label for="employeeId">Employee ID</label>
@@ -109,7 +110,7 @@
     </div>
     <div class="action-row">
       <button type="submit" class="sup-btn-primary">{{ $isEdit ? 'Save changes' : 'Add User' }}</button>
-      <a href="/laravel/admin/users" class="sup-btn-outline">Cancel</a>
+      <a href="/admin/users" class="sup-btn-outline">Cancel</a>
     </div>
   </form>
   @unless ($isEdit)

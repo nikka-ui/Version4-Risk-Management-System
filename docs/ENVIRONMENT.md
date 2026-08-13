@@ -83,7 +83,8 @@ Change before sharing dev environments.
 | `APP_KEY` | `docker/secrets/app_key.txt` | Laravel `api` (via `APP_KEY_FILE`) |
 | `SANCTUM_STATEFUL_DOMAINS` | `.env` | Laravel Sanctum stateful hosts — e.g. `localhost:8080` |
 | `STORE_JSON_PATH` | compose / `.env` | Laravel import path (default `/import/store.json` in Docker) |
-| `RMS_INTERNAL_SERVICE_TOKEN` | `.env` | Optional future Express→Laravel service header (`X-RMS-Service-Token`). Empty = disabled. **Not used for browser login.** |
+| `RMS_INTERNAL_SERVICE_TOKEN` | `.env` / compose | Phase 7 slice 1: Laravel→Express org mirror (`X-RMS-Service-Token`). Compose default **`rms-dev-internal`**. Empty disables the mirror. **Not used for browser login.** |
+| `EXPRESS_WEB_INTERNAL_URL` | api env | Phase 7 slice 1: Express base URL for org mirror. Default `http://web:3000`. |
 | `USE_LARAVEL_AUTH` | web env | Phase 5 slice 3: defaults **`true`**. Express POST /login verifies via Laravel `/v1/auth/verify`, then sets Express cookie. Set `false` or use `compose.soak.yml` to opt out. |
 | `USE_LARAVEL_LOGIN_UI` | web env | Phase 5 slice 4: defaults **`true`**. Express GET `/login` redirects to Laravel Blade `/laravel/login`; success bridges via `/auth/bridge`. |
 | `USE_LARAVEL_PROFILE_UI` | web env | Phase 5 slice 5: defaults **`true`**. Express GET `/admin/profile` redirects to Laravel Blade `/laravel/admin/profile`. |
@@ -94,25 +95,42 @@ Change before sharing dev environments.
 | `USE_LARAVEL_REPORTER_NOTIFICATIONS_UI` | web env | Phase 5 slice 10: defaults **`true`**. Express GET `/supervisor/notifications` redirects to Blade notifications (mark-all-read / open use Laravel). |
 | `USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI` | web env | Phase 5 slice 11: defaults **`true`**. Express GET `/supervisor/accomplishments` redirects to Blade accomplishment history. |
 | `USE_LARAVEL_REPORTER_ACTIONS_UI` | web env | Phase 5 slice 12: defaults **`true`**. Express GET `/supervisor/actions` redirects to Blade action-required queue. |
-| `USE_LARAVEL_REPORTER_TICKET_FORM_UI` | web env | Phase 5 slice 13: defaults **`true`**. Express GET create/edit/preview form routes redirect to Blade; POST + uploads stay on Express. |
+| `USE_LARAVEL_REPORTER_TICKET_FORM_UI` | web env | Phase 5 slice 13: defaults **`true`**. Express GET create/edit/preview form routes redirect to Blade. Preview save/submit + draft delete moved in Phase 7 slice 7; create/edit uploads moved in Phase 8 slice 1. |
+| `USE_LARAVEL_REPORTER_TICKET_MUTATIONS` | web env | Phase 7 slice 7: defaults **`true`**. Blade preview save/submit + draft delete POSTs; Express `store.json` is mirrored via `/internal/tickets/upsert` and `/internal/tickets/delete-draft`. |
+| `USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS` | web env | Phase 8 slice 1–2: defaults **`true`**. Blade create/edit + evidence + accomplishment multipart POSTs; Express `store.json` is mirrored via `/internal/tickets/upsert`. |
 | `USE_LARAVEL_ADMIN_DASHBOARD_UI` | web env | Phase 5 slice 14: defaults **`true`**. Express GET `/admin` redirects to Blade dashboard; management POSTs stay on Express. |
-| `USE_LARAVEL_ADMIN_USERS_UI` | web env | Phase 5 slice 15: defaults **`true`**. Express GET `/admin/users` (+ edit) redirects to Blade; create/edit/status/reset POSTs stay on Express. |
-| `USE_LARAVEL_ADMIN_DEPARTMENTS_UI` | web env | Phase 5 slice 16: defaults **`true`**. Express GET `/admin/departments` (+ edit) redirects to Blade; create/edit/delete POSTs stay on Express. |
-| `USE_LARAVEL_ADMIN_POSITIONS_UI` | web env | Phase 5 slice 17: defaults **`true`**. Express GET `/admin/positions` (+ edit) redirects to Blade; create/edit/delete POSTs stay on Express. |
-| `USE_LARAVEL_ADMIN_TICKETS_UI` | web env | Phase 5 slice 18: defaults **`true`**. Express GET `/admin/tickets` redirects to Blade; delete POST stays on Express; ticket detail still Express. |
+| `USE_LARAVEL_ADMIN_USERS_UI` | web env | Phase 5 slice 15: defaults **`true`**. Express GET `/admin/users` (+ edit) redirects to Blade. |
+| `USE_LARAVEL_ADMIN_USER_MUTATIONS` | web env | Phase 7 slice 3: defaults **`true`**. Blade create/edit/activate/deactivate/delete/reset-password POSTs; Express `store.json` is mirrored via `/internal/org/users`. |
+| `USE_LARAVEL_ADMIN_DEPARTMENTS_UI` | web env | Phase 5 slice 16: defaults **`true`**. Express GET `/admin/departments` (+ edit) redirects to Blade. |
+| `USE_LARAVEL_ADMIN_DEPT_MUTATIONS` | web + api env | Phase 7 slice 1: defaults **`true`**. Blade create/edit/delete POSTs; Express `store.json` is mirrored via `/internal/org/departments`. |
+| `USE_LARAVEL_ADMIN_POSITIONS_UI` | web env | Phase 5 slice 17: defaults **`true`**. Express GET `/admin/positions` (+ edit) redirects to Blade. |
+| `USE_LARAVEL_ADMIN_POS_MUTATIONS` | web env | Phase 7 slice 2: defaults **`true`**. Blade create/edit/delete POSTs; Express `store.json` is mirrored via `/internal/org/positions`. |
+| `USE_LARAVEL_ADMIN_TICKETS_UI` | web env | Phase 5 slice 18: defaults **`true`**. Express GET `/admin/tickets` redirects to Blade. |
+| `USE_LARAVEL_ADMIN_TICKET_MUTATIONS` | web env | Phase 7 slice 5: defaults **`true`**. Blade soft-delete POST `/admin/tickets/:ref/delete`; Express `store.json` is mirrored via `/internal/tickets/soft-delete`. |
+| `USE_LARAVEL_DEPT_TICKET_MUTATIONS` | web env | Phase 7 slice 6 + slice 13 + Phase 8 slice 3: defaults **`true`**. Blade dept workflow + comment + document POSTs; Express `store.json` is mirrored via `/internal/tickets/upsert`. Personnel/resolution stay Express. |
 | `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI` | web env | Phase 5 slice 19: defaults **`true`**. Express GET `/admin/tickets/:ref` redirects to Blade; detail view now read-only on Laravel. |
 | `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI` | web env | Phase 5 slice 20: defaults **`true`**. Express GET `/admin/audit-logs` redirects to Blade; export remains on Express. |
-| `USE_LARAVEL_ADMIN_SETTINGS_UI` | web env | Phase 5 slice 21: defaults **`true`**. Express GET `/admin/settings` redirects to Blade; save/reset POSTs remain on Express. |
+| `USE_LARAVEL_ADMIN_SETTINGS_UI` | web env | Phase 5 slice 21: defaults **`true`**. Express GET `/admin/settings` redirects to Blade. |
+| `USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS` | web env | Phase 7 slice 4: defaults **`true`**. Blade save/reset-landing/reset-ai POSTs; Express `store.json` is mirrored via `/internal/org/settings`. |
 | `USE_LARAVEL_DEPT_DASHBOARD_UI` | web env | Phase 5 slice 22: defaults **`true`**. Express GET `/dept` redirects to Blade; queues/detail remain on Express. |
 | `USE_LARAVEL_DEPT_QUEUES_UI` | web env | Phase 5 slice 23: defaults **`true`**. Express GET `/dept/{inbox,active,drafts,returned,overdue,closure,tickets}` redirects to Blade; ticket detail remains on Express. |
-| `USE_LARAVEL_DEPT_TICKET_DETAIL_UI` | web env | Phase 5 slice 24: defaults **`true`**. Express GET `/dept/tickets/:ref` redirects to Blade; ownership/action-plan/close POSTs remain on Express. |
+| `USE_LARAVEL_DEPT_TICKET_DETAIL_UI` | web env | Phase 5 slice 24: defaults **`true`**. Express GET `/dept/tickets/:ref` redirects to Blade. Workflow POSTs moved in Phase 7 slice 6. |
 | `USE_LARAVEL_OFFICER_DASHBOARD_UI` | web env | Phase 5 slice 25: defaults **`true`**. Express GET `/officer` redirects to Blade; queues/detail remain on Express. |
 | `USE_LARAVEL_OFFICER_QUEUES_UI` | web env | Phase 5 slice 26: defaults **`true`**. Express GET `/officer/{tickets,overdue,monitoring,action-plans}` redirects to Blade; ticket detail remains on Express. |
-| `USE_LARAVEL_OFFICER_TICKET_DETAIL_UI` | web env | Phase 5 slice 27: defaults **`true`**. Express GET `/officer/tickets/:ref` redirects to Blade; thread-comment/reopen POSTs remain on Express. |
-| `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI` | web env | Phase 5 slice 28: defaults **`true`**. Express GET `/executive` redirects to Blade; remaining `/executive/*` stay on Express for now. |
+| `USE_LARAVEL_OFFICER_TICKET_DETAIL_UI` | web env | Phase 5 slice 27: defaults **`true`**. Express GET `/officer/tickets/:ref` redirects to Blade. Reopen moved in Phase 7 slice 8; thread-comment in Phase 7 slice 11. |
+| `USE_LARAVEL_OFFICER_TICKET_MUTATIONS` | web env | Phase 7 slice 8 + slice 11: defaults **`true`**. Blade reopen + thread-comment POSTs; Express `store.json` is mirrored via `/internal/tickets/upsert`. |
+| `USE_LARAVEL_OFFICER_ALIASES_UI` | web env | Phase 6 slice 5: defaults **`true`**. Express GET `/officer/{ai-review,review,final-validation}` redirect to Laravel aliases (`/officer/tickets` or `/officer/action-plans`). |
+| `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI` | web env | Phase 5 slice 28: defaults **`true`**. Express GET `/executive` redirects to Blade. |
+| `USE_LARAVEL_EXECUTIVE_PAGES_UI` | web env | Phase 6 slice 3: defaults **`true`**. Express GET `/executive/{heatmap,reports,trends,statistics,departments,register,critical}` redirect to Blade. |
+| `USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI` | web env | Phase 6 slice 4: defaults **`true`**. Express GET `/executive/tickets/:ref` redirects to Blade. Comment moved in Phase 7 slice 10. |
+| `USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS` | web env | Phase 7 slice 10: defaults **`true`**. Blade comment POST `/executive/tickets/:ref/comment`; Express `store.json` is mirrored via `/internal/tickets/upsert`. |
 | `USE_LARAVEL_PRESIDENT_DASHBOARD_UI` | web env | Phase 5 slice 29: defaults **`true`**. Express GET `/president` redirects to Blade. |
 | `USE_LARAVEL_PRESIDENT_QUEUES_UI` | web env | Phase 5 slice 30: defaults **`true`**. Express GET `/president/{pending,high,critical,trends}` redirect to Blade. |
-| `USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI` | web env | Phase 5 slice 31: defaults **`true`**. Express GET `/president/tickets/:ref` redirects to Blade; decision/comment POSTs stay on Express. |
+| `USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI` | web env | Phase 5 slice 31: defaults **`true`**. Express GET `/president/tickets/:ref` redirects to Blade. Decision moved in Phase 7 slice 9; comment in Phase 7 slice 12. |
+| `USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS` | web env | Phase 7 slice 9 + slice 12: defaults **`true`**. Blade decision + comment POSTs; Express `store.json` is mirrored via `/internal/tickets/upsert`. |
+| `USE_LARAVEL_EDGE_ROOT` | api + web env | Phase 6 slice 1: defaults **`true`**. Edge nginx exact `/` → Laravel; guest redirects to `/login`. Soak sets **`false`**. |
+| `USE_LARAVEL_EDGE_UI` | api + web env | Phase 6 slice 2: defaults **`true`**. Unprefixed Blade GETs (`/login`, `/admin`, …) via nginx. Soak nginx omits those locations. |
+| `USE_LARAVEL_DASHBOARD_UI` | web env | Phase 6 slice 6: defaults **`true`**. Express GET `/dashboard` redirects to Blade; console roles hop to `/{role}`, employees see the stub. |
 | `USE_LARAVEL_AUTH_FALLBACK` | web env | If auth flag on and Laravel unreachable, fall back to store.json auth. Default **`false`** (fail closed). |
 | `USE_LARAVEL_ORG` | web env | Unused (admin org UI stays Express). |
 | `USE_LARAVEL_API` | web env | Phase 5 slice 1: defaults **`true`**. Dual-write + attachment routing through Laravel. Set `false` or use `docker/compose.soak.yml` to opt out. |

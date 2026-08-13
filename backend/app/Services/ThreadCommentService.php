@@ -67,6 +67,20 @@ class ThreadCommentService
         ];
         $comments[] = $record;
 
+        $executiveComments = is_array($ticket->executive_comments) ? $ticket->executive_comments : [];
+        if (in_array($user->role, [Roles::EXECUTIVE, Roles::PRESIDENT], true)) {
+            $already = false;
+            foreach ($executiveComments as $existing) {
+                if (($existing['id'] ?? null) === $record['id']) {
+                    $already = true;
+                    break;
+                }
+            }
+            if (! $already) {
+                $executiveComments[] = $record;
+            }
+        }
+
         $audit = is_array($ticket->audit_trail) ? $ticket->audit_trail : [];
         $action = $user->role === Roles::RM_OFFICER
             ? ($parentId ? 'RMO thread reply' : 'RMO governance comment')
@@ -83,6 +97,7 @@ class ThreadCommentService
 
         $ticket->fill([
             'thread_comments' => $comments,
+            'executive_comments' => $executiveComments,
             'audit_trail' => $audit,
             'source_updated_at' => $now,
         ]);

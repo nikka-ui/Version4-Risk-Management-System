@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return '/laravel/login';
+            return config('rms.edge_ui', true) ? '/login' : '/laravel/login';
         });
 
         // Optional future Express→Laravel service calls (not used by browser login).

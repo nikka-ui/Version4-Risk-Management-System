@@ -22,23 +22,23 @@
       <h1>Dashboard</h1>
       <p class="sup-page-desc">Welcome, Risk Management Officer — view organizational risks, monitor SLA compliance, and participate in ticket discussion threads. The RMO does not own or edit tickets.</p>
     </div>
-    <a href="/laravel/officer/overdue" class="filter-pill filter-pill--head">Overdue <span class="filter-pill__count">{{ (int) ($stats['overdueMitigation'] ?? 0) }}</span></a>
+    <a href="/officer/overdue" class="filter-pill filter-pill--head">Overdue <span class="filter-pill__count">{{ (int) ($stats['overdueMitigation'] ?? 0) }}</span></a>
   </div>
 
   <div class="sup-kpi-grid sup-kpi-grid--officer">
-    <a class="sup-kpi sup-kpi--accent" href="/laravel/officer/tickets">
+    <a class="sup-kpi sup-kpi--accent" href="/officer/tickets">
       <span class="sup-kpi__value">{{ (int) ($stats['total'] ?? 0) }}</span>
       <span class="sup-kpi__label">Risk register</span>
     </a>
-    <a class="sup-kpi" href="/laravel/officer/monitoring">
+    <a class="sup-kpi" href="/officer/monitoring">
       <span class="sup-kpi__value">{{ (int) ($stats['open'] ?? 0) }}</span>
       <span class="sup-kpi__label">Open risks</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['overdueMitigation'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/officer/overdue">
+    <a class="sup-kpi{{ ((int) ($stats['overdueMitigation'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/officer/overdue">
       <span class="sup-kpi__value">{{ (int) ($stats['overdueMitigation'] ?? 0) }}</span>
       <span class="sup-kpi__label">Overdue / SLA</span>
     </a>
-    <a class="sup-kpi" href="/laravel/officer/action-plans">
+    <a class="sup-kpi" href="/officer/action-plans">
       <span class="sup-kpi__value">{{ (int) ($stats['awaitingFinalValidation'] ?? 0) }}</span>
       <span class="sup-kpi__label">Action plans</span>
     </a>
@@ -49,17 +49,17 @@
   </div>
 
   <div class="ticket-filters officer-quick-actions" aria-label="Quick actions">
-    <a href="/laravel/officer/tickets" class="filter-pill">Risk register <span class="filter-pill__count">{{ (int) ($stats['total'] ?? 0) }}</span></a>
-    <a href="/laravel/officer/overdue" class="filter-pill">Overdue &amp; SLA <span class="filter-pill__count">{{ (int) ($stats['overdueMitigation'] ?? 0) }}</span></a>
-    <a href="/laravel/officer/action-plans" class="filter-pill">Action plans <span class="filter-pill__count">{{ (int) ($stats['awaitingFinalValidation'] ?? 0) }}</span></a>
-    <a href="/laravel/officer/monitoring" class="filter-pill">Active monitoring <span class="filter-pill__count">{{ (int) ($stats['inMitigation'] ?? 0) }}</span></a>
+    <a href="/officer/tickets" class="filter-pill">Risk register <span class="filter-pill__count">{{ (int) ($stats['total'] ?? 0) }}</span></a>
+    <a href="/officer/overdue" class="filter-pill">Overdue &amp; SLA <span class="filter-pill__count">{{ (int) ($stats['overdueMitigation'] ?? 0) }}</span></a>
+    <a href="/officer/action-plans" class="filter-pill">Action plans <span class="filter-pill__count">{{ (int) ($stats['awaitingFinalValidation'] ?? 0) }}</span></a>
+    <a href="/officer/monitoring" class="filter-pill">Active monitoring <span class="filter-pill__count">{{ (int) ($stats['inMitigation'] ?? 0) }}</span></a>
   </div>
 
   <div class="officer-dash-grid">
     <section class="sup-card">
       <div class="sup-card__head">
         <h2>Risks by department</h2>
-        <a href="/laravel/officer/tickets" class="sup-link">View register</a>
+        <a href="/officer/tickets" class="sup-link">View register</a>
       </div>
       <div class="sup-card__body">
         @if (count($departments) === 0)

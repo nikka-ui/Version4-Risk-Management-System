@@ -45,7 +45,7 @@
         · <span class="pill pill--{{ $tone }}">{{ $t['statusLabel'] ?? '' }}</span>
       </p>
     </div>
-    <a href="/laravel/president/pending" class="btn-outline">Back to pending</a>
+    <a href="/president/pending" class="btn-outline">Back to pending</a>
   </div>
 
   @if (!empty($caps['canApproveActionPlan']) && $level === 'critical')
@@ -237,6 +237,7 @@
 
         @if (!empty($caps['canPostComment']))
           <form method="post" action="/president/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-compose">
+            @csrf
             <div class="field field--console">
               <label for="pres-comment-{{ $ref }}">Add comment</label>
               <textarea id="pres-comment-{{ $ref }}" name="comment" rows="3" required placeholder="Comment on this High/Critical risk action plan…"></textarea>
@@ -305,6 +306,7 @@
           </div>
           <p class="dept-modal__desc">Release this plan to the reporter for implementation.</p>
           <form method="post" action="/president/tickets/{{ urlencode($ref) }}/decision" class="stack-form stack-form--console dept-modal__form">
+            @csrf
             <input type="hidden" name="decision" value="approve">
             <div class="dept-modal__actions">
               <button type="button" class="btn-outline btn-primary--auto" data-pres-modal-close>Cancel</button>
@@ -323,6 +325,7 @@
           </div>
           <p class="dept-modal__desc">Send the plan back with revision instructions.</p>
           <form method="post" action="/president/tickets/{{ urlencode($ref) }}/decision" class="stack-form stack-form--console dept-modal__form">
+            @csrf
             <input type="hidden" name="decision" value="return">
             <div class="field field--console">
               <label for="returnNote">Instructions <span class="text-muted">(required)</span></label>
@@ -347,6 +350,7 @@
           </div>
           <p class="dept-modal__desc">Close this ticket after accomplishment review.</p>
           <form method="post" action="/president/tickets/{{ urlencode($ref) }}/decision" class="stack-form stack-form--console dept-modal__form">
+            @csrf
             <input type="hidden" name="decision" value="close">
             <div class="field field--console">
               <label for="closeNote">Note <span class="text-muted">(optional)</span></label>
@@ -369,6 +373,7 @@
           </div>
           <p class="dept-modal__desc">Return the ticket for further work.</p>
           <form method="post" action="/president/tickets/{{ urlencode($ref) }}/decision" class="stack-form stack-form--console dept-modal__form">
+            @csrf
             <input type="hidden" name="decision" value="return">
             <div class="field field--console">
               <label for="returnNoteFinal">Reason <span class="text-muted">(required)</span></label>

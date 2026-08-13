@@ -21,7 +21,7 @@
       <div class="rmo-feedback-alert__body">
         <p class="rmo-feedback-alert__title">Revision required</p>
         <p class="rmo-feedback-alert__message">No changes were detected since this ticket was returned. Go back, update the report details or evidence, then return to submit.</p>
-        <p class="rmo-feedback-alert__hint"><a href="/laravel/supervisor/tickets/{{ urlencode($ref) }}/edit">Edit returned report</a></p>
+        <p class="rmo-feedback-alert__hint"><a href="/supervisor/tickets/{{ urlencode($ref) }}/edit">Edit returned report</a></p>
       </div>
     </div>
   @endif
@@ -62,6 +62,7 @@
         <h2>{{ $isRevise ? 'FINAL STEP: RESUBMIT TICKET' : 'REVIEW & SUBMISSION' }}</h2>
       </div>
       <form method="post" action="/supervisor/tickets/new/preview/{{ urlencode($ref) }}/submit" class="submit-report-form" id="submitForm" novalidate>
+        @csrf
         <div class="review-confirm" id="reviewConfirmBox">
           <label class="confirm-check" id="confirmCheckLabel">
             <input type="checkbox" id="confirmBox" name="confirmBox" value="1">
@@ -72,7 +73,7 @@
         </div>
         <div class="enterprise-actions enterprise-actions--split review-submission-actions">
           <div class="enterprise-actions__group">
-            <a href="/laravel/supervisor/tickets/{{ urlencode($ref) }}/edit" class="btn-enterprise-outline">{{ $isRevise ? 'Back to edit' : 'Edit Draft' }}</a>
+            <a href="/supervisor/tickets/{{ urlencode($ref) }}/edit" class="btn-enterprise-outline">{{ $isRevise ? 'Back to edit' : 'Edit Draft' }}</a>
             @if (! $isRevise)
               <button type="submit" formaction="/supervisor/tickets/new/preview/{{ urlencode($ref) }}/save" formmethod="post" class="btn-enterprise-outline">Save Draft</button>
             @endif

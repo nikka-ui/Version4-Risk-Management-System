@@ -78,6 +78,7 @@
     @endif
 
     <form method="post" action="{{ $formAction }}" class="enterprise-form" id="riskForm" enctype="multipart/form-data" novalidate>
+      @csrf
       <input type="hidden" name="referenceOverride" value="{{ $ref }}">
 
       <section class="enterprise-card">
@@ -149,7 +150,7 @@
 
       <div class="enterprise-actions enterprise-actions--split">
         @if ($isEdit ?? false)
-          <a href="/laravel/supervisor/tickets" class="btn-enterprise-outline">Back to My Tickets</a>
+          <a href="/supervisor/tickets" class="btn-enterprise-outline">Back to My Tickets</a>
         @endif
         <button type="submit" id="nextBtn" class="btn-enterprise-primary btn-enterprise-next" disabled>
           {{ ($isRevise ?? false) || ($isEdit ?? false) ? 'UPDATE & PREVIEW' : 'NEXT: SUMMARY PREVIEW' }}

@@ -58,7 +58,7 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 |------|---------|
 | [`docker/compose.yml`](../docker/compose.yml) | Base services, networks, volumes, secrets |
 | [`docker/compose.override.yml`](../docker/compose.override.yml) | Dev: localhost DB/AI ports, optional profiles |
-| [`docker/compose.soak.yml`](../docker/compose.soak.yml) | Phase 5 opt-out: forces Laravel API/auth/login/profile/reporter-profile flags off |
+| [`docker/compose.soak.yml`](../docker/compose.soak.yml) | Phase 5–6 opt-out: forces Laravel API/auth/Blade UI/edge-root flags off |
 | [`docker/compose.prod.yml`](../docker/compose.prod.yml) | Prod: resource limits, read-only roots, 80/443 |
 
 ## Development vs production
@@ -66,7 +66,7 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | Mode | Command |
 |------|---------|
 | **Development** | `docker compose -f docker/compose.yml -f docker/compose.override.yml up -d` (dual-write ON by default) |
-| **Bridge opt-out** | Add `-f docker/compose.soak.yml` to force API/auth/login-UI flags off |
+| **Bridge opt-out** | Add `-f docker/compose.soak.yml` to force API/auth/login-UI/edge-root flags off |
 | **Blade login** | Phase 5 slice 4: edge `/laravel/` → Laravel; Express `/login` redirects when `USE_LARAVEL_LOGIN_UI=true` |
 | **Blade admin profile** | Phase 5 slice 5: `/admin/profile` → `/laravel/admin/profile` when `USE_LARAVEL_PROFILE_UI=true` |
 | **Blade reporter profile** | Phase 5 slice 6: `/supervisor/profile` → `/laravel/supervisor/profile` when `USE_LARAVEL_REPORTER_PROFILE_UI=true` |
@@ -91,10 +91,27 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade officer dashboard** | Phase 5 slice 25: `GET /officer` → `/laravel/officer` when `USE_LARAVEL_OFFICER_DASHBOARD_UI=true` |
 | **Blade officer queues** | Phase 5 slice 26: `GET /officer/{tickets,overdue,monitoring,action-plans}` → `/laravel/officer/…` when `USE_LARAVEL_OFFICER_QUEUES_UI=true` |
 | **Blade officer ticket detail** | Phase 5 slice 27: `GET /officer/tickets/:ref` → `/laravel/officer/tickets/:ref` when `USE_LARAVEL_OFFICER_TICKET_DETAIL_UI=true` |
+| **Blade officer aliases** | Phase 6 slice 5: `GET /officer/{ai-review,review,final-validation}` → Laravel aliases when `USE_LARAVEL_OFFICER_ALIASES_UI=true` |
+| **Blade employee dashboard** | Phase 6 slice 6: `GET /dashboard` → Laravel when `USE_LARAVEL_DASHBOARD_UI=true` |
+| **Blade admin department mutations** | Phase 7 slice 1: `POST /admin/departments*` → Laravel when `USE_LARAVEL_ADMIN_DEPT_MUTATIONS=true` |
+| **Blade admin position mutations** | Phase 7 slice 2: `POST /admin/positions*` → Laravel when `USE_LARAVEL_ADMIN_POS_MUTATIONS=true` |
+| **Blade admin user mutations** | Phase 7 slice 3: `POST /admin/users*` → Laravel when `USE_LARAVEL_ADMIN_USER_MUTATIONS=true` |
+| **Blade admin settings mutations** | Phase 7 slice 4: `POST /admin/settings*` → Laravel when `USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS=true` |
+| **Blade admin ticket mutations** | Phase 7 slice 5: `POST /admin/tickets/:ref/delete` → Laravel when `USE_LARAVEL_ADMIN_TICKET_MUTATIONS=true` |
+| **Blade dept ticket mutations** | Phase 7 slice 6 + slice 13 + Phase 8 slice 3: `POST /dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents}` → Laravel when `USE_LARAVEL_DEPT_TICKET_MUTATIONS=true` |
+| **Blade reporter ticket mutations** | Phase 7 slice 7: `POST /supervisor/tickets/new/preview/:ref/{save,submit}` + `POST /supervisor/tickets/:ref/delete` → Laravel when `USE_LARAVEL_REPORTER_TICKET_MUTATIONS=true` |
+| **Blade reporter upload mutations** | Phase 8 slice 1–2: `POST /supervisor/tickets/new/preview` + `POST /supervisor/tickets/:ref/{edit,evidence,accomplishment}` → Laravel when `USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS=true` |
+| **Blade officer ticket mutations** | Phase 7 slice 8 + slice 11: `POST /officer/tickets/:ref/reopen` + `POST /officer/tickets/:ref/thread-comment` → Laravel when `USE_LARAVEL_OFFICER_TICKET_MUTATIONS=true` |
+| **Blade president ticket mutations** | Phase 7 slice 9 + slice 12: `POST /president/tickets/:ref/decision` + `POST /president/tickets/:ref/comment` → Laravel when `USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS=true` |
+| **Blade executive ticket mutations** | Phase 7 slice 10: `POST /executive/tickets/:ref/comment` → Laravel when `USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS=true` |
 | **Blade executive dashboard** | Phase 5 slice 28: `GET /executive` → `/laravel/executive` when `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI=true` |
+| **Blade executive pages** | Phase 6 slice 3: `GET /executive/{heatmap,reports,trends,statistics,departments,register}` → Laravel when `USE_LARAVEL_EXECUTIVE_PAGES_UI=true` |
+| **Blade executive ticket detail** | Phase 6 slice 4: `GET /executive/tickets/:ref` → Laravel when `USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI=true` |
 | **Blade president dashboard** | Phase 5 slice 29: `GET /president` → `/laravel/president` when `USE_LARAVEL_PRESIDENT_DASHBOARD_UI=true` |
 | **Blade president ticket detail** | Phase 5 slice 31: `GET /president/tickets/:ref` → `/laravel/president/tickets/…` when `USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI=true` |
 | **Blade president queues** | Phase 5 slice 30: `GET /president/{pending,high,critical,trends}` → `/laravel/president/…` when `USE_LARAVEL_PRESIDENT_QUEUES_UI=true` |
+| **Edge `/` → Laravel** | Phase 6 slice 1: exact `GET /` → Laravel home redirect when `USE_LARAVEL_EDGE_ROOT=true` (POSTs stay Express) |
+| **Unprefixed Blade UI** | Phase 6 slice 2–6: `GET /login`, `/dashboard`, `/admin`, `/supervisor`, `/dept`, `/officer`, `/president`, `/executive` → Laravel when `USE_LARAVEL_EDGE_UI=true` |
 | **Production** | `docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d` |
 
 Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, privkey.pem) and updated secrets.
@@ -103,7 +120,8 @@ Production requires TLS certificates in `docker/nginx/certs/` (fullchain.pem, pr
 
 | URL | Service |
 |-----|---------|
-| http://localhost:8080/ | Express RMS web app (login + role consoles) |
+| http://localhost:8080/ | Laravel home redirect → `/login` or role console (Phase 6) |
+| http://localhost:8080/login | Blade Sign In (Phase 6 slice 2) |
 | http://localhost:8080/login | Sign-in — see [LOGIN.md](LOGIN.md) |
 | http://localhost:8080/api/ | Laravel 11 API (Phase 1 identity; routes under `/api/v1`) |
 | http://localhost:8080/health | nginx health |

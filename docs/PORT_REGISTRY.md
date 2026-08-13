@@ -38,7 +38,27 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 
 | Path | Upstream | Notes |
 |------|----------|-------|
-| `/` | `web:3000` | Frontend SPA |
+| `/` (exact) | `api:8080` | Phase 6 slice 1: Laravel home redirect (login / role console) |
+| `/login` | `api:8080` | Phase 6 slice 2: Blade Sign In (GET+POST) |
+| `/dashboard` (GET) | `api:8080` | Phase 6 slice 6: Employee stub; other roles redirect to their console |
+| `/admin/departments*` (GET+POST) | `api:8080` | Phase 7 slice 1: Blade department list + create/edit/delete |
+| `/admin/positions*` (GET+POST) | `api:8080` | Phase 7 slice 2: Blade position list + create/edit/delete |
+| `/admin/users*` (GET+POST) | `api:8080` | Phase 7 slice 3: Blade user list + create/edit/status/reset/delete |
+| `/admin/settings*` (GET+POST) | `api:8080` | Phase 7 slice 4: Blade settings save + reset-landing + reset-ai |
+| `/admin/tickets/:ref/delete` (POST) | `api:8080` | Phase 7 slice 5: Blade admin ticket soft-delete |
+| `/dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents}` (POST) | `api:8080` | Phase 7 slice 6 + slice 13 + Phase 8 slice 3: Blade dept workflow + comment + documents |
+| `/supervisor/tickets/new/preview/:ref/{save,submit}` + `/supervisor/tickets/:ref/delete` (POST) | `api:8080` | Phase 7 slice 7: Blade reporter preview save/submit + draft delete |
+| `/supervisor/tickets/new/preview` + `/supervisor/tickets/:ref/edit` (POST) | `api:8080` | Phase 8 slice 1: Blade reporter create/edit multipart |
+| `/supervisor/tickets/:ref/{evidence,accomplishment}` (POST) | `api:8080` | Phase 8 slice 2: Blade reporter evidence + accomplishment |
+| `/officer/tickets/:ref/reopen` (POST) | `api:8080` | Phase 7 slice 8: Blade RMO reopen + reassign |
+| `/officer/tickets/:ref/thread-comment` (POST) | `api:8080` | Phase 7 slice 11: Blade RMO governance thread comment |
+| `/president/tickets/:ref/decision` (POST) | `api:8080` | Phase 7 slice 9: Blade president action-plan + final decision |
+| `/president/tickets/:ref/comment` (POST) | `api:8080` | Phase 7 slice 12: Blade president thread comment |
+| `/executive/tickets/:ref/comment` (POST) | `api:8080` | Phase 7 slice 10: Blade executive thread comment |
+| `/admin`, `/supervisor`, `/dept`, `/officer`, `/president` (GET) | `api:8080` | Phase 6 slice 2: Blade consoles; other POSTs stay on Express |
+| `/executive` (GET) | `api:8080` | Phase 6 slice 4: Blade executive dashboard + oversight + ticket detail; comment POST is Laravel |
+| `/` (other paths) | `web:3000` | Express POSTs, attachments, remaining pages |
+| `/laravel/` | `api:8080` | Blade UI compatibility rewrite |
 | `/api/` | `api:8080` | Laravel 11; rewrite strips `/api` so app routes are `/v1/...` |
 | `/health` | nginx local | Stack health check |
 | `/ai-health` | `ai-service:5000/health` | AI service health (internal route) |

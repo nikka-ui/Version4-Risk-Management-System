@@ -19,43 +19,43 @@
       <h1>Dashboard</h1>
       <p class="sup-page-desc">Welcome, {{ $user['displayName'] ?? $user['username'] }} — you own risk tickets routed to {{ $user['department'] ?? 'your department' }}.</p>
     </div>
-    <a href="/laravel/dept/inbox" class="filter-pill filter-pill--head">Ownership inbox <span class="filter-pill__count">{{ (int) ($stats['inbox'] ?? 0) }}</span></a>
+    <a href="/dept/inbox" class="filter-pill filter-pill--head">Ownership inbox <span class="filter-pill__count">{{ (int) ($stats['inbox'] ?? 0) }}</span></a>
   </div>
 
   <div class="sup-kpi-grid sup-kpi-grid--officer">
-    <a class="sup-kpi sup-kpi--accent" href="/laravel/dept/tickets">
+    <a class="sup-kpi sup-kpi--accent" href="/dept/tickets">
       <span class="sup-kpi__value">{{ (int) ($stats['total'] ?? 0) }}</span>
       <span class="sup-kpi__label">Department tickets</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['inbox'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/dept/inbox">
+    <a class="sup-kpi{{ ((int) ($stats['inbox'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/dept/inbox">
       <span class="sup-kpi__value">{{ (int) ($stats['inbox'] ?? 0) }}</span>
       <span class="sup-kpi__label">Awaiting acceptance</span>
     </a>
-    <a class="sup-kpi" href="/laravel/dept/active">
+    <a class="sup-kpi" href="/dept/active">
       <span class="sup-kpi__value">{{ (int) ($stats['active'] ?? 0) }}</span>
       <span class="sup-kpi__label">In progress</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['returned'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/dept/returned">
+    <a class="sup-kpi{{ ((int) ($stats['returned'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/dept/returned">
       <span class="sup-kpi__value">{{ (int) ($stats['returned'] ?? 0) }}</span>
       <span class="sup-kpi__label">Returned by President</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['drafts'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/dept/drafts">
+    <a class="sup-kpi{{ ((int) ($stats['drafts'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/dept/drafts">
       <span class="sup-kpi__value">{{ (int) ($stats['drafts'] ?? 0) }}</span>
       <span class="sup-kpi__label">Action plan drafts</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['pendingClosure'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/dept/closure">
+    <a class="sup-kpi{{ ((int) ($stats['pendingClosure'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/dept/closure">
       <span class="sup-kpi__value">{{ (int) ($stats['pendingClosure'] ?? 0) }}</span>
       <span class="sup-kpi__label">Pending closure</span>
     </a>
-    <a class="sup-kpi" href="/laravel/dept/tickets">
+    <a class="sup-kpi" href="/dept/tickets">
       <span class="sup-kpi__value">{{ (int) ($stats['awaitingPresident'] ?? 0) }}</span>
       <span class="sup-kpi__label">Awaiting President</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['overdue'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/dept/overdue">
+    <a class="sup-kpi{{ ((int) ($stats['overdue'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/dept/overdue">
       <span class="sup-kpi__value">{{ (int) ($stats['overdue'] ?? 0) }}</span>
       <span class="sup-kpi__label">Overdue</span>
     </a>
-    <a class="sup-kpi" href="/laravel/dept/tickets">
+    <a class="sup-kpi" href="/dept/tickets">
       <span class="sup-kpi__value">{{ (int) ($stats['closed'] ?? 0) }}</span>
       <span class="sup-kpi__label">Closed</span>
     </a>
@@ -64,7 +64,7 @@
   <section class="sup-card sup-card--table">
     <div class="sup-card__head">
       <h2>Recent department tickets</h2>
-      <a href="/laravel/dept/tickets" class="sup-link">View all</a>
+      <a href="/dept/tickets" class="sup-link">View all</a>
     </div>
     <div class="table-wrap">
       <table class="data-table data-table--compact tickets-table sup-table">
@@ -82,7 +82,7 @@
         <tbody>
           @forelse ($recent as $t)
             <tr class="{{ !empty($t['isOverdue']) ? 'ticket-row--overdue' : '' }}">
-              <td class="mono nowrap"><a href="/laravel/dept/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
+              <td class="mono nowrap"><a href="/dept/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
               <td>{{ $t['title'] }}</td>
               <td class="nowrap">{{ $t['submittedByName'] }}</td>
               <td class="nowrap">{{ $t['categoryLabel'] }}</td>

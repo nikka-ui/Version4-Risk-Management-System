@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <form method="get" action="/laravel/admin/tickets" class="admin-filter-bar">
+  <form method="get" action="/admin/tickets" class="admin-filter-bar">
     <input type="search" name="q" placeholder="Search tickets…" value="{{ $filters['q'] ?? '' }}" aria-label="Search tickets">
     <select name="department" aria-label="Filter by department">
       <option value="">All departments</option>
@@ -117,6 +117,7 @@
 
   <dialog id="ticketDeleteDialog" class="admin-dialog">
     <form method="post" id="ticketDeleteForm" class="admin-dialog__form">
+      @csrf
       <h3>Delete ticket</h3>
       <p class="sup-muted-block">You are about to soft-delete <strong id="ticketDeleteRef"></strong>. This is recorded in the audit log. Provide a reason for deletion.</p>
       <div class="field">

@@ -19,7 +19,7 @@
     $stats = $stats ?? [];
 
     $nav = [
-      ['id' => 'overview', 'href' => '/laravel/executive', 'label' => 'Dashboard'],
+      ['id' => 'overview', 'href' => '/executive', 'label' => 'Dashboard'],
       ['id' => 'heatmap', 'href' => '/executive/heatmap', 'label' => 'Heatmap'],
       ['id' => 'reports', 'href' => '/executive/reports', 'label' => 'Reports'],
       ['id' => 'trends', 'href' => '/executive/trends', 'label' => 'Trends'],

@@ -148,6 +148,22 @@ class AttachmentService
         return true;
     }
 
+    /** Delete MinIO bytes (when owned) plus metadata. Phase 8 slice 1. */
+    public function deleteWithStorage(string $id): bool
+    {
+        $attachment = $this->findById($id);
+        if (! $attachment) {
+            return false;
+        }
+
+        $key = (string) $attachment->storage_key;
+        if ($key !== '' && ! $attachment->legacy && ! str_starts_with($key, 'legacy/')) {
+            $this->storage->delete($key);
+        }
+
+        return $this->deleteMetadata($id);
+    }
+
     /**
      * Store raw file bytes to object storage AND register metadata.
      * Mirrors Express validation (pdf/png/jpg/jpeg, 20MB).

@@ -14,46 +14,46 @@
     </div>
   </div>
   <div class="sup-kpi-grid sup-kpi-grid--stats">
-    <a class="sup-kpi" href="/laravel/admin/users">
+    <a class="sup-kpi" href="/admin/users">
       <span class="sup-kpi__value">{{ (int) ($stats['totalUsers'] ?? 0) }}</span>
       <span class="sup-kpi__label">Total Users</span>
     </a>
-    <a class="sup-kpi" href="/laravel/admin/users?filter=active">
+    <a class="sup-kpi" href="/admin/users?filter=active">
       <span class="sup-kpi__value">{{ (int) ($stats['activeUsers'] ?? 0) }}</span>
       <span class="sup-kpi__label">Active Users</span>
     </a>
-    <a class="sup-kpi" href="/laravel/admin/departments">
+    <a class="sup-kpi" href="/admin/departments">
       <span class="sup-kpi__value">{{ (int) ($stats['departments'] ?? 0) }}</span>
       <span class="sup-kpi__label">Departments</span>
     </a>
-    <a class="sup-kpi" href="/laravel/admin/tickets?status=open">
+    <a class="sup-kpi" href="/admin/tickets?status=open">
       <span class="sup-kpi__value">{{ (int) ($stats['openTickets'] ?? 0) }}</span>
       <span class="sup-kpi__label">Open Tickets</span>
     </a>
-    <a class="sup-kpi" href="/laravel/admin/tickets?status=closed">
+    <a class="sup-kpi" href="/admin/tickets?status=closed">
       <span class="sup-kpi__value">{{ (int) ($stats['closedTickets'] ?? 0) }}</span>
       <span class="sup-kpi__label">Closed Tickets</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['highRiskTickets'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/admin/tickets?level=high">
+    <a class="sup-kpi{{ ((int) ($stats['highRiskTickets'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/admin/tickets?level=high">
       <span class="sup-kpi__value">{{ (int) ($stats['highRiskTickets'] ?? 0) }}</span>
       <span class="sup-kpi__label">High Risk</span>
     </a>
-    <a class="sup-kpi{{ ((int) ($stats['criticalRiskTickets'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/laravel/admin/tickets?level=critical">
+    <a class="sup-kpi{{ ((int) ($stats['criticalRiskTickets'] ?? 0) > 0) ? ' sup-kpi--warn' : '' }}" href="/admin/tickets?level=critical">
       <span class="sup-kpi__value">{{ (int) ($stats['criticalRiskTickets'] ?? 0) }}</span>
       <span class="sup-kpi__label">Critical Risk</span>
     </a>
   </div>
   <div class="sup-quick-actions">
-    <a href="/laravel/admin/users?action=add" class="sup-quick-actions__link">Add User</a>
-    <a href="/laravel/admin/departments?action=add" class="sup-quick-actions__link">Add Department</a>
+    <a href="/admin/users?action=add" class="sup-quick-actions__link">Add User</a>
+    <a href="/admin/departments?action=add" class="sup-quick-actions__link">Add Department</a>
     <a href="/admin/audit-logs" class="sup-quick-actions__link">View Audit Logs</a>
-    <a href="/laravel/admin/tickets" class="sup-quick-actions__link">Manage Tickets</a>
+    <a href="/admin/tickets" class="sup-quick-actions__link">Manage Tickets</a>
   </div>
   <div class="admin-dash-grid">
     <section class="sup-card sup-card--table">
       <div class="sup-card__head">
         <h2>Newly created users</h2>
-        <a href="/laravel/admin/users" class="sup-link">View all</a>
+        <a href="/admin/users" class="sup-link">View all</a>
       </div>
       <div class="table-wrap">
         <table class="data-table data-table--compact sup-table">
@@ -83,7 +83,7 @@
     <section class="sup-card sup-card--table">
       <div class="sup-card__head">
         <h2>Recently deleted tickets</h2>
-        <a href="/laravel/admin/tickets?deleted=1" class="sup-link">View all</a>
+        <a href="/admin/tickets?deleted=1" class="sup-link">View all</a>
       </div>
       <div class="table-wrap">
         <table class="data-table data-table--compact sup-table">

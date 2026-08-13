@@ -3,18 +3,25 @@
 namespace App\Services;
 
 use App\Models\Department;
+use App\Models\RiskAttachment;
 use App\Models\RiskTicket;
 use App\Models\User;
 use App\Support\Departments;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Phase 3 slice 6: dept return/reassign/close + slice 5 ownership/action plan.
+ * Phase 8 slice 3: multipart document uploads (MinIO + Postgres).
  * Notifications remain Express-owned until a later slice.
  */
 class DeptTicketService
 {
+    public function __construct(
+        private readonly AttachmentService $attachments,
+    ) {}
+
     /** @var list<string> */
     private const OWNERSHIP_STATUSES = ['assigned'];
 
@@ -386,7 +393,7 @@ class DeptTicketService
             ]);
         }
 
-        $closingNotes = trim((string) ($input['closingNotes'] ?? $input['notes'] ?? $input['summary'] ?? ''));
+        $closingNotes = trim((string) ($input['closingNotes'] ?? $input['notes'] ?? $input['summary'] ?? $input['comment'] ?? ''));
         $now = now();
         $closure = [
             'closedAt' => $now->toIso8601String(),
@@ -460,7 +467,71 @@ class DeptTicketService
     }
 
     /**
-     * Metadata-only document mirror (MinIO file ownership remains Express until a later slice).
+     * Phase 8 slice 3: store supporting documents to MinIO + risk_attachments.
+     *
+     * @param  list<UploadedFile>  $files
+     */
+    public function uploadDocuments(RiskTicket $ticket, User $user, array $files): RiskTicket
+    {
+        $this->assertDeptHeadAccess($ticket, $user);
+        if (! in_array($ticket->status, self::EXECUTION_STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Documents can be uploaded once the ticket is in progress.'],
+            ]);
+        }
+        if ($files === []) {
+            throw ValidationException::withMessages([
+                'attachments' => ['Select at least one document to upload.'],
+            ]);
+        }
+
+        $saved = $this->attachments->storeUploadedFiles($ticket->reference, $files, $user->username);
+        $now = now();
+        $payload = is_array($ticket->payload) ? $ticket->payload : [];
+        $ids = is_array($payload['implementationEvidenceIds'] ?? null) ? $payload['implementationEvidenceIds'] : [];
+        $fileNames = [];
+        foreach ($saved as $att) {
+            if (! $att instanceof RiskAttachment) {
+                continue;
+            }
+            $fileNames[] = (string) $att->original_name;
+            if ($att->id !== '' && ! in_array($att->id, $ids, true)) {
+                $ids[] = $att->id;
+            }
+        }
+        $payload['implementationEvidenceIds'] = $ids;
+        $docs = is_array($payload['deptDocuments'] ?? null) ? $payload['deptDocuments'] : [];
+        $docs[] = [
+            'at' => $now->toIso8601String(),
+            'byUsername' => $user->username,
+            'byName' => $user->name ?: $user->username,
+            'fileCount' => count($saved),
+            'fileNames' => $fileNames,
+        ];
+        $payload['deptDocuments'] = $docs;
+
+        $label = count($saved) === 1 ? '1 document' : count($saved).' documents';
+        $audit = $this->appendAudit(
+            $ticket,
+            'Documents uploaded',
+            $label.' added by '.($user->name ?: $user->username).'.',
+            $user,
+            $now,
+        );
+
+        $ticket->fill([
+            'evidence_count' => $this->attachments->syncEvidenceCount($ticket->reference),
+            'payload' => $payload,
+            'audit_trail' => $audit,
+            'source_updated_at' => $now,
+        ]);
+        $ticket->save();
+
+        return $ticket->fresh();
+    }
+
+    /**
+     * Metadata-only document mirror (API / internal callers without file bytes).
      */
     public function recordDocuments(RiskTicket $ticket, User $user, array $input = []): RiskTicket
     {

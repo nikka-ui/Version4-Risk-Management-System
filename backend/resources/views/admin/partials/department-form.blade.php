@@ -8,6 +8,7 @@
 <section class="sup-card sup-card--compact">
   <h2>{{ $isEdit ? 'Edit department' : 'Add department' }}</h2>
   <form method="post" action="{{ $formAction }}">
+    @csrf
     <div class="admin-form-grid">
       <div class="field">
         <label for="name">Department Name</label>
@@ -35,7 +36,7 @@
     </div>
     <div class="action-row">
       <button type="submit" class="sup-btn-primary">{{ $isEdit ? 'Save' : 'Add Department' }}</button>
-      <a href="/laravel/admin/departments" class="sup-btn-outline">Cancel</a>
+      <a href="/admin/departments" class="sup-btn-outline">Cancel</a>
     </div>
   </form>
 </section>

@@ -11,8 +11,7 @@ use App\Support\Departments;
 use Illuminate\Support\Carbon;
 
 /**
- * Phase 5 slice 24: Department Head ticket detail (read + capability flags) from Postgres.
- * Mutations stay on Express POSTs.
+ * Phase 5 slice 24 + Phase 7 slice 6 + slice 13: Department Head ticket detail (read + workflow + comment).
  */
 class DeptTicketDetailService
 {
@@ -41,6 +40,7 @@ class DeptTicketDetailService
      *   accomplishment: array<string, mixed>|null,
      *   timeline: list<array<string, mixed>>,
      *   reassignments: list<array<string, mixed>>,
+     *   threadComments: list<array<string, mixed>>,
      *   departments: list<string>,
      *   capabilities: array<string, bool>,
      *   stats: array<string, int>,
@@ -235,6 +235,9 @@ class DeptTicketDetailService
             ] : null,
             'timeline' => $timeline,
             'reassignments' => $reassignments,
+            'threadComments' => $this->normalizeThreadComments(
+                is_array($ticket->thread_comments) ? $ticket->thread_comments : []
+            ),
             'departments' => $departments,
             'capabilities' => [
                 'canAccept' => $status === 'assigned',
@@ -243,6 +246,8 @@ class DeptTicketDetailService
                 'canReturn' => $canExecute,
                 'canEditActionPlan' => $canExecute,
                 'canClose' => $canClose,
+                'canPostComment' => true,
+                'canUploadDocuments' => $canExecute,
             ],
             'stats' => $dashboard['stats'],
             'activeNav' => $activeNav,
@@ -338,5 +343,33 @@ class DeptTicketDetailService
             'resolved' => 'Resolved',
             default => $status ? str_replace('_', ' ', ucfirst($status)) : '—',
         };
+    }
+
+    /**
+     * @param  list<mixed>  $comments
+     * @return list<array<string, mixed>>
+     */
+    private function normalizeThreadComments(array $comments): array
+    {
+        $rows = [];
+        foreach ($comments as $c) {
+            if (! is_array($c) || empty($c['id'])) {
+                continue;
+            }
+            $rows[] = [
+                'id' => (string) $c['id'],
+                'body' => (string) ($c['body'] ?? ''),
+                'authorName' => (string) ($c['authorName'] ?? $c['authorUsername'] ?? 'Unknown'),
+                'authorUsername' => (string) ($c['authorUsername'] ?? ''),
+                'roleLabel' => (string) ($c['authorPosition'] ?? $c['roleLabel'] ?? $c['authorRole'] ?? ''),
+                'kind' => (string) ($c['kind'] ?? 'comment'),
+                'parentId' => isset($c['parentId']) && $c['parentId'] ? (string) $c['parentId'] : null,
+                'at' => (string) ($c['at'] ?? ''),
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b) => strcmp($a['at'] ?? '', $b['at'] ?? ''));
+
+        return $rows;
     }
 }

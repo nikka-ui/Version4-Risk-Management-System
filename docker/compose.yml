@@ -14,6 +14,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/edge-ui:/etc/nginx/edge-ui:ro
     networks:
       - rms_edge
       - rms_app
@@ -62,6 +63,7 @@ services:
       S3_USE_PATH_STYLE_ENDPOINT: ${S3_USE_PATH_STYLE_ENDPOINT:-true}
       # Phase 5 slice 1: dual-write + attachment bridge ON by default.
       USE_LARAVEL_API: ${USE_LARAVEL_API:-true}
+      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
       # Phase 5 slice 3: Laravel credential verify for browser login ON by default.
       USE_LARAVEL_AUTH: ${USE_LARAVEL_AUTH:-true}
       USE_LARAVEL_AUTH_FALLBACK: ${USE_LARAVEL_AUTH_FALLBACK:-false}
@@ -84,42 +86,76 @@ services:
       # Phase 5 slice 12: Blade Ticket Reporter actions queue.
       USE_LARAVEL_REPORTER_ACTIONS_UI: ${USE_LARAVEL_REPORTER_ACTIONS_UI:-true}
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: ${USE_LARAVEL_REPORTER_TICKET_FORM_UI:-true}
+      # Phase 7 slice 7: Blade reporter preview save/submit + draft delete POSTs.
+      USE_LARAVEL_REPORTER_TICKET_MUTATIONS: ${USE_LARAVEL_REPORTER_TICKET_MUTATIONS:-true}
+      # Phase 8 slice 1–2: Blade reporter create/edit + evidence + accomplishment uploads.
+      USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS: ${USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS:-true}
       # Phase 5 slice 14: Blade admin dashboard at /laravel/admin.
       USE_LARAVEL_ADMIN_DASHBOARD_UI: ${USE_LARAVEL_ADMIN_DASHBOARD_UI:-true}
       # Phase 5 slice 15: Blade admin user management at /laravel/admin/users.
       USE_LARAVEL_ADMIN_USERS_UI: ${USE_LARAVEL_ADMIN_USERS_UI:-true}
+      # Phase 7 slice 3: Blade admin user create/edit/status/reset/delete POSTs.
+      USE_LARAVEL_ADMIN_USER_MUTATIONS: ${USE_LARAVEL_ADMIN_USER_MUTATIONS:-true}
       # Phase 5 slice 16: Blade admin departments at /laravel/admin/departments.
       USE_LARAVEL_ADMIN_DEPARTMENTS_UI: ${USE_LARAVEL_ADMIN_DEPARTMENTS_UI:-true}
+      # Phase 7 slice 1: Blade admin department create/edit/delete POSTs.
+      USE_LARAVEL_ADMIN_DEPT_MUTATIONS: ${USE_LARAVEL_ADMIN_DEPT_MUTATIONS:-true}
       # Phase 5 slice 17: Blade admin positions at /laravel/admin/positions.
       USE_LARAVEL_ADMIN_POSITIONS_UI: ${USE_LARAVEL_ADMIN_POSITIONS_UI:-true}
+      # Phase 7 slice 2: Blade admin position create/edit/delete POSTs.
+      USE_LARAVEL_ADMIN_POS_MUTATIONS: ${USE_LARAVEL_ADMIN_POS_MUTATIONS:-true}
       # Phase 5 slice 18: Blade admin tickets at /laravel/admin/tickets.
       USE_LARAVEL_ADMIN_TICKETS_UI: ${USE_LARAVEL_ADMIN_TICKETS_UI:-true}
       # Phase 5 slice 19: Blade admin ticket detail at /laravel/admin/tickets/:ref.
       USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: ${USE_LARAVEL_ADMIN_TICKET_DETAIL_UI:-true}
+      # Phase 7 slice 5: Blade admin ticket soft-delete POST.
+      USE_LARAVEL_ADMIN_TICKET_MUTATIONS: ${USE_LARAVEL_ADMIN_TICKET_MUTATIONS:-true}
       # Phase 5 slice 20: Blade admin audit logs at /laravel/admin/audit-logs.
       USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: ${USE_LARAVEL_ADMIN_AUDIT_LOGS_UI:-true}
       # Phase 5 slice 21: Blade admin system settings at /laravel/admin/settings.
       USE_LARAVEL_ADMIN_SETTINGS_UI: ${USE_LARAVEL_ADMIN_SETTINGS_UI:-true}
+      # Phase 7 slice 4: Blade admin settings save/reset POSTs.
+      USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS: ${USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS:-true}
       # Phase 5 slice 22: Blade dept dashboard at /laravel/dept.
       USE_LARAVEL_DEPT_DASHBOARD_UI: ${USE_LARAVEL_DEPT_DASHBOARD_UI:-true}
       # Phase 5 slice 23: Blade dept queues at /laravel/dept/*.
       USE_LARAVEL_DEPT_QUEUES_UI: ${USE_LARAVEL_DEPT_QUEUES_UI:-true}
       # Phase 5 slice 24: Blade dept ticket detail at /laravel/dept/tickets/:ref.
       USE_LARAVEL_DEPT_TICKET_DETAIL_UI: ${USE_LARAVEL_DEPT_TICKET_DETAIL_UI:-true}
+      # Phase 7 slice 6 + slice 13 + Phase 8 slice 3: Blade dept workflow + comment + document POSTs.
+      USE_LARAVEL_DEPT_TICKET_MUTATIONS: ${USE_LARAVEL_DEPT_TICKET_MUTATIONS:-true}
       # Phase 5 slice 25: Blade officer dashboard at /laravel/officer.
       USE_LARAVEL_OFFICER_DASHBOARD_UI: ${USE_LARAVEL_OFFICER_DASHBOARD_UI:-true}
       # Phase 5 slice 26: Blade officer queues at /laravel/officer/*.
       USE_LARAVEL_OFFICER_QUEUES_UI: ${USE_LARAVEL_OFFICER_QUEUES_UI:-true}
       # Phase 5 slice 27: Blade officer ticket detail at /laravel/officer/tickets/:ref.
       USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: ${USE_LARAVEL_OFFICER_TICKET_DETAIL_UI:-true}
+      # Phase 7 slice 8 + slice 11: Blade officer reopen + thread-comment POSTs.
+      USE_LARAVEL_OFFICER_TICKET_MUTATIONS: ${USE_LARAVEL_OFFICER_TICKET_MUTATIONS:-true}
+      # Phase 6 slice 5: Blade RMO legacy aliases /officer/{ai-review,review,final-validation}.
+      USE_LARAVEL_OFFICER_ALIASES_UI: ${USE_LARAVEL_OFFICER_ALIASES_UI:-true}
+      # Phase 6 slice 6: Blade employee /dashboard stub.
+      USE_LARAVEL_DASHBOARD_UI: ${USE_LARAVEL_DASHBOARD_UI:-true}
       # Phase 5 slice 28: Blade Executive Committee dashboard at /laravel/executive.
       USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: ${USE_LARAVEL_EXECUTIVE_DASHBOARD_UI:-true}
+      # Phase 6 slice 3: Blade Executive oversight pages at /laravel/executive/*.
+      USE_LARAVEL_EXECUTIVE_PAGES_UI: ${USE_LARAVEL_EXECUTIVE_PAGES_UI:-true}
+      # Phase 6 slice 4: Blade Executive ticket detail at /laravel/executive/tickets/:ref.
+      USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI: ${USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI:-true}
+      # Phase 7 slice 10: Blade executive comment POST.
+      USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS: ${USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS:-true}
       # Phase 5 slice 29: Blade President dashboard at /laravel/president.
       USE_LARAVEL_PRESIDENT_DASHBOARD_UI: ${USE_LARAVEL_PRESIDENT_DASHBOARD_UI:-true}
       # Phase 5 slice 31: Blade President ticket detail at /laravel/president/tickets/:ref.
       USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: ${USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI:-true}
+      # Phase 7 slice 9 + slice 12: Blade president decision + comment POSTs.
+      USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS: ${USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS:-true}
       # Phase 5 slice 30: Blade President queues at /laravel/president/*.
       USE_LARAVEL_PRESIDENT_QUEUES_UI: ${USE_LARAVEL_PRESIDENT_QUEUES_UI:-true}
+      # Phase 6 slice 1: edge nginx exact `/` → Laravel (observability on web health).
+      USE_LARAVEL_EDGE_ROOT: ${USE_LARAVEL_EDGE_ROOT:-true}
+      # Phase 6 slice 2: unprefixed Blade GETs /login + role consoles.
+      USE_LARAVEL_EDGE_UI: ${USE_LARAVEL_EDGE_UI:-true}
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
     secrets:
       - db_password
@@ -178,8 +214,13 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:5000}
       # Phase 1: path for `php artisan rms:import-users` (Express store remains SoT for live auth)
       STORE_JSON_PATH: ${STORE_JSON_PATH:-/import/store.json}
-      # Optional future Express→Laravel service token (empty = disabled). Not used for browser login.
-      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-}
+      # Phase 7 slice 1: Laravel → Express org mirror (empty disables mirror).
+      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
+      EXPRESS_WEB_INTERNAL_URL: ${EXPRESS_WEB_INTERNAL_URL:-http://web:3000}
+      # Phase 6 slice 1: Laravel `/` redirects to Blade login / role console when true.
+      USE_LARAVEL_EDGE_ROOT: ${USE_LARAVEL_EDGE_ROOT:-true}
+      # Phase 6 slice 2: unprefixed Blade URLs (/login, /admin, …) when true.
+      USE_LARAVEL_EDGE_UI: ${USE_LARAVEL_EDGE_UI:-true}
       # Phase 3 slice 10: shared MinIO bucket (same S3_* names + values as web) for the
       # `evidence` filesystem disk. Express stays the live upload/download path (flag OFF).
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}

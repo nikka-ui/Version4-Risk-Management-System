@@ -28,7 +28,7 @@
             @php
               $href = !empty($t['isRevision'])
                 ? '/supervisor/tickets/'.urlencode($t['reference']).'/edit'
-                : '/laravel/supervisor/tickets/'.urlencode($t['reference']);
+                : '/supervisor/tickets/'.urlencode($t['reference']);
             @endphp
             <tr>
               <td class="mono nowrap"><a href="{{ $href }}">{{ $t['reference'] }}</a></td>

@@ -1,11 +1,15 @@
-# Phase 5 opt-out overlay — disables Laravel dual-write, auth, and Blade UI flags.
+# Phase 5–6 opt-out overlay — disables Laravel dual-write, auth, Blade UI, and edge-root flags.
 #
-#   docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d web
+#   docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d web api
 #
 # Restore defaults:
-#   docker compose -f docker/compose.yml -f docker/compose.override.yml up -d web nginx
+#   docker compose -f docker/compose.yml -f docker/compose.override.yml up -d web api nginx
 
 services:
+  nginx:
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/soak:/etc/nginx/conf.d:ro
   web:
     environment:
       USE_LARAVEL_API: "false"
@@ -20,22 +24,43 @@ services:
       USE_LARAVEL_REPORTER_ACCOMPLISHMENTS_UI: "false"
       USE_LARAVEL_REPORTER_ACTIONS_UI: "false"
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: "false"
+      USE_LARAVEL_REPORTER_TICKET_MUTATIONS: "false"
+      USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS: "false"
       USE_LARAVEL_ADMIN_DASHBOARD_UI: "false"
       USE_LARAVEL_ADMIN_USERS_UI: "false"
+      USE_LARAVEL_ADMIN_USER_MUTATIONS: "false"
       USE_LARAVEL_ADMIN_DEPARTMENTS_UI: "false"
+      USE_LARAVEL_ADMIN_DEPT_MUTATIONS: "false"
       USE_LARAVEL_ADMIN_POSITIONS_UI: "false"
+      USE_LARAVEL_ADMIN_POS_MUTATIONS: "false"
       USE_LARAVEL_ADMIN_TICKETS_UI: "false"
       USE_LARAVEL_ADMIN_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_ADMIN_TICKET_MUTATIONS: "false"
       USE_LARAVEL_ADMIN_AUDIT_LOGS_UI: "false"
       USE_LARAVEL_ADMIN_SETTINGS_UI: "false"
+      USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS: "false"
       USE_LARAVEL_DEPT_DASHBOARD_UI: "false"
       USE_LARAVEL_DEPT_QUEUES_UI: "false"
       USE_LARAVEL_DEPT_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_DEPT_TICKET_MUTATIONS: "false"
       USE_LARAVEL_OFFICER_DASHBOARD_UI: "false"
       USE_LARAVEL_OFFICER_QUEUES_UI: "false"
       USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_OFFICER_TICKET_MUTATIONS: "false"
+      USE_LARAVEL_OFFICER_ALIASES_UI: "false"
+      USE_LARAVEL_DASHBOARD_UI: "false"
       USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: "false"
+      USE_LARAVEL_EXECUTIVE_PAGES_UI: "false"
+      USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS: "false"
       USE_LARAVEL_PRESIDENT_DASHBOARD_UI: "false"
       USE_LARAVEL_PRESIDENT_QUEUES_UI: "false"
       USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: "false"
+      USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS: "false"
+      USE_LARAVEL_EDGE_ROOT: "false"
+      USE_LARAVEL_EDGE_UI: "false"
       LARAVEL_API_BASE_URL: ${LARAVEL_API_BASE_URL:-http://api:8080}
+  api:
+    environment:
+      USE_LARAVEL_EDGE_ROOT: "false"
+      USE_LARAVEL_EDGE_UI: "false"

@@ -7,6 +7,9 @@
     $colspan = $showDueColumn ? 8 : 7;
     $flashMsg = match (is_string($flash ?? null) ? $flash : '') {
       'not_found' => 'Ticket not found or not visible to your department.',
+      'ownership_rejected' => 'Ownership rejected.',
+      'ticket_reassigned' => 'Ticket transferred.',
+      'report_returned' => 'Ticket returned to reporter.',
       default => null,
     };
     $errorMsg = is_string($error ?? null) && $error !== '' ? urldecode($error) : null;
@@ -44,7 +47,7 @@
         <tbody>
           @forelse ($tickets as $t)
             <tr class="{{ !empty($t['isOverdue']) ? 'ticket-row--overdue' : '' }}">
-              <td class="mono nowrap"><a href="/laravel/dept/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
+              <td class="mono nowrap"><a href="/dept/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
               <td>{{ $t['title'] }}</td>
               <td class="nowrap">{{ $t['submittedByName'] }}</td>
               <td class="nowrap">{{ $t['categoryLabel'] }}</td>

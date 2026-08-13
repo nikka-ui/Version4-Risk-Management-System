@@ -17,7 +17,7 @@ class AdminTicketDetailController extends Controller
     {
         $ticket = $this->service->findByReference($ref);
         if (! $ticket) {
-            return redirect('/laravel/admin/tickets?flash=not_found');
+            return redirect('/admin/tickets?flash=not_found');
         }
 
         return view('admin.ticket-detail', [

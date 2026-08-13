@@ -18,7 +18,7 @@
       <p class="sup-page-desc">Ticket status updates, routing confirmations, and return notices.</p>
     </div>
     @if (($unread ?? 0) > 0)
-      <form method="post" action="/laravel/supervisor/notifications/read-all">
+      <form method="post" action="/supervisor/notifications/read-all">
         @csrf
         <button type="submit" class="btn-outline">Mark all read</button>
       </form>
@@ -28,7 +28,7 @@
     <ul class="notif-page-list">
       @forelse ($notifications as $n)
         <li class="notif-page-item{{ empty($n['read']) ? ' notif-page-item--unread' : '' }}">
-          <a href="/laravel/supervisor/notifications/open/{{ urlencode($n['id']) }}" class="notif-page-item__link">
+          <a href="/supervisor/notifications/open/{{ urlencode($n['id']) }}" class="notif-page-item__link">
             <span class="notif-page-item__title">{{ $n['title'] ?: 'Notification' }}</span>
             <span class="notif-page-item__message">{{ $n['message'] ?? '' }}</span>
             <span class="notif-page-item__time">{{ !empty($n['at']) ? \Illuminate\Support\Carbon::parse($n['at'])->format('Y-m-d H:i') : '' }}</span>

@@ -7,6 +7,11 @@
     $caps = $capabilities ?? [];
     $plan = $actionPlan ?? null;
     $ref = $t['reference'] ?? '';
+    $comments = $threadComments ?? [];
+    $tops = array_values(array_filter($comments, fn ($c) => empty($c['parentId'])));
+    $childrenOf = function (string $parentId) use ($comments) {
+      return array_values(array_filter($comments, fn ($c) => ($c['parentId'] ?? null) === $parentId));
+    };
     $flashLabels = [
       'ownership_accepted' => 'Ownership accepted.',
       'ownership_rejected' => 'Ownership rejected.',
@@ -24,7 +29,7 @@
     $flashKey = is_string($flash ?? null) ? $flash : '';
     $flashMsg = $flashLabels[$flashKey] ?? null;
     $errorMsg = is_string($error ?? null) && $error !== '' ? urldecode($error) : null;
-    $backHref = ($t['status'] ?? '') === 'assigned' ? '/laravel/dept/inbox' : '/laravel/dept/tickets';
+    $backHref = ($t['status'] ?? '') === 'assigned' ? '/dept/inbox' : '/dept/tickets';
     $backLabel = ($t['status'] ?? '') === 'assigned' ? 'Back to inbox' : 'Back to tickets';
     $submitLabel = !empty($t['needsPresident'])
       ? 'Submit to President for approval'
@@ -197,9 +202,24 @@
           <div class="sup-card__body"><p class="sup-muted-block">No action plan yet.</p></div>
         @endif
 
+        @if (!empty($caps['canUploadDocuments']))
+          <div class="sup-card__body">
+            <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/documents" class="stack-form stack-form--console" enctype="multipart/form-data">
+              @csrf
+              <div class="field field--console">
+                <label for="deptDocs">Supporting documents</label>
+                <p class="section-hint text-muted">Upload PDF, PNG, or JPG (max 20MB each) once the ticket is in progress.</p>
+                <input id="deptDocs" name="attachments" type="file" multiple accept=".pdf,.png,.jpg,.jpeg" required>
+              </div>
+              <button type="submit" class="btn-primary btn-primary--auto">Upload documents</button>
+            </form>
+          </div>
+        @endif
+
         @if (!empty($caps['canEditActionPlan']))
           <div class="sup-card__body">
             <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/action-plan" class="stack-form stack-form--console dept-inline-form">
+              @csrf
               <div class="field field--console">
                 <label for="planSummary">{{ $plan ? 'Update action plan' : 'Action plan summary' }}</label>
                 <textarea id="planSummary" name="summary" rows="3" required placeholder="Describe the corrective actions the department will take…">{{ $plan['summary'] ?? '' }}</textarea>
@@ -252,6 +272,77 @@
           </ul>
         </section>
       @endif
+
+      <section class="sup-card">
+        <h2>Discussion thread</h2>
+        @if (count($tops) === 0)
+          <div class="reddit-thread reddit-thread--empty">
+            <p class="reddit-empty">No comments yet. Start the discussion below.</p>
+          </div>
+        @else
+          <div class="reddit-thread">
+            @foreach ($tops as $c)
+              <div class="reddit-comment" id="comment-{{ $c['id'] }}">
+                <div class="reddit-comment__main">
+                  <header class="reddit-comment__header">
+                    <span class="reddit-author">{{ $c['authorName'] }}</span>
+                    @if (($c['roleLabel'] ?? '') !== '')
+                      <span class="reddit-role">{{ $c['roleLabel'] }}</span>
+                    @endif
+                    @if (!empty($c['at']))
+                      <span class="reddit-sep" aria-hidden="true">·</span>
+                      <time class="reddit-time">{{ \Illuminate\Support\Carbon::parse($c['at'])->format('Y-m-d H:i') }}</time>
+                    @endif
+                  </header>
+                  <div class="reddit-body">{{ $c['body'] }}</div>
+                  @if (!empty($caps['canPostComment']))
+                    <details class="reddit-reply-box">
+                      <summary class="reddit-action-btn">Reply</summary>
+                      <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-reply-form">
+                        @csrf
+                        <input type="hidden" name="parentId" value="{{ $c['id'] }}">
+                        <div class="field">
+                          <label class="visually-hidden" for="reply-{{ $c['id'] }}">Reply</label>
+                          <textarea id="reply-{{ $c['id'] }}" name="comment" rows="3" required placeholder="Write a reply…"></textarea>
+                        </div>
+                        <button type="submit" class="btn-outline btn-primary--auto">Reply</button>
+                      </form>
+                    </details>
+                  @endif
+                  @foreach ($childrenOf($c['id']) as $reply)
+                    <div class="reddit-comment reddit-comment--reply" id="comment-{{ $reply['id'] }}">
+                      <div class="reddit-comment__main">
+                        <header class="reddit-comment__header">
+                          <span class="reddit-author">{{ $reply['authorName'] }}</span>
+                          @if (($reply['roleLabel'] ?? '') !== '')
+                            <span class="reddit-role">{{ $reply['roleLabel'] }}</span>
+                          @endif
+                          @if (!empty($reply['at']))
+                            <span class="reddit-sep" aria-hidden="true">·</span>
+                            <time class="reddit-time">{{ \Illuminate\Support\Carbon::parse($reply['at'])->format('Y-m-d H:i') }}</time>
+                          @endif
+                        </header>
+                        <div class="reddit-body">{{ $reply['body'] }}</div>
+                      </div>
+                    </div>
+                  @endforeach
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @endif
+
+        @if (!empty($caps['canPostComment']))
+          <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-compose">
+            @csrf
+            <div class="field">
+              <label for="dept-comment-{{ $ref }}">Add comment</label>
+              <textarea id="dept-comment-{{ $ref }}" name="comment" rows="3" required placeholder="Comment visible to the reporter and Risk Management Officer…"></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-primary--auto">Post comment</button>
+          </form>
+        @endif
+      </section>
     </div>
 
     <aside class="dept-detail__side">
@@ -303,6 +394,7 @@
         <section class="sup-card">
           <h3>Ownership decision</h3>
           <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/accept" class="stack-form stack-form--console">
+            @csrf
             <div class="field field--console">
               <label for="acceptComment">Comment <span class="text-muted">(optional)</span></label>
               <textarea id="acceptComment" name="comment" rows="2" placeholder="Optional note when accepting…"></textarea>
@@ -312,6 +404,7 @@
           <details class="dept-inline-details" style="margin-top:1rem">
             <summary>Reject ownership</summary>
             <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/reject" class="stack-form stack-form--console" style="margin-top:0.75rem">
+              @csrf
               <div class="field field--console">
                 <label for="rejectReason">Reason <span class="text-muted">(required)</span></label>
                 <textarea id="rejectReason" name="reason" rows="3" required placeholder="Explain why this ticket does not belong to your department…"></textarea>
@@ -326,6 +419,7 @@
         <section class="sup-card">
           <h3>Transfer ticket</h3>
           <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/reassign" class="stack-form stack-form--console">
+            @csrf
             <div class="field field--console">
               <label for="reassignReason">Reason <span class="text-muted">(required)</span></label>
               <textarea id="reassignReason" name="reason" rows="2" required></textarea>
@@ -355,6 +449,7 @@
             <p>Send the ticket back to the reporter if the report is incomplete or needs correction.</p>
           </div>
           <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/return" class="stack-form stack-form--console">
+            @csrf
             <div class="field field--console">
               <label for="returnReason">Reason for return</label>
               <textarea id="returnReason" name="reason" rows="3" required></textarea>
@@ -369,6 +464,7 @@
           <h3>Close ticket</h3>
           <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/close" class="stack-form stack-form--console"
             onsubmit="return confirm('Close {{ $ref }} after reviewing the accomplishment?');">
+            @csrf
             <div class="field field--console">
               <label for="closeComment">Closure note <span class="text-muted">(optional)</span></label>
               <textarea id="closeComment" name="comment" rows="2"></textarea>

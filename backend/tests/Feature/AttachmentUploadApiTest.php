@@ -35,12 +35,12 @@ class AttachmentUploadApiTest extends TestCase
             ->json('ticket.reference');
     }
 
-    public function test_health_slice_ten(): void
+    public function test_health_slice_thirteen(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 5)
-            ->assertJsonPath('slice', 31);
+            ->assertJsonPath('phase', 8)
+            ->assertJsonPath('slice', 3);
     }
 
     public function test_upload_and_download_roundtrip(): void

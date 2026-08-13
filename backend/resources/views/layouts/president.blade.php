@@ -21,11 +21,11 @@
     $highCount = (int) ($stats['highCount'] ?? 0);
     $criticalCount = (int) ($stats['criticalCount'] ?? 0);
     $nav = [
-      ['id' => 'overview', 'href' => '/laravel/president', 'label' => 'Dashboard'],
-      ['id' => 'pending', 'href' => '/laravel/president/pending', 'label' => 'Pending decisions', 'statKey' => 'pendingCount'],
-      ['id' => 'high', 'href' => '/laravel/president/high', 'label' => 'High risks', 'statKey' => 'highCount'],
-      ['id' => 'critical', 'href' => '/laravel/president/critical', 'label' => 'Critical risks', 'statKey' => 'criticalCount'],
-      ['id' => 'trends', 'href' => '/laravel/president/trends', 'label' => 'Trends'],
+      ['id' => 'overview', 'href' => '/president', 'label' => 'Dashboard'],
+      ['id' => 'pending', 'href' => '/president/pending', 'label' => 'Pending decisions', 'statKey' => 'pendingCount'],
+      ['id' => 'high', 'href' => '/president/high', 'label' => 'High risks', 'statKey' => 'highCount'],
+      ['id' => 'critical', 'href' => '/president/critical', 'label' => 'Critical risks', 'statKey' => 'criticalCount'],
+      ['id' => 'trends', 'href' => '/president/trends', 'label' => 'Trends'],
     ];
   @endphp
   <aside class="supervisor-sidebar">

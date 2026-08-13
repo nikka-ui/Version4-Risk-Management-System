@@ -645,6 +645,55 @@ function deleteUser(username) {
   return { user: publicUser(user) };
 }
 
+/** Phase 7 slice 3: upsert Express store.json user from Laravel mirror. */
+function upsertUserFromLaravel(record = {}) {
+  const username = String(record.username || '').trim().toLowerCase();
+  if (!username) return { error: 'Username is required.' };
+  const store = loadStore();
+  if (!store.users) store.users = [];
+  let user = store.users.find((u) => u.username === username);
+  const now = new Date().toISOString();
+  if (!user) {
+    user = {
+      username,
+      createdAt: record.createdAt || now,
+      builtIn: Boolean(record.builtIn),
+    };
+    store.users.push(user);
+  }
+  if (record.password) user.password = String(record.password);
+  if (record.displayName !== undefined) user.displayName = String(record.displayName || username).trim();
+  if (record.email !== undefined) user.email = String(record.email || `${username}@rms.local`).trim().toLowerCase();
+  if (record.employeeId !== undefined) user.employeeId = String(record.employeeId || '').trim();
+  if (record.department !== undefined) user.department = String(record.department || '').trim();
+  if (record.position !== undefined) user.position = String(record.position || '').trim();
+  if (record.role !== undefined && isAssignableRole(record.role)) {
+    user.role = record.role;
+    user.roleLabel = record.roleLabel || getRoleLabel(record.role);
+    user.canManageUsers = Boolean(record.canManageUsers) || record.role === 'admin';
+  } else if (record.roleLabel !== undefined) {
+    user.roleLabel = String(record.roleLabel);
+  }
+  if (record.canManageUsers !== undefined) user.canManageUsers = Boolean(record.canManageUsers);
+  if (record.builtIn !== undefined) user.builtIn = Boolean(record.builtIn);
+  if (record.deleted === true) {
+    user.deleted = true;
+    user.deletedAt = now;
+    user.active = false;
+    user.status = 'deleted';
+  } else {
+    if (record.active !== undefined) user.active = Boolean(record.active);
+    if (record.status !== undefined) user.status = String(record.status);
+    if (record.deleted === false) {
+      user.deleted = false;
+      user.deletedAt = null;
+    }
+  }
+  user.updatedAt = record.updatedAt || now;
+  saveStore();
+  return { user: publicUser(user) };
+}
+
 function getCredentialLogs(limit = 200) {
   const store = loadStore();
   return [...store.credentialLogs]
@@ -770,6 +819,36 @@ function deleteDepartment(id) {
   return { department: dept };
 }
 
+/** Phase 7 slice 1: upsert Express store.json department from Laravel mirror. */
+function upsertDepartmentFromLaravel(record = {}) {
+  const id = String(record.id || '').trim();
+  const name = String(record.name || '').trim();
+  const code = String(record.code || '').trim().toUpperCase();
+  if (!id || !name || !code) return { error: 'Department id, name, and code are required.' };
+  const store = loadStore();
+  if (!store.departments) store.departments = [];
+  let dept = store.departments.find((d) => d.id === id);
+  const now = new Date().toISOString();
+  if (!dept) {
+    dept = {
+      id,
+      createdAt: record.createdAt || now,
+      autoApproveLowModerate: false,
+    };
+    store.departments.push(dept);
+  }
+  dept.name = name;
+  dept.code = code;
+  dept.description = String(record.description || '').trim();
+  dept.head = record.head ? String(record.head).trim() : null;
+  dept.status = record.status === 'inactive' ? 'inactive' : 'active';
+  dept.active = record.active !== false && dept.status !== 'inactive';
+  dept.autoApproveLowModerate = Boolean(record.autoApproveLowModerate);
+  dept.updatedAt = record.updatedAt || now;
+  saveStore();
+  return { department: dept };
+}
+
 function listPositions() {
   const store = loadStore();
   return (store.positions || [])
@@ -811,6 +890,26 @@ function deletePosition(id) {
   if (!pos) return { error: 'Position not found.' };
   pos.active = false;
   pos.updatedAt = new Date().toISOString();
+  saveStore();
+  return { position: pos };
+}
+
+/** Phase 7 slice 2: upsert Express store.json position from Laravel mirror. */
+function upsertPositionFromLaravel(record = {}) {
+  const id = String(record.id || '').trim();
+  const name = String(record.name || '').trim();
+  if (!id || !name) return { error: 'Position id and name are required.' };
+  const store = loadStore();
+  if (!store.positions) store.positions = [];
+  let pos = store.positions.find((p) => p.id === id);
+  const now = new Date().toISOString();
+  if (!pos) {
+    pos = { id, createdAt: record.createdAt || now, active: true };
+    store.positions.push(pos);
+  }
+  pos.name = name;
+  pos.active = record.active !== false;
+  pos.updatedAt = record.updatedAt || now;
   saveStore();
   return { position: pos };
 }
@@ -1133,6 +1232,7 @@ module.exports = {
   updateUser,
   updateUserRole,
   deleteUser,
+  upsertUserFromLaravel,
   setUserStatus,
   resetUserPassword,
   getCredentialLogs,
@@ -1145,10 +1245,12 @@ module.exports = {
   createDepartment,
   updateDepartment,
   deleteDepartment,
+  upsertDepartmentFromLaravel,
   listPositions,
   createPosition,
   updatePosition,
   deletePosition,
+  upsertPositionFromLaravel,
   appendAuditLog,
   getAuditLogs,
   getAuditLogsTodayCount,

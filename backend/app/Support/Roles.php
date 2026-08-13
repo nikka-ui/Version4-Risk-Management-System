@@ -82,6 +82,39 @@ final class Roles
         return $roleId !== null && isset(self::DEFINITIONS[$roleId]);
     }
 
+    public static function isAssignable(?string $roleId): bool
+    {
+        if ($roleId === null || $roleId === '' || ! isset(self::DEFINITIONS[$roleId])) {
+            return false;
+        }
+
+        return (bool) (self::DEFINITIONS[$roleId]['assignable'] ?? false);
+    }
+
+    /** Express console path for a role (e.g. `/admin`). */
+    public static function consolePath(?string $roleId): string
+    {
+        if ($roleId === null || $roleId === '') {
+            return '/dashboard';
+        }
+
+        return self::DEFINITIONS[$roleId]['path'] ?? '/dashboard';
+    }
+
+    /**
+     * Legacy prefixed Blade console path (`/laravel/admin`).
+     * Phase 6 slice 2 uses consolePath() when USE_LARAVEL_EDGE_UI is on.
+     */
+    public static function bladeConsolePath(?string $roleId): string
+    {
+        $path = self::consolePath($roleId);
+        if ($path === '/dashboard') {
+            return $path;
+        }
+
+        return '/laravel'.$path;
+    }
+
     /** @return list<string> */
     public static function ids(): array
     {

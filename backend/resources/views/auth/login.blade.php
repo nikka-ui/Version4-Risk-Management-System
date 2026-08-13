@@ -31,7 +31,7 @@ System</h2>
           @if (!empty($error))
             <div class="alert" role="alert">{{ $error }}</div>
           @endif
-          <form method="post" action="/laravel/login" autocomplete="on" class="login-form">
+          <form method="post" action="/login" autocomplete="on" class="login-form">
             @csrf
             @if (!empty($next))
               <input type="hidden" name="next" value="{{ $next }}">

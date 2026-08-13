@@ -20,7 +20,7 @@
       <p class="sup-page-desc">Final approving authority for High and Critical risks — review and approve department action plans, or return them for revision.</p>
     </div>
     @if ($pendingCount > 0)
-      <a href="/laravel/president/pending" class="btn-primary btn-primary--auto">Review pending decisions</a>
+      <a href="/president/pending" class="btn-primary btn-primary--auto">Review pending decisions</a>
     @endif
   </div>
 
@@ -54,10 +54,10 @@
   </div>
 
   <div class="ticket-filters officer-quick-actions" aria-label="Quick actions">
-    <a href="/laravel/president/pending" class="filter-pill">Pending decisions <span class="filter-pill__count">{{ $pendingCount }}</span></a>
-    <a href="/laravel/president/high" class="filter-pill">High risks <span class="filter-pill__count">{{ (int) ($stats['highCount'] ?? 0) }}</span></a>
-    <a href="/laravel/president/critical" class="filter-pill">Critical risks <span class="filter-pill__count">{{ (int) ($stats['criticalCount'] ?? 0) }}</span></a>
-    <a href="/laravel/president/trends" class="filter-pill">Trends</a>
+    <a href="/president/pending" class="filter-pill">Pending decisions <span class="filter-pill__count">{{ $pendingCount }}</span></a>
+    <a href="/president/high" class="filter-pill">High risks <span class="filter-pill__count">{{ (int) ($stats['highCount'] ?? 0) }}</span></a>
+    <a href="/president/critical" class="filter-pill">Critical risks <span class="filter-pill__count">{{ (int) ($stats['criticalCount'] ?? 0) }}</span></a>
+    <a href="/president/trends" class="filter-pill">Trends</a>
   </div>
 
   <div class="exec-dash-grid">
@@ -130,7 +130,7 @@
                   $tone = $isOverdue ? 'bad' : 'ok';
                 @endphp
                 <tr{{ $level === 'critical' ? ' class="row--critical"' : '' }}>
-                  <td class="mono nowrap"><a href="/laravel/president/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
+                  <td class="mono nowrap"><a href="/president/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
                   <td class="sup-truncate">{{ $t['title'] }}</td>
                   <td class="nowrap">
                     <span class="risk-badge risk-badge--{{ $level }}">{{ $level === 'critical' ? 'Critical' : 'High' }}</span>

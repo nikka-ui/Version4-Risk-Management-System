@@ -38,7 +38,7 @@
         <span class="pill pill--{{ !empty($t['isOverdue']) ? 'bad' : 'info' }}">{{ $t['statusLabel'] ?? '' }}</span>
       </p>
     </div>
-    <a href="/laravel/officer/tickets" class="btn-outline">Back to risk register</a>
+    <a href="/officer/tickets" class="btn-outline">Back to risk register</a>
   </div>
 
   <div class="sup-detail-stack">
@@ -213,6 +213,7 @@
         <div class="sup-card__body">
           <p class="sup-muted-block">Reopen this closed ticket and assign it back to a department for a new ownership cycle. Only Risk Management Officer users can perform this action.</p>
           <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/reopen" class="stack-form stack-form--console">
+            @csrf
             <div class="field field--console">
               <label for="reopenReason">Reason <span class="text-muted">(required)</span></label>
               <textarea id="reopenReason" name="reason" rows="3" required placeholder="Explain why this ticket must be reopened…"></textarea>
@@ -257,6 +258,7 @@
                   <details class="reddit-reply-box">
                     <summary class="reddit-action-btn">Reply</summary>
                     <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/thread-comment" class="stack-form reddit-reply-form">
+                      @csrf
                       <input type="hidden" name="parentId" value="{{ $c['id'] }}">
                       <div class="field">
                         <label class="visually-hidden" for="reply-{{ $c['id'] }}">Reply</label>
@@ -291,6 +293,7 @@
 
       @if (!empty($caps['canPostComment']))
         <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/thread-comment" class="stack-form reddit-compose">
+          @csrf
           <div class="field">
             <label for="thread-comment-{{ $ref }}">Add comment</label>
             <textarea id="thread-comment-{{ $ref }}" name="comment" rows="3" required placeholder="Comment visible to the reporter and responsible department…"></textarea>

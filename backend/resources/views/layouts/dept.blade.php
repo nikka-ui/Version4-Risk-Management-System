@@ -19,14 +19,14 @@
     $positionLine = $user['position'] ?: 'Department Head / Vice President';
     $stats = $stats ?? [];
     $nav = [
-      ['id' => 'dashboard', 'href' => '/laravel/dept', 'label' => 'Dashboard'],
-      ['id' => 'inbox', 'href' => '/laravel/dept/inbox', 'label' => 'Ownership inbox', 'statKey' => 'inbox'],
-      ['id' => 'active', 'href' => '/laravel/dept/active', 'label' => 'In progress', 'statKey' => 'active'],
-      ['id' => 'returned', 'href' => '/laravel/dept/returned', 'label' => 'Returned ticket', 'statKey' => 'returned', 'critical' => true],
-      ['id' => 'drafts', 'href' => '/laravel/dept/drafts', 'label' => 'Action plan drafts', 'statKey' => 'drafts'],
-      ['id' => 'overdue', 'href' => '/laravel/dept/overdue', 'label' => 'Overdue', 'statKey' => 'overdue'],
-      ['id' => 'closure', 'href' => '/laravel/dept/closure', 'label' => 'Pending closure', 'statKey' => 'pendingClosure'],
-      ['id' => 'tickets', 'href' => '/laravel/dept/tickets', 'label' => 'All department tickets'],
+      ['id' => 'dashboard', 'href' => '/dept', 'label' => 'Dashboard'],
+      ['id' => 'inbox', 'href' => '/dept/inbox', 'label' => 'Ownership inbox', 'statKey' => 'inbox'],
+      ['id' => 'active', 'href' => '/dept/active', 'label' => 'In progress', 'statKey' => 'active'],
+      ['id' => 'returned', 'href' => '/dept/returned', 'label' => 'Returned ticket', 'statKey' => 'returned', 'critical' => true],
+      ['id' => 'drafts', 'href' => '/dept/drafts', 'label' => 'Action plan drafts', 'statKey' => 'drafts'],
+      ['id' => 'overdue', 'href' => '/dept/overdue', 'label' => 'Overdue', 'statKey' => 'overdue'],
+      ['id' => 'closure', 'href' => '/dept/closure', 'label' => 'Pending closure', 'statKey' => 'pendingClosure'],
+      ['id' => 'tickets', 'href' => '/dept/tickets', 'label' => 'All department tickets'],
     ];
   @endphp
   <aside class="supervisor-sidebar">

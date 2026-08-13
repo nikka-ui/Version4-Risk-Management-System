@@ -31,7 +31,7 @@
         <tbody>
           @forelse ($accomplishments as $a)
             <tr>
-              <td class="mono nowrap"><a href="/laravel/supervisor/tickets/{{ urlencode($a['ticketRef']) }}">{{ $a['ticketRef'] }}</a></td>
+              <td class="mono nowrap"><a href="/supervisor/tickets/{{ urlencode($a['ticketRef']) }}">{{ $a['ticketRef'] }}</a></td>
               <td>{{ $a['ticketTitle'] }}</td>
               <td class="sup-truncate" title="{{ $a['summary'] }}">{{ \Illuminate\Support\Str::limit($a['summary'], 80) }}</td>
               <td class="nowrap">{{ !empty($a['submittedAt']) ? \Illuminate\Support\Carbon::parse($a['submittedAt'])->format('Y-m-d H:i') : '—' }}</td>

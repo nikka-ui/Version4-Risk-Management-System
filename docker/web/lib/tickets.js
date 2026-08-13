@@ -3643,6 +3643,71 @@ function softDeleteTicketForAdmin(reference, user, reason) {
   return { ticket: publicTicket(ticket) };
 }
 
+/** Phase 7 slice 5: apply Laravel admin soft-delete onto Express store.json. */
+function softDeleteTicketFromLaravel(record = {}) {
+  const reference = String(record.reference || '').trim();
+  if (!reference) return { error: 'Ticket not found.' };
+  const ticket = getTicketByRefForAdmin(reference);
+  if (!ticket) return { error: 'Ticket not found.' };
+  if (ticket.deleted) return { error: 'Ticket is already deleted.' };
+  const deletionReason = String(record.deletionReason || record.reason || '').trim();
+  if (!deletionReason) return { error: 'A reason for deletion is required.' };
+  const now = new Date().toISOString();
+  ticket.deleted = true;
+  ticket.deletedAt = record.deletedAt || now;
+  ticket.deletedBy = String(record.deletedBy || '').trim();
+  ticket.deletedByName = String(record.deletedByName || ticket.deletedBy);
+  ticket.deletionReason = deletionReason;
+  ticket.updatedAt = now;
+  const { saveStore } = getStore();
+  saveStore();
+  const { appendDeletedTicketLog } = require('./store');
+  appendDeletedTicketLog({
+    ticketRef: ticket.reference,
+    title: ticket.title,
+    deletedBy: ticket.deletedBy,
+    reason: deletionReason,
+  });
+  return { ticket: publicTicket(ticket) };
+}
+
+/** Phase 7 slice 7: hard-delete Express draft after Laravel reporter delete. */
+async function deleteDraftTicketFromLaravel(record = {}) {
+  const reference = String(record.reference || '').trim();
+  if (!reference) return { error: 'Ticket not found.' };
+  const { store, saveStore } = getStore();
+  const idx = (store.riskTickets || []).findIndex((t) => t.reference === reference);
+  if (idx < 0) return { reference };
+  const ticket = store.riskTickets[idx];
+  if (ticket.status && ticket.status !== 'draft') {
+    return { error: 'Only draft tickets can be deleted.' };
+  }
+  await deleteTicketUploads(ticket.reference);
+  store.riskTickets.splice(idx, 1);
+  saveStore();
+  return { reference: ticket.reference };
+}
+
+/** Phase 7 slice 6: upsert Express store.json ticket from Laravel mirror. */
+function upsertTicketFromLaravel(record = {}) {
+  const reference = String(record.reference || '').trim();
+  if (!reference) return { error: 'Ticket not found.' };
+  const { store, saveStore } = getStore();
+  if (!store.riskTickets) store.riskTickets = [];
+  let ticket = store.riskTickets.find((t) => t.reference === reference);
+  if (!ticket) {
+    ticket = { reference, id: record.id || reference };
+    store.riskTickets.push(ticket);
+  }
+  for (const [key, value] of Object.entries(record)) {
+    if (key === 'reference' || value === undefined) continue;
+    ticket[key] = value;
+  }
+  ticket.updatedAt = record.updatedAt || new Date().toISOString();
+  saveStore();
+  return { ticket: publicTicket(ticket) };
+}
+
 module.exports = {
   listTicketsForSupervisor,
   getTicketByRef,
@@ -3745,5 +3810,8 @@ module.exports = {
   getAdminTicketStats,
   getTicketByRefForAdmin,
   softDeleteTicketForAdmin,
+  softDeleteTicketFromLaravel,
+  upsertTicketFromLaravel,
+  deleteDraftTicketFromLaravel,
   checkAndNotifyOverdueTickets,
 };

@@ -17,12 +17,12 @@ class NotificationApiTest extends TestCase
         return $this->postJson('/v1/auth/token', compact('username', 'password'))->json('token');
     }
 
-    public function test_health_slice_nine(): void
+    public function test_health_slice_thirteen(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 5)
-            ->assertJsonPath('slice', 31);
+            ->assertJsonPath('phase', 8)
+            ->assertJsonPath('slice', 3);
     }
 
     public function test_create_list_unread_and_mark_read(): void

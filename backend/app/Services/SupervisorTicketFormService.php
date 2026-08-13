@@ -7,8 +7,7 @@ use App\Models\RiskTicket;
 use App\Models\User;
 
 /**
- * Phase 5 slice 13: Ticket Reporter create/edit/preview form data (Blade GET).
- * POST handlers remain on Express.
+ * Phase 5 slice 13 + Phase 7 slice 7 + Phase 8 slice 1: Ticket Reporter create/edit/preview form data.
  */
 class SupervisorTicketFormService
 {
@@ -131,7 +130,7 @@ class SupervisorTicketFormService
     /**
      * @param  array<string, mixed>  $ticket
      */
-    private function hasRevisionSinceReturn(array $ticket): bool
+    public function hasRevisionSinceReturn(array $ticket): bool
     {
         $hash = $ticket['returnRevisionHash'] ?? null;
         if (! is_string($hash) || $hash === '') {

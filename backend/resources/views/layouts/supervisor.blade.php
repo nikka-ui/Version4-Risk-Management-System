@@ -18,16 +18,16 @@
     $roleLabel = $user['roleLabel'] ?? 'Ticket Reporter';
     $positionLine = $user['position'] ?: 'Risk Reporter';
     $nav = [
-      ['id' => 'overview', 'href' => '/laravel/supervisor', 'label' => 'Dashboard'],
-      ['id' => 'tickets', 'href' => '/laravel/supervisor/tickets', 'label' => 'My tickets'],
-      ['id' => 'new', 'href' => '/laravel/supervisor/tickets/new', 'label' => 'Create new ticket'],
-      ['id' => 'drafts', 'href' => '/laravel/supervisor/drafts', 'label' => 'Draft reports'],
-      ['id' => 'submitted', 'href' => '/laravel/supervisor/submitted', 'label' => 'Submitted reports'],
-      ['id' => 'returned', 'href' => '/laravel/supervisor/returned', 'label' => 'Returned reports'],
-      ['id' => 'overdue', 'href' => '/laravel/supervisor/overdue', 'label' => 'Overdue'],
-      ['id' => 'accomplishments', 'href' => '/laravel/supervisor/accomplishments', 'label' => 'Accomplishment reports'],
-      ['id' => 'notifications', 'href' => '/laravel/supervisor/notifications', 'label' => 'Notifications'],
-      ['id' => 'profile', 'href' => '/laravel/supervisor/profile', 'label' => 'Profile'],
+      ['id' => 'overview', 'href' => '/supervisor', 'label' => 'Dashboard'],
+      ['id' => 'tickets', 'href' => '/supervisor/tickets', 'label' => 'My tickets'],
+      ['id' => 'new', 'href' => '/supervisor/tickets/new', 'label' => 'Create new ticket'],
+      ['id' => 'drafts', 'href' => '/supervisor/drafts', 'label' => 'Draft reports'],
+      ['id' => 'submitted', 'href' => '/supervisor/submitted', 'label' => 'Submitted reports'],
+      ['id' => 'returned', 'href' => '/supervisor/returned', 'label' => 'Returned reports'],
+      ['id' => 'overdue', 'href' => '/supervisor/overdue', 'label' => 'Overdue'],
+      ['id' => 'accomplishments', 'href' => '/supervisor/accomplishments', 'label' => 'Accomplishment reports'],
+      ['id' => 'notifications', 'href' => '/supervisor/notifications', 'label' => 'Notifications'],
+      ['id' => 'profile', 'href' => '/supervisor/profile', 'label' => 'Profile'],
     ];
   @endphp
   <aside class="supervisor-sidebar">

@@ -84,33 +84,20 @@ class DraftTicketService
     public function updateDraft(RiskTicket $ticket, User $user, array $input): RiskTicket
     {
         $this->assertOwnerDraft($ticket, $user);
-        $fields = $this->validatedFields($input);
-        $evidenceCount = $this->resolveEvidenceCount($input, $ticket->evidence_count);
 
-        $ai = DraftAiAnalysis::analyze([
-            'title' => $fields['title'],
-            'location' => $fields['location'],
-            'fiveW1H' => $fields['five_w1h'],
-            'evidenceCount' => $evidenceCount,
-        ]);
+        return $this->applyFieldUpdate($ticket, $input);
+    }
 
-        $ticket->fill([
-            'title' => $fields['title'],
-            'description' => $fields['description'],
-            'location' => $fields['location'],
-            'mitigation_approach' => $fields['mitigation_approach'],
-            'five_w1h' => $fields['five_w1h'],
-            'category' => $ai['riskCategory'],
-            'likelihood' => $ai['likelihood'],
-            'impact' => $ai['impact'],
-            'risk_score' => $ai['likelihood'] * $ai['impact'],
-            'ai' => $ai,
-            'evidence_count' => $evidenceCount,
-            'source_updated_at' => now(),
-        ]);
-        $ticket->save();
+    /**
+     * Phase 8 slice 1: update draft or returned / ownership_rejected reports.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function updateEditable(RiskTicket $ticket, User $user, array $input): RiskTicket
+    {
+        $this->assertOwnerEditable($ticket, $user);
 
-        return $ticket->fresh();
+        return $this->applyFieldUpdate($ticket, $input);
     }
 
     public function deleteDraft(RiskTicket $ticket, User $user): string
@@ -227,6 +214,40 @@ class DraftTicketService
         return $count;
     }
 
+    /**
+     * @param  array<string, mixed>  $input
+     */
+    private function applyFieldUpdate(RiskTicket $ticket, array $input): RiskTicket
+    {
+        $fields = $this->validatedFields($input);
+        $evidenceCount = $this->resolveEvidenceCount($input, $ticket->evidence_count);
+
+        $ai = DraftAiAnalysis::analyze([
+            'title' => $fields['title'],
+            'location' => $fields['location'],
+            'fiveW1H' => $fields['five_w1h'],
+            'evidenceCount' => $evidenceCount,
+        ]);
+
+        $ticket->fill([
+            'title' => $fields['title'],
+            'description' => $fields['description'],
+            'location' => $fields['location'],
+            'mitigation_approach' => $fields['mitigation_approach'],
+            'five_w1h' => $fields['five_w1h'],
+            'category' => $ai['riskCategory'],
+            'likelihood' => $ai['likelihood'],
+            'impact' => $ai['impact'],
+            'risk_score' => $ai['likelihood'] * $ai['impact'],
+            'ai' => $ai,
+            'evidence_count' => $evidenceCount,
+            'source_updated_at' => now(),
+        ]);
+        $ticket->save();
+
+        return $ticket->fresh();
+    }
+
     private function assertOwnerDraft(RiskTicket $ticket, User $user): void
     {
         if ($ticket->deleted || $ticket->submitted_by !== $user->username) {
@@ -236,6 +257,19 @@ class DraftTicketService
         if ($ticket->status !== 'draft') {
             throw ValidationException::withMessages([
                 'status' => ['Only draft tickets can be edited or deleted from this API.'],
+            ]);
+        }
+    }
+
+    private function assertOwnerEditable(RiskTicket $ticket, User $user): void
+    {
+        if ($ticket->deleted || $ticket->submitted_by !== $user->username) {
+            abort(404, 'Ticket not found.');
+        }
+
+        if ($ticket->status !== 'draft' && ! in_array($ticket->status, ['returned', 'ownership_rejected'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['This ticket can no longer be edited.'],
             ]);
         }
     }

@@ -20,7 +20,7 @@ class EnsureWebAdminRole
         $user = $request->user();
 
         if (! $user || $user->role !== Roles::ADMIN || ! $user->isActiveAccount()) {
-            return redirect()->away('/laravel/login');
+            return redirect()->away('/login');
         }
 
         return $next($request);

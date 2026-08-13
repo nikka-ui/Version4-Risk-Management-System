@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const cookieSession = require('cookie-session');
 const {
@@ -306,6 +307,179 @@ async function sendAttachment(res, found, username) {
   await streamAttachmentToResponse(res, found, { username });
 }
 
+function requireInternalToken(req, res, next) {
+  const expected = String(process.env.RMS_INTERNAL_SERVICE_TOKEN || '');
+  if (!expected) {
+    return res.status(503).json({ message: 'Internal service token is not configured.' });
+  }
+  const provided = String(req.headers['x-rms-service-token'] || '');
+  const left = Buffer.from(expected);
+  const right = Buffer.from(provided);
+  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) {
+    return res.status(401).json({ message: 'Invalid or missing service token.' });
+  }
+  return next();
+}
+
+app.post('/internal/tickets/delete-draft', requireInternalToken, asyncRoute(async (req, res) => {
+  const ticket = req.body?.ticket && typeof req.body.ticket === 'object' ? req.body.ticket : {};
+  const { deleteDraftTicketFromLaravel } = require('./lib/tickets');
+  try {
+    const result = await deleteDraftTicketFromLaravel(ticket);
+    if (result.error) return res.status(422).json({ message: result.error });
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-tickets] delete-draft sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+}));
+
+app.post('/internal/tickets/upsert', requireInternalToken, (req, res) => {
+  const ticket = req.body?.ticket && typeof req.body.ticket === 'object' ? req.body.ticket : {};
+  const { upsertTicketFromLaravel } = require('./lib/tickets');
+  try {
+    const result = upsertTicketFromLaravel(ticket);
+    if (result.error) return res.status(422).json({ message: result.error });
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-tickets] upsert sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
+app.post('/internal/tickets/soft-delete', requireInternalToken, (req, res) => {
+  const ticket = req.body?.ticket && typeof req.body.ticket === 'object' ? req.body.ticket : {};
+  const { softDeleteTicketFromLaravel } = require('./lib/tickets');
+  const { appendAuditLog, appendNotification } = require('./lib/store');
+  try {
+    const result = softDeleteTicketFromLaravel(ticket);
+    if (result.error) return res.status(422).json({ message: result.error });
+    if (req.body?.audit && typeof req.body.audit === 'object') {
+      appendAuditLog(req.body.audit);
+    }
+    if (req.body?.notification && typeof req.body.notification === 'object') {
+      appendNotification(req.body.notification);
+    }
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-tickets] soft-delete sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
+app.post('/internal/org/settings', requireInternalToken, (req, res) => {
+  const settings = req.body?.settings && typeof req.body.settings === 'object' ? req.body.settings : {};
+  const { updateSystemSettings, appendAuditLog } = require('./lib/store');
+  try {
+    updateSystemSettings(settings);
+    if (req.body?.audit && typeof req.body.audit === 'object') {
+      appendAuditLog(req.body.audit);
+    }
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-org] settings sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
+app.post('/internal/org/users', requireInternalToken, (req, res) => {
+  const op = String(req.body?.op || '');
+  const user = req.body?.user && typeof req.body.user === 'object' ? req.body.user : {};
+  const {
+    upsertUserFromLaravel,
+    deleteUser,
+    appendAuditLog,
+    appendNotification,
+    appendCredentialLog,
+  } = require('./lib/store');
+  try {
+    if (op === 'upsert') {
+      const result = upsertUserFromLaravel(user);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else if (op === 'delete') {
+      const result = deleteUser(user.username || req.body?.username);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else {
+      return res.status(422).json({ message: 'Unknown op.' });
+    }
+    if (req.body?.audit && typeof req.body.audit === 'object') {
+      appendAuditLog(req.body.audit);
+    }
+    if (req.body?.notification && typeof req.body.notification === 'object') {
+      appendNotification(req.body.notification);
+    }
+    if (req.body?.credential && typeof req.body.credential === 'object') {
+      appendCredentialLog(req.body.credential);
+    }
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-org] user sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
+app.post('/internal/org/positions', requireInternalToken, (req, res) => {
+  const op = String(req.body?.op || '');
+  const position = req.body?.position && typeof req.body.position === 'object' ? req.body.position : {};
+  const {
+    upsertPositionFromLaravel,
+    deletePosition,
+    appendAuditLog,
+  } = require('./lib/store');
+  try {
+    if (op === 'upsert') {
+      const result = upsertPositionFromLaravel(position);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else if (op === 'delete') {
+      const id = String(position.id || req.body?.id || '');
+      const result = deletePosition(id);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else {
+      return res.status(422).json({ message: 'Unknown op.' });
+    }
+    if (req.body?.audit && typeof req.body.audit === 'object') {
+      appendAuditLog(req.body.audit);
+    }
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-org] position sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
+app.post('/internal/org/departments', requireInternalToken, (req, res) => {
+  const op = String(req.body?.op || '');
+  const department = req.body?.department && typeof req.body.department === 'object' ? req.body.department : {};
+  const {
+    upsertDepartmentFromLaravel,
+    deleteDepartment,
+    appendAuditLog,
+    appendNotification,
+  } = require('./lib/store');
+  try {
+    if (op === 'upsert') {
+      const result = upsertDepartmentFromLaravel(department);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else if (op === 'delete') {
+      const id = String(department.id || req.body?.id || '');
+      const result = deleteDepartment(id);
+      if (result.error) return res.status(422).json({ message: result.error });
+    } else {
+      return res.status(422).json({ message: 'Unknown op.' });
+    }
+    if (req.body?.audit && typeof req.body.audit === 'object') {
+      appendAuditLog(req.body.audit);
+    }
+    if (req.body?.notification && typeof req.body.notification === 'object') {
+      appendNotification(req.body.notification);
+    }
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.warn('[internal-org] department sync failed:', err?.message || err);
+    return res.status(500).json({ message: 'sync failed' });
+  }
+});
+
 app.get('/health', (req, res) => {
   const {
     USE_LARAVEL_API,
@@ -335,17 +509,34 @@ app.get('/health', (req, res) => {
     USE_LARAVEL_OFFICER_DASHBOARD_UI,
     USE_LARAVEL_OFFICER_QUEUES_UI,
     USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_ALIASES_UI,
     USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_EXECUTIVE_PAGES_UI,
+    USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI,
     USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
     USE_LARAVEL_PRESIDENT_QUEUES_UI,
     USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
+    USE_LARAVEL_EDGE_ROOT,
+    USE_LARAVEL_EDGE_UI,
+    USE_LARAVEL_DASHBOARD_UI,
+    USE_LARAVEL_ADMIN_DEPT_MUTATIONS,
+    USE_LARAVEL_ADMIN_POS_MUTATIONS,
+    USE_LARAVEL_ADMIN_USER_MUTATIONS,
+    USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS,
+    USE_LARAVEL_ADMIN_TICKET_MUTATIONS,
+    USE_LARAVEL_DEPT_TICKET_MUTATIONS,
+    USE_LARAVEL_REPORTER_TICKET_MUTATIONS,
+    USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS,
+    USE_LARAVEL_OFFICER_TICKET_MUTATIONS,
+    USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS,
+    USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS,
     USE_LARAVEL_ORG,
   } = require('./config/features');
   res.json({
     status: 'ok',
     service: 'web',
-    phase: 5,
-    slice: 31,
+    phase: 8,
+    slice: 3,
     laravelBridge: {
       USE_LARAVEL_API: Boolean(USE_LARAVEL_API),
       USE_LARAVEL_AUTH: Boolean(USE_LARAVEL_AUTH),
@@ -374,10 +565,27 @@ app.get('/health', (req, res) => {
       USE_LARAVEL_OFFICER_DASHBOARD_UI: Boolean(USE_LARAVEL_OFFICER_DASHBOARD_UI),
       USE_LARAVEL_OFFICER_QUEUES_UI: Boolean(USE_LARAVEL_OFFICER_QUEUES_UI),
       USE_LARAVEL_OFFICER_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_OFFICER_TICKET_DETAIL_UI),
+      USE_LARAVEL_OFFICER_ALIASES_UI: Boolean(USE_LARAVEL_OFFICER_ALIASES_UI),
       USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: Boolean(USE_LARAVEL_EXECUTIVE_DASHBOARD_UI),
+      USE_LARAVEL_EXECUTIVE_PAGES_UI: Boolean(USE_LARAVEL_EXECUTIVE_PAGES_UI),
+      USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI),
       USE_LARAVEL_PRESIDENT_DASHBOARD_UI: Boolean(USE_LARAVEL_PRESIDENT_DASHBOARD_UI),
       USE_LARAVEL_PRESIDENT_QUEUES_UI: Boolean(USE_LARAVEL_PRESIDENT_QUEUES_UI),
       USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI: Boolean(USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI),
+      USE_LARAVEL_EDGE_ROOT: Boolean(USE_LARAVEL_EDGE_ROOT),
+      USE_LARAVEL_EDGE_UI: Boolean(USE_LARAVEL_EDGE_UI),
+      USE_LARAVEL_DASHBOARD_UI: Boolean(USE_LARAVEL_DASHBOARD_UI),
+      USE_LARAVEL_ADMIN_DEPT_MUTATIONS: Boolean(USE_LARAVEL_ADMIN_DEPT_MUTATIONS),
+      USE_LARAVEL_ADMIN_POS_MUTATIONS: Boolean(USE_LARAVEL_ADMIN_POS_MUTATIONS),
+      USE_LARAVEL_ADMIN_USER_MUTATIONS: Boolean(USE_LARAVEL_ADMIN_USER_MUTATIONS),
+      USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS: Boolean(USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS),
+      USE_LARAVEL_ADMIN_TICKET_MUTATIONS: Boolean(USE_LARAVEL_ADMIN_TICKET_MUTATIONS),
+      USE_LARAVEL_DEPT_TICKET_MUTATIONS: Boolean(USE_LARAVEL_DEPT_TICKET_MUTATIONS),
+      USE_LARAVEL_REPORTER_TICKET_MUTATIONS: Boolean(USE_LARAVEL_REPORTER_TICKET_MUTATIONS),
+      USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS: Boolean(USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS),
+      USE_LARAVEL_OFFICER_TICKET_MUTATIONS: Boolean(USE_LARAVEL_OFFICER_TICKET_MUTATIONS),
+      USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS: Boolean(USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS),
+      USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS: Boolean(USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS),
       USE_LARAVEL_ORG: Boolean(USE_LARAVEL_ORG),
     },
   });
@@ -568,10 +776,14 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_OFFICER_DASHBOARD_UI,
     USE_LARAVEL_OFFICER_QUEUES_UI,
     USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_ALIASES_UI,
     USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_EXECUTIVE_PAGES_UI,
+    USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI,
     USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
     USE_LARAVEL_PRESIDENT_QUEUES_UI,
     USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
+    USE_LARAVEL_DASHBOARD_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -598,10 +810,14 @@ app.post('/logout', (req, res) => {
     USE_LARAVEL_OFFICER_DASHBOARD_UI ||
     USE_LARAVEL_OFFICER_QUEUES_UI ||
     USE_LARAVEL_OFFICER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_OFFICER_ALIASES_UI ||
     USE_LARAVEL_EXECUTIVE_DASHBOARD_UI ||
+    USE_LARAVEL_EXECUTIVE_PAGES_UI ||
+    USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI ||
     USE_LARAVEL_PRESIDENT_DASHBOARD_UI ||
     USE_LARAVEL_PRESIDENT_QUEUES_UI ||
-    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI ||
+    USE_LARAVEL_DASHBOARD_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -645,10 +861,14 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_OFFICER_DASHBOARD_UI,
     USE_LARAVEL_OFFICER_QUEUES_UI,
     USE_LARAVEL_OFFICER_TICKET_DETAIL_UI,
+    USE_LARAVEL_OFFICER_ALIASES_UI,
     USE_LARAVEL_EXECUTIVE_DASHBOARD_UI,
+    USE_LARAVEL_EXECUTIVE_PAGES_UI,
+    USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI,
     USE_LARAVEL_PRESIDENT_DASHBOARD_UI,
     USE_LARAVEL_PRESIDENT_QUEUES_UI,
     USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI,
+    USE_LARAVEL_DASHBOARD_UI,
   } = require('./config/features');
   if (
     USE_LARAVEL_LOGIN_UI ||
@@ -675,10 +895,14 @@ app.get('/logout', (req, res) => {
     USE_LARAVEL_OFFICER_DASHBOARD_UI ||
     USE_LARAVEL_OFFICER_QUEUES_UI ||
     USE_LARAVEL_OFFICER_TICKET_DETAIL_UI ||
+    USE_LARAVEL_OFFICER_ALIASES_UI ||
     USE_LARAVEL_EXECUTIVE_DASHBOARD_UI ||
+    USE_LARAVEL_EXECUTIVE_PAGES_UI ||
+    USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI ||
     USE_LARAVEL_PRESIDENT_DASHBOARD_UI ||
     USE_LARAVEL_PRESIDENT_QUEUES_UI ||
-    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI
+    USE_LARAVEL_PRESIDENT_TICKET_DETAIL_UI ||
+    USE_LARAVEL_DASHBOARD_UI
   ) {
     return res.redirect('/laravel/logout');
   }
@@ -686,6 +910,11 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/dashboard', requireAuth, (req, res) => {
+  const { USE_LARAVEL_DASHBOARD_UI } = require('./config/features');
+  if (USE_LARAVEL_DASHBOARD_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/dashboard${qs ? `?${qs}` : ''}`);
+  }
   const target = roleDashboardPath(req.session.user.role);
   if (target && target !== '/dashboard') {
     return res.redirect(target);
@@ -770,7 +999,13 @@ app.get('/supervisor/tickets/new', requireSupervisor, (req, res) => {
 });
 
 // Step 1 -> Step 2 (AI preview)
-app.post('/supervisor/tickets/new/preview', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
+app.post('/supervisor/tickets/new/preview', requireSupervisor, (req, res, next) => {
+  const { USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS) {
+    return res.redirect(307, '/laravel/supervisor/tickets/new/preview');
+  }
+  return handleEvidenceUpload(req, res, next);
+}, asyncRoute(async (req, res) => {
   const user = req.session.user;
   const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
   const newPath = USE_LARAVEL_REPORTER_TICKET_FORM_UI ? '/laravel/supervisor/tickets/new' : '/supervisor/tickets/new';
@@ -823,7 +1058,13 @@ app.get('/supervisor/tickets/:ref/edit', requireSupervisor, asyncRoute(async (re
   );
 }));
 
-app.post('/supervisor/tickets/:ref/edit', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
+app.post('/supervisor/tickets/:ref/edit', requireSupervisor, (req, res, next) => {
+  const { USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/${encodeURIComponent(req.params.ref)}/edit`);
+  }
+  return handleEvidenceUpload(req, res, next);
+}, asyncRoute(async (req, res) => {
   const user = req.session.user;
   const ref = req.params.ref;
   const { USE_LARAVEL_REPORTER_TICKET_FORM_UI } = require('./config/features');
@@ -853,6 +1094,10 @@ app.post('/supervisor/tickets/:ref/edit', requireSupervisor, handleEvidenceUploa
 }));
 
 app.post('/supervisor/tickets/:ref/delete', requireSupervisor, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/${encodeURIComponent(req.params.ref)}/delete`);
+  }
   const result = await deleteDraftTicket(req.params.ref, req.session.user.username);
   if (result.error) {
     return res.redirect('/supervisor/tickets?error=' + encodeURIComponent(result.error));
@@ -893,11 +1138,19 @@ app.get('/supervisor/tickets/new/preview/:ref', requireSupervisor, asyncRoute(as
 }));
 
 app.post('/supervisor/tickets/new/preview/:ref/save', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/new/preview/${encodeURIComponent(req.params.ref)}/save`);
+  }
   // Draft was already created during NEXT; nothing else to save in the placeholder build.
   return res.redirect(`/supervisor/tickets?flash=draft_saved`);
 });
 
 app.post('/supervisor/tickets/new/preview/:ref/submit', requireSupervisor, (req, res) => {
+  const { USE_LARAVEL_REPORTER_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/new/preview/${encodeURIComponent(req.params.ref)}/submit`);
+  }
   const user = req.session.user;
   const ref = req.params.ref;
 
@@ -979,7 +1232,13 @@ app.post('/supervisor/tickets/:ref', requireSupervisor, asyncRoute(async (req, r
   return res.redirect(`/supervisor/tickets/${ref}?flash=draft_saved`);
 }));
 
-app.post('/supervisor/tickets/:ref/evidence', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
+app.post('/supervisor/tickets/:ref/evidence', requireSupervisor, (req, res, next) => {
+  const { USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/${encodeURIComponent(req.params.ref)}/evidence`);
+  }
+  return handleEvidenceUpload(req, res, next);
+}, asyncRoute(async (req, res) => {
   const ref = req.params.ref;
   if (req.uploadError) {
     return res.redirect(`/supervisor/tickets/${ref}?error=${encodeURIComponent(req.uploadError)}`);
@@ -991,7 +1250,13 @@ app.post('/supervisor/tickets/:ref/evidence', requireSupervisor, handleEvidenceU
   return res.redirect(`/supervisor/tickets/${ref}?flash=evidence_added`);
 }));
 
-app.post('/supervisor/tickets/:ref/accomplishment', requireSupervisor, handleEvidenceUpload, asyncRoute(async (req, res) => {
+app.post('/supervisor/tickets/:ref/accomplishment', requireSupervisor, (req, res, next) => {
+  const { USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS) {
+    return res.redirect(307, `/laravel/supervisor/tickets/${encodeURIComponent(req.params.ref)}/accomplishment`);
+  }
+  return handleEvidenceUpload(req, res, next);
+}, asyncRoute(async (req, res) => {
   const user = req.session.user;
   const ref = req.params.ref;
   if (req.uploadError) {
@@ -1362,6 +1627,10 @@ app.get('/dept/attachments/:id', requireDeptHead, asyncRoute(async (req, res) =>
 }));
 
 app.post('/dept/tickets/:ref/accept', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/accept`);
+  }
   const ref = req.params.ref;
   const result = acceptOwnership(ref, req.session.user, req.body);
   if (result.error) {
@@ -1371,6 +1640,10 @@ app.post('/dept/tickets/:ref/accept', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/reject', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/reject`);
+  }
   const ref = req.params.ref;
   const result = rejectOwnership(ref, req.session.user, req.body);
   if (result.error) {
@@ -1380,6 +1653,10 @@ app.post('/dept/tickets/:ref/reject', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/return', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/return`);
+  }
   const ref = req.params.ref;
   const result = returnTicketForRevision(ref, req.session.user, req.body);
   if (result.error) {
@@ -1389,6 +1666,10 @@ app.post('/dept/tickets/:ref/return', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/reassign', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/reassign`);
+  }
   const ref = req.params.ref;
   const result = reassignTicket(ref, req.session.user, req.body);
   if (result.error) {
@@ -1398,6 +1679,10 @@ app.post('/dept/tickets/:ref/reassign', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/action-plan', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/action-plan`);
+  }
   const ref = req.params.ref;
   const result = saveActionPlan(ref, req.session.user, req.body);
   if (result.error) {
@@ -1415,7 +1700,13 @@ app.post('/dept/tickets/:ref/personnel', requireDeptHead, (req, res) => {
   return res.redirect(deptTicketDetailPath(ref, 'flash=personnel_assigned'));
 });
 
-app.post('/dept/tickets/:ref/documents', requireDeptHead, handleEvidenceUpload, asyncRoute(async (req, res) => {
+app.post('/dept/tickets/:ref/documents', requireDeptHead, (req, res, next) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/documents`);
+  }
+  return handleEvidenceUpload(req, res, next);
+}, asyncRoute(async (req, res) => {
   const ref = req.params.ref;
   if (req.uploadError) {
     return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
@@ -1437,6 +1728,10 @@ app.post('/dept/tickets/:ref/resolution', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/close', requireDeptHead, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/close`);
+  }
   const ref = req.params.ref;
   const result = closeTicketAsDeptHead(ref, req.session.user, req.body);
   if (result.error) {
@@ -1446,6 +1741,10 @@ app.post('/dept/tickets/:ref/close', requireDeptHead, (req, res) => {
 });
 
 app.post('/dept/tickets/:ref/comment', requireDeptHead, handleEvidenceUpload, (req, res) => {
+  const { USE_LARAVEL_DEPT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_DEPT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/dept/tickets/${encodeURIComponent(req.params.ref)}/comment`);
+  }
   const ref = req.params.ref;
   if (req.uploadError) {
     return res.redirect(deptTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
@@ -1517,10 +1816,18 @@ app.get('/officer', requireRmOfficer, (req, res) => {
 });
 
 app.get('/officer/ai-review', requireRmOfficer, (req, res) => {
+  const { USE_LARAVEL_OFFICER_ALIASES_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_ALIASES_UI) {
+    return res.redirect('/laravel/officer/ai-review');
+  }
   return res.redirect('/officer/tickets');
 });
 
 app.get('/officer/review', requireRmOfficer, (req, res) => {
+  const { USE_LARAVEL_OFFICER_ALIASES_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_ALIASES_UI) {
+    return res.redirect('/laravel/officer/review');
+  }
   return res.redirect('/officer/tickets');
 });
 
@@ -1549,6 +1856,10 @@ app.get('/officer/action-plans', requireRmOfficer, (req, res) => {
 });
 
 app.get('/officer/final-validation', requireRmOfficer, (req, res) => {
+  const { USE_LARAVEL_OFFICER_ALIASES_UI } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_ALIASES_UI) {
+    return res.redirect('/laravel/officer/final-validation');
+  }
   return res.redirect('/officer/action-plans');
 });
 
@@ -1631,6 +1942,10 @@ app.get('/officer/attachments/:id', requireRmOfficer, asyncRoute(async (req, res
 }));
 
 app.post('/officer/tickets/:ref/thread-comment', requireRmOfficer, handleEvidenceUpload, (req, res) => {
+  const { USE_LARAVEL_OFFICER_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/officer/tickets/${encodeURIComponent(req.params.ref)}/thread-comment`);
+  }
   const ref = req.params.ref;
   if (req.uploadError) {
     return res.redirect(officerTicketDetailPath(ref, `error=${encodeURIComponent(req.uploadError)}`));
@@ -1643,6 +1958,10 @@ app.post('/officer/tickets/:ref/thread-comment', requireRmOfficer, handleEvidenc
 });
 
 app.post('/officer/tickets/:ref/reopen', requireRmOfficer, (req, res) => {
+  const { USE_LARAVEL_OFFICER_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_OFFICER_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/officer/tickets/${encodeURIComponent(req.params.ref)}/reopen`);
+  }
   const ref = req.params.ref;
   const result = reopenTicketAsOfficer(ref, req.session.user, req.body);
   if (result.error) {
@@ -1680,12 +1999,22 @@ app.get('/executive', requireExecutive, (req, res) => {
 });
 
 app.get('/executive/heatmap', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/heatmap${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveHeatmapPage(req.session.user, getExecutiveDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/executive/register', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/register${qs ? `?${qs}` : ''}`);
+  }
   const stats = getExecutiveStats();
   const level = typeof req.query.level === 'string' ? req.query.level : '';
   const category = typeof req.query.category === 'string' ? req.query.category : '';
@@ -1700,30 +2029,54 @@ app.get('/executive/register', requireExecutive, (req, res) => {
 });
 
 app.get('/executive/reports', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/reports${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveReportsPage(req.session.user, getExecutiveDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/executive/trends', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/trends${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveTrendsPage(req.session.user, getExecutiveDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/executive/statistics', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/statistics${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveStatisticsPage(req.session.user, getExecutiveDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/executive/departments', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/departments${qs ? `?${qs}` : ''}`);
+  }
   res.type('html').send(
     executiveDepartmentPerformancePage(req.session.user, getExecutiveDashboardData(), flashFromQuery(req.query)),
   );
 });
 
 app.get('/executive/critical', requireExecutive, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    return res.redirect('/laravel/executive/critical');
+  }
   const stats = getExecutiveStats();
   const tickets = listTicketsForExecutive({ level: 'critical' });
   res.type('html').send(
@@ -1733,10 +2086,19 @@ app.get('/executive/critical', requireExecutive, (req, res) => {
 
 app.get('/executive/tickets', requireExecutive, (req, res) => {
   const q = new URLSearchParams(req.query).toString();
+  const { USE_LARAVEL_EXECUTIVE_PAGES_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_PAGES_UI) {
+    return res.redirect(`/laravel/executive/register${q ? `?${q}` : ''}`);
+  }
   return res.redirect(`/executive/register${q ? `?${q}` : ''}`);
 });
 
 app.get('/executive/tickets/:ref', requireExecutive, asyncRoute(async (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI) {
+    const qs = new URLSearchParams(req.query).toString();
+    return res.redirect(`/laravel/executive/tickets/${encodeURIComponent(req.params.ref)}${qs ? `?${qs}` : ''}`);
+  }
   const ref = req.params.ref;
   const raw = getTicketByRefForExecutive(ref);
   if (!raw) {
@@ -1758,6 +2120,10 @@ app.get('/executive/attachments/:id', requireExecutive, asyncRoute(async (req, r
 }));
 
 app.post('/executive/tickets/:ref/comment', requireExecutive, handleEvidenceUpload, (req, res) => {
+  const { USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/executive/tickets/${encodeURIComponent(req.params.ref)}/comment`);
+  }
   const ref = req.params.ref;
   if (req.uploadError) {
     return res.redirect(`/executive/tickets/${ref}?error=${encodeURIComponent(req.uploadError)}`);
@@ -1869,6 +2235,10 @@ app.get('/president/tickets/:ref', requirePresident, asyncRoute(async (req, res)
 }));
 
 app.post('/president/tickets/:ref/decision', requirePresident, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/president/tickets/${encodeURIComponent(req.params.ref)}/decision`);
+  }
   const ref = req.params.ref;
   const result = recordPresidentDecision(ref, req.session.user, req.body);
   if (result.error) {
@@ -1878,6 +2248,10 @@ app.post('/president/tickets/:ref/decision', requirePresident, (req, res) => {
 });
 
 app.post('/president/tickets/:ref/comment', requirePresident, handleEvidenceUpload, (req, res) => {
+  const { USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/president/tickets/${encodeURIComponent(req.params.ref)}/comment`);
+  }
   const ref = req.params.ref;
   const result = addPresidentThreadComment(ref, req.session.user, req.body);
   if (result.error) {
@@ -2006,6 +2380,10 @@ app.get('/admin/users/:username/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/users');
+  }
   const { username, password, displayName, role, employeeId, email, department, position, confirmPassword } = req.body;
   if (!isAssignableRole(role)) return adminError(res, adminUsersListPath(), 'Invalid role selected.');
   const result = createUser({
@@ -2056,6 +2434,10 @@ app.post('/admin/users', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:username/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/users/${encodeURIComponent(req.params.username)}/edit`);
+  }
   const username = req.params.username.toLowerCase();
   const { displayName, email, employeeId, department, position, role, status } = req.body;
   const result = updateUser(username, { displayName, email, employeeId, department, position, role });
@@ -2074,6 +2456,10 @@ app.post('/admin/users/:username/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:username/delete', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/users/${encodeURIComponent(req.params.username)}/delete`);
+  }
   const username = req.params.username.toLowerCase();
   const result = deleteUser(username);
   if (result.error) return adminError(res, adminUsersListPath(), result.error);
@@ -2094,6 +2480,10 @@ app.post('/admin/users/:username/delete', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:username/activate', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/users/${encodeURIComponent(req.params.username)}/activate`);
+  }
   const username = req.params.username.toLowerCase();
   const result = setUserStatus(username, true);
   if (result.error) return adminError(res, adminUsersListPath(), result.error);
@@ -2120,6 +2510,10 @@ app.post('/admin/users/:username/activate', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:username/deactivate', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/users/${encodeURIComponent(req.params.username)}/deactivate`);
+  }
   const username = req.params.username.toLowerCase();
   const result = setUserStatus(username, false);
   if (result.error) return adminError(res, adminUsersListPath(), result.error);
@@ -2146,6 +2540,10 @@ app.post('/admin/users/:username/deactivate', requireAdmin, (req, res) => {
 });
 
 app.get('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(`/laravel/admin/users/${encodeURIComponent(req.params.username)}/reset-password`);
+  }
   const target = findUserRecord(req.params.username.toLowerCase());
   if (!target) return res.redirect(adminUsersListPath('flash=not_found'));
   res.type('html').send(
@@ -2159,6 +2557,10 @@ app.get('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:username/reset-password', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_USER_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_USER_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/users/${encodeURIComponent(req.params.username)}/reset-password`);
+  }
   const username = req.params.username.toLowerCase();
   if (req.body.mode === 'prompt') {
     return res.redirect(`/admin/users/${username}/reset-password`);
@@ -2244,6 +2646,10 @@ app.get('/admin/departments/:id/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/departments', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DEPT_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DEPT_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/departments');
+  }
   const result = createDepartment(req.body);
   if (result.error) return adminError(res, adminDepartmentsListPath(), result.error);
   logAdminAction(req, {
@@ -2262,6 +2668,10 @@ app.post('/admin/departments', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/departments/:id/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DEPT_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DEPT_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/departments/${encodeURIComponent(req.params.id)}/edit`);
+  }
   const result = updateDepartment(req.params.id, req.body);
   if (result.error) return adminError(res, adminDepartmentsEditPath(req.params.id), result.error);
   logAdminAction(req, {
@@ -2279,6 +2689,10 @@ app.post('/admin/departments/:id/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/departments/:id/delete', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_DEPT_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_DEPT_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/departments/${encodeURIComponent(req.params.id)}/delete`);
+  }
   const dept = findDepartment(req.params.id);
   const result = deleteDepartment(req.params.id);
   if (result.error) return adminError(res, adminDepartmentsListPath(), result.error);
@@ -2352,6 +2766,10 @@ app.get('/admin/positions/:id/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/positions', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_POS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_POS_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/positions');
+  }
   const result = createPosition(req.body.name);
   if (result.error) return adminError(res, adminPositionsListPath(), result.error);
   logAdminAction(req, {
@@ -2369,6 +2787,10 @@ app.post('/admin/positions', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/positions/:id/edit', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_POS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_POS_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/positions/${encodeURIComponent(req.params.id)}/edit`);
+  }
   const result = updatePosition(req.params.id, req.body.name);
   if (result.error) return adminError(res, adminPositionsEditPath(req.params.id), result.error);
   logAdminAction(req, {
@@ -2386,6 +2808,10 @@ app.post('/admin/positions/:id/edit', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/positions/:id/delete', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_POS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_POS_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/positions/${encodeURIComponent(req.params.id)}/delete`);
+  }
   const positions = listPositions();
   const pos = positions.find((p) => p.id === req.params.id);
   const result = deletePosition(req.params.id);
@@ -2467,6 +2893,10 @@ app.get('/admin/tickets/:ref', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/tickets/:ref/delete', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_TICKET_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_TICKET_MUTATIONS) {
+    return res.redirect(307, `/laravel/admin/tickets/${encodeURIComponent(req.params.ref)}/delete`);
+  }
   const result = softDeleteTicketForAdmin(req.params.ref, req.session.user, req.body.reason);
   if (result.error) return adminError(res, adminTicketsListPath(), result.error);
   logAdminAction(req, {
@@ -2545,6 +2975,10 @@ app.get('/admin/settings', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/settings', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/settings');
+  }
   const body = req.body;
   const fields = {
     landingTagline: String(body.landingTagline || '').trim().slice(0, 120),
@@ -2580,6 +3014,10 @@ app.post('/admin/settings', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/settings/reset-landing', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/settings/reset-landing');
+  }
   updateSystemSettings({
     landingTagline: DEFAULT_SYSTEM_SETTINGS.landingTagline,
     landingHeadline: DEFAULT_SYSTEM_SETTINGS.landingHeadline,
@@ -2594,6 +3032,10 @@ app.post('/admin/settings/reset-landing', requireAdmin, (req, res) => {
 });
 
 app.post('/admin/settings/reset-ai', requireAdmin, (req, res) => {
+  const { USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS } = require('./config/features');
+  if (USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS) {
+    return res.redirect(307, '/laravel/admin/settings/reset-ai');
+  }
   updateSystemSettings({
     defaultRiskLevels: [...DEFAULT_SYSTEM_SETTINGS.defaultRiskLevels],
   });

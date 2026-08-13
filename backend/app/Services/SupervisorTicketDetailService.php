@@ -14,6 +14,10 @@ class SupervisorTicketDetailService
 {
     private const REVISION_STATUSES = ['returned', 'ownership_rejected'];
 
+    public function __construct(
+        private readonly ReporterEvidenceMutationService $evidence,
+    ) {}
+
     /**
      * @return array{redirect_edit: true, reference: string}|array{
      *   redirect_edit: false,
@@ -21,7 +25,10 @@ class SupervisorTicketDetailService
      *   attachments: list<array<string, mixed>>,
      *   fiveW1H: array<string, string>,
      *   timeline: list<array<string, mixed>>,
-     *   accomplishment: array<string, mixed>|null
+     *   accomplishment: array<string, mixed>|null,
+     *   capabilities: array<string, bool>,
+     *   implementationEvidence: list<array<string, mixed>>,
+     *   actionPlanSummary: string|null
      * }|null
      */
     public function forUsername(string $username, string $reference): ?array
@@ -134,6 +141,12 @@ class SupervisorTicketDetailService
                 'outcomes' => $accomplishment->outcomes ?: '—',
                 'submittedAt' => optional($accomplishment->submitted_at)?->toIso8601String(),
             ] : null,
+            'capabilities' => [
+                'canUploadEvidence' => $this->evidence->canUploadEvidence($ticket) && $accomplishment === null && ! $this->evidence->canSubmitAccomplishment($ticket),
+                'canSubmitAccomplishment' => $this->evidence->canSubmitAccomplishment($ticket),
+            ],
+            'implementationEvidence' => $this->evidence->implementationEvidenceList($ticket),
+            'actionPlanSummary' => is_array($plan) ? (trim((string) ($plan['summary'] ?? '')) ?: null) : null,
         ];
     }
 

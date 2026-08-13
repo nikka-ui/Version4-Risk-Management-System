@@ -41,7 +41,7 @@
         <tbody>
           @forelse ($tickets as $t)
             <tr class="{{ !empty($t['isOverdue']) ? 'ticket-row--overdue' : '' }}">
-              <td class="mono nowrap"><a href="/laravel/officer/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
+              <td class="mono nowrap"><a href="/officer/tickets/{{ urlencode($t['reference']) }}">{{ $t['reference'] }}</a></td>
               <td>{{ $t['title'] }}</td>
               <td class="nowrap">{{ $t['submittedByName'] }}</td>
               <td class="nowrap">{{ $t['department'] }}</td>

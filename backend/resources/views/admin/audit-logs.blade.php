@@ -36,7 +36,7 @@
     </div>
   </div>
 
-  <form method="get" action="/laravel/admin/audit-logs" class="admin-filter-bar">
+  <form method="get" action="/admin/audit-logs" class="admin-filter-bar">
     <input type="search" name="q" placeholder="Search logs…" value="{{ $filters['q'] ?? '' }}">
     <input type="date" name="date" value="{{ $filters['date'] ?? '' }}" aria-label="Filter by date">
     <select name="user" aria-label="Filter by user">
@@ -53,7 +53,7 @@
       @endforeach
     </select>
     <button type="submit" class="btn-outline">Filter</button>
-    <a href="/laravel/admin/audit-logs" class="btn-outline">Reset</a>
+    <a href="/admin/audit-logs" class="btn-outline">Reset</a>
   </form>
 
   <section class="sup-card sup-card--table admin-printable">

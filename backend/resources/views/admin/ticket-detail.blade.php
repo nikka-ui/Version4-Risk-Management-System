@@ -22,7 +22,7 @@
       <h1>Ticket Details</h1>
       <p class="sup-page-desc">{{ $t['reference'] ?? '' }} · {{ $t['statusLabel'] ?? '' }} · Read-only view</p>
     </div>
-    <a href="/laravel/admin/tickets" class="sup-btn-outline">Back to tickets</a>
+    <a href="/admin/tickets" class="sup-btn-outline">Back to tickets</a>
   </div>
 
   <section class="sup-card">

@@ -1,13 +1,13 @@
 # Login and built-in accounts (development)
 
-The Sign In UI is **Laravel Blade** at `/laravel/login` when `USE_LARAVEL_LOGIN_UI=true` (compose default). Express `/login` redirects there; success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin **Dashboard**, **User Management**, **Department Management**, **Position Management**, and **Profile**, Ticket Reporter **Profile**, **Dashboard**, **ticket lists**, **ticket detail** (read-only), and **create/edit/preview forms** (GET). POST/uploads and other admin management pages remain Express.
+The Sign In UI is **Laravel Blade** at `/login` (Phase 6 slice 2; `/laravel/login` still works). Success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin, Ticket Reporter, Department Head, RMO (including legacy aliases), President, Executive dashboard + oversight + ticket detail, and the employee `/dashboard` stub (GET). Admin mutations, Department Head workflow + comment + document POSTs, Ticket Reporter preview save/submit + draft delete + create/edit/evidence/accomplishment uploads, RMO reopen + thread-comment, President decision + comment, and Executive comment are Laravel (Phase 8 slice 3). Comment edit/react remain Express.
 
 ## Access URL
 
 | Environment | URL |
 |-------------|-----|
-| Docker (default) | http://localhost:8080/login → `/laravel/login` |
-| Blade login (direct) | http://localhost:8080/laravel/login |
+| Docker (default) | http://localhost:8080/login |
+| Legacy Blade path | http://localhost:8080/laravel/login |
 | Web container direct | http://localhost:3000/login (internal; redirects when flag on) |
 
 ## Roles (canonical)

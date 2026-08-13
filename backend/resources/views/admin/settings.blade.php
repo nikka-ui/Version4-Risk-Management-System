@@ -29,6 +29,7 @@
   </div>
 
   <form method="post" action="/admin/settings" class="admin-settings-form">
+    @csrf
     <section class="sup-card sup-card--compact">
       <div class="admin-settings-section-head">
         <h2>Landing Page Title</h2>

@@ -20,7 +20,7 @@ class EnsureWebRmOfficerRole
         $user = $request->user();
 
         if (! $user || $user->role !== Roles::RM_OFFICER || ! $user->isActiveAccount()) {
-            return redirect()->away('/laravel/login');
+            return redirect()->away('/login');
         }
 
         return $next($request);

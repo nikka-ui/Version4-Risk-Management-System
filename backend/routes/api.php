@@ -16,8 +16,7 @@ use Illuminate\Support\Facades\Route;
 | API routes (served under /v1 after nginx strips the public /api prefix)
 |--------------------------------------------------------------------------
 |
-| Phase 5 slice 27: Blade officer ticket detail + queues + prior Blade pages.
-| Express still owns form POST/uploads; cookie session via /auth/bridge.
+| Phase 8 slice 3: Admin + dept (incl. documents) + reporter (incl. create/edit/evidence/accomplishment) + officer + president + executive POSTs on Blade; comment edit/react still Express.
 |
 */
 
@@ -27,8 +26,8 @@ Route::get('/', function () {
         'status' => 'ok',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 5,
-        'slice' => 31,
+        'phase' => 8,
+        'slice' => 3,
     ]);
 });
 
@@ -38,8 +37,8 @@ Route::get('/health', function () {
         'service' => 'rms-api',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 5,
-        'slice' => 31,
+        'phase' => 8,
+        'slice' => 3,
     ]);
 });
 

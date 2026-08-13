@@ -18,10 +18,10 @@
     $positionLine = $user['position'] ?: 'Risk Management Officer';
     $stats = $stats ?? [];
     $nav = [
-      ['id' => 'dashboard', 'href' => '/laravel/officer', 'label' => 'Dashboard'],
-      ['id' => 'register', 'href' => '/laravel/officer/tickets', 'label' => 'Risk register', 'statKey' => 'total'],
-      ['id' => 'overdue', 'href' => '/laravel/officer/overdue', 'label' => 'Overdue & SLA', 'statKey' => 'overdueMitigation'],
-      ['id' => 'monitoring', 'href' => '/laravel/officer/monitoring', 'label' => 'Monitoring', 'statKey' => 'inMitigation'],
+      ['id' => 'dashboard', 'href' => '/officer', 'label' => 'Dashboard'],
+      ['id' => 'register', 'href' => '/officer/tickets', 'label' => 'Risk register', 'statKey' => 'total'],
+      ['id' => 'overdue', 'href' => '/officer/overdue', 'label' => 'Overdue & SLA', 'statKey' => 'overdueMitigation'],
+      ['id' => 'monitoring', 'href' => '/officer/monitoring', 'label' => 'Monitoring', 'statKey' => 'inMitigation'],
     ];
   @endphp
   <aside class="supervisor-sidebar">

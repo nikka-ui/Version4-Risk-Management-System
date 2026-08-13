@@ -110,7 +110,7 @@ Container boundaries:
 - `web` reaches PostgreSQL for attachment metadata and MinIO/S3 for evidence files; ticket/org data also lives in the `store.json` volume.
 - `api` is intended for future business API access to `postgres` / `redis`.
 - `ai-service` should receive only what the app proxies (no direct browser access in production).
-- nginx sits on `rms_edge` / `rms_app` and proxies `/`, `/api/`, and AI health.
+- nginx sits on `rms_edge` / `rms_app` and proxies exact `/` + `/laravel/` + `/api/` to Laravel, remaining `/` paths to Express, and AI health.
 
 ## Audit and logging
 
