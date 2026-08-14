@@ -84,7 +84,7 @@ class SubmitTicketApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 8)
-            ->assertJsonPath('slice', 3);
+            ->assertJsonPath('phase', 9)
+            ->assertJsonPath('slice', 6);
     }
 }

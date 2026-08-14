@@ -25,6 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return config('rms.edge_ui', true) ? '/login' : '/laravel/login';
         });
 
+        $middleware->validateCsrfTokens(except: [
+            'internal/*',
+        ]);
+
         // Optional future Express→Laravel service calls (not used by browser login).
         $middleware->alias([
             'rms.service_token' => \App\Http\Middleware\VerifyInternalServiceToken::class,

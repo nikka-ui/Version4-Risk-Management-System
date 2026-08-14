@@ -83,7 +83,7 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade admin positions** | Phase 5 slice 17: `GET /admin/positions` → `/laravel/admin/positions` when `USE_LARAVEL_ADMIN_POSITIONS_UI=true` |
 | **Blade admin tickets** | Phase 5 slice 18: `GET /admin/tickets` → `/laravel/admin/tickets` when `USE_LARAVEL_ADMIN_TICKETS_UI=true` |
 | **Blade admin ticket detail** | Phase 5 slice 19: `GET /admin/tickets/:ref` → `/laravel/admin/tickets/:ref` when `USE_LARAVEL_ADMIN_TICKET_DETAIL_UI=true` |
-| **Blade admin audit logs** | Phase 5 slice 20: `GET /admin/audit-logs` → `/laravel/admin/audit-logs` when `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI=true` |
+| **Blade admin audit logs** | Phase 5 slice 20 + Phase 8 slice 7: `GET /admin/audit-logs` + `GET /admin/audit-logs/export` → Laravel when `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI=true` |
 | **Blade admin settings** | Phase 5 slice 21: `GET /admin/settings` → `/laravel/admin/settings` when `USE_LARAVEL_ADMIN_SETTINGS_UI=true` |
 | **Blade dept dashboard** | Phase 5 slice 22: `GET /dept` → `/laravel/dept` when `USE_LARAVEL_DEPT_DASHBOARD_UI=true` |
 | **Blade dept queues** | Phase 5 slice 23: `GET /dept/{inbox,…,tickets}` → `/laravel/dept/…` when `USE_LARAVEL_DEPT_QUEUES_UI=true` |
@@ -98,12 +98,20 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade admin user mutations** | Phase 7 slice 3: `POST /admin/users*` → Laravel when `USE_LARAVEL_ADMIN_USER_MUTATIONS=true` |
 | **Blade admin settings mutations** | Phase 7 slice 4: `POST /admin/settings*` → Laravel when `USE_LARAVEL_ADMIN_SETTINGS_MUTATIONS=true` |
 | **Blade admin ticket mutations** | Phase 7 slice 5: `POST /admin/tickets/:ref/delete` → Laravel when `USE_LARAVEL_ADMIN_TICKET_MUTATIONS=true` |
-| **Blade dept ticket mutations** | Phase 7 slice 6 + slice 13 + Phase 8 slice 3: `POST /dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents}` → Laravel when `USE_LARAVEL_DEPT_TICKET_MUTATIONS=true` |
-| **Blade reporter ticket mutations** | Phase 7 slice 7: `POST /supervisor/tickets/new/preview/:ref/{save,submit}` + `POST /supervisor/tickets/:ref/delete` → Laravel when `USE_LARAVEL_REPORTER_TICKET_MUTATIONS=true` |
+| **Blade dept ticket mutations** | Phase 7 slice 6 + slice 13 + Phase 8 slice 3–5: `POST /dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents,personnel,resolution,comment/edit,comment/react}` → Laravel when `USE_LARAVEL_DEPT_TICKET_MUTATIONS=true` |
+| **Blade reporter ticket mutations** | Phase 7 slice 7 + Phase 8 slice 5: `POST /supervisor/tickets/new/preview/:ref/{save,submit}` + `POST /supervisor/tickets/:ref/{delete,comment,comment/edit,comment/react}` → Laravel when `USE_LARAVEL_REPORTER_TICKET_MUTATIONS=true` |
 | **Blade reporter upload mutations** | Phase 8 slice 1–2: `POST /supervisor/tickets/new/preview` + `POST /supervisor/tickets/:ref/{edit,evidence,accomplishment}` → Laravel when `USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS=true` |
 | **Blade officer ticket mutations** | Phase 7 slice 8 + slice 11: `POST /officer/tickets/:ref/reopen` + `POST /officer/tickets/:ref/thread-comment` → Laravel when `USE_LARAVEL_OFFICER_TICKET_MUTATIONS=true` |
 | **Blade president ticket mutations** | Phase 7 slice 9 + slice 12: `POST /president/tickets/:ref/decision` + `POST /president/tickets/:ref/comment` → Laravel when `USE_LARAVEL_PRESIDENT_TICKET_MUTATIONS=true` |
 | **Blade executive ticket mutations** | Phase 7 slice 10: `POST /executive/tickets/:ref/comment` → Laravel when `USE_LARAVEL_EXECUTIVE_TICKET_MUTATIONS=true` |
+| **Blade other-role notifications** | Phase 8 slice 6–8: `POST /{dept,officer,executive,president}/notifications/read-all` + `GET .../notifications/open/:id` → Laravel when the matching dashboard UI flag is true |
+| **Blade role attachment downloads** | Phase 8 slice 9: `GET /{supervisor,dept,officer,executive,president}/attachments/:id` → Laravel when the matching ticket-detail UI flag is true |
+| **Blade static assets** | Phase 9 slice 1: `GET /css/*` + `/img/*` → Laravel `public/` |
+| **Blade login bridge** | Phase 9 slice 2: `GET /auth/bridge` → Laravel when `USE_LARAVEL_LOGIN_UI=true` |
+| **Blade logout** | Phase 9 slice 3: `GET`/`POST /logout` → Laravel when `USE_LARAVEL_LOGIN_UI=true` |
+| **Unmatched edge fallback** | Phase 9 slice 4: unmatched `location /` → Laravel (`/favicon.ico`, 404s). Soak keeps Express. |
+| **Ticket dual-write internals** | Phase 9 slice 5: `POST /internal/tickets/*` → Laravel `store.json` when `USE_LARAVEL_INTERNAL_TICKETS=true`. |
+| **Org dual-write internals** | Phase 9 slice 6: `POST /internal/org/*` → Laravel `store.json` when `USE_LARAVEL_INTERNAL_ORG=true`. Default nginx `^~ /internal/` → Laravel. Soak keeps Express. |
 | **Blade executive dashboard** | Phase 5 slice 28: `GET /executive` → `/laravel/executive` when `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI=true` |
 | **Blade executive pages** | Phase 6 slice 3: `GET /executive/{heatmap,reports,trends,statistics,departments,register}` → Laravel when `USE_LARAVEL_EXECUTIVE_PAGES_UI=true` |
 | **Blade executive ticket detail** | Phase 6 slice 4: `GET /executive/tickets/:ref` → Laravel when `USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI=true` |

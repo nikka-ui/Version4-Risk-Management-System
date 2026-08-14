@@ -1,6 +1,6 @@
 # Laravel Migration Notes
 
-Incremental cutover from Express (`docker/web`) to Laravel (`backend/`). Blade owns GETs plus admin mutations, Department Head workflow + comment + document POSTs, Ticket Reporter preview save/submit + draft delete + create/edit/evidence/accomplishment uploads, RMO reopen + thread-comment, President decision + comment, and Executive comment (Phase 8 slice 3). **Comment edit/react and optional leftovers remain on Express.**
+Incremental cutover from Express (`docker/web`) to Laravel (`backend/`). Blade owns GETs, mutations, static assets, `/auth/bridge`, `/logout`, unmatched edge paths, and dual-write `/internal/*` (Phase 9 slice 6). Express internals remain for soak. Soak still opts out.
 
 ## Phase 0–5 slice 17 (complete)
 
@@ -51,7 +51,7 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php
 | `GET /laravel/admin/audit-logs` | Audit log list (search/filter + details dialog) |
 | `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI` | Compose default **`true`** |
 | Express redirect | `GET /admin/audit-logs` redirects to Blade when enabled |
-| Export CSV | Still served from Express (`/admin/audit-logs/export`) for now |
+| Export CSV | Phase 8 slice 7: Laravel `GET /admin/audit-logs/export` |
 | Health | `phase: 5`, `slice: 20` |
 
 ### Verify
@@ -351,14 +351,334 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php
 docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice5-president-queues
 ```
 
-## Phase 8 slice 3 (Dept documents — current)
+## Phase 9 slice 6 (Org dual-write internals on Laravel — current)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `POST /internal/org/*` | Laravel writes Express `store.json` (departments, positions, users, settings). |
+| nginx `^~ /internal/` | All dual-write internals → Laravel (`api:8080`). |
+| `USE_LARAVEL_INTERNAL_ORG` | Compose default **`true`**; soak **`false`** (Express keeps org internals). |
+| Health | `phase: 9`, `slice: 6` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-internal-org
+curl.exe -sI -X POST http://localhost:8080/internal/org/users
+```
+
+Expected: guest POST → Laravel `401` JSON (no `X-Powered-By: Express`). `/internal/tickets/` still Laravel.
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 9 slice 5 (Ticket dual-write internals on Laravel)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `POST /internal/tickets/*` | Laravel writes Express `store.json` (upsert, soft-delete, delete-draft). Exact `^~ /internal/tickets/`. |
+| `USE_LARAVEL_INTERNAL_TICKETS` | Compose default **`true`**; soak **`false`** (Express keeps ticket internals). |
+| nginx `^~ /internal/` | Slice 6 sends all `/internal/` to Laravel. |
+| Health | `phase: 9`, `slice: 5` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-internal-tickets
+curl.exe -sI -X POST http://localhost:8080/internal/tickets/upsert
+```
+
+Expected: guest POST → Laravel `401` JSON (no `X-Powered-By: Express`). Slice 6 also sends `/internal/org/` to Laravel.
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 9 slice 4 (Unmatched edge fallback on Laravel)
+
+
+| Piece | Notes |
+|-------|--------|
+| nginx unmatched `location /` | Laravel (`api:8080`). Serves `public/favicon.ico`, `robots.txt`, and Laravel 404s. |
+| nginx `^~ /internal/` | Still Express (Laravel→`store.json` dual-write). |
+| Soak | `docker/nginx/soak/rms.conf` keeps unmatched `location /` on Express. |
+| Health | `phase: 9`, `slice: 4` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-edge-fallback
+curl.exe -sI http://localhost:8080/favicon.ico
+curl.exe -sI http://localhost:8080/rms-edge-fallback-probe
+```
+
+Expected: favicon → Laravel `200` (no `X-Powered-By: Express`); unknown path → Laravel `404` (no Express).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 9 slice 3 (Logout on Laravel)
+
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET`/`POST /logout` | Laravel clears the web session and redirects to `/login`. Exact `location =`. |
+| `USE_LARAVEL_LOGIN_UI` | Same compose default **`true`**; soak **`false`** (Express keeps `/logout`). |
+| nginx `^~ /internal/` | Still Express (Laravel→`store.json` dual-write). |
+| Health | `phase: 9`, `slice: 3` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-logout
+curl.exe -sI http://localhost:8080/logout
+```
+
+Expected: guest URL → Laravel `302` to `/login` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 9 slice 2 (Login bridge on Laravel)
+
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET /auth/bridge` | Laravel consumes the one-time code and redirects to the role console (`next` allowed). Exact `location =`. |
+| `USE_LARAVEL_LOGIN_UI` | Same compose default **`true`**; soak **`false`** (Express keeps the cookie bridge). |
+| nginx `^~ /internal/` | Still Express (Laravel→`store.json` dual-write). |
+| Health | `phase: 9`, `slice: 2` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-auth-bridge
+curl.exe -sI http://localhost:8080/auth/bridge
+```
+
+Expected: guest URL → Laravel `302` to `/login?error=auth_unavailable` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 9 slice 1 (Blade static assets on Laravel)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET /css/*` + `/img/*` | Laravel `public/css` and `public/img` (copied from Express `docker/web/public`) |
+| Soak | Still omits `blade-roots.conf`, so soak keeps Express static |
+| Still Express | `/internal/*` dual-write mirrors, unmatched `location /` |
+| Health | `phase: 9`, `slice: 1` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-static-assets
+curl.exe -sI http://localhost:8080/css/app.css
+```
+
+Expected: guest CSS URL → `200` `text/css` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 9 (Role attachment downloads)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET /{supervisor,dept,officer,executive,president}/attachments/:id` | Laravel streams MinIO/S3 bytes after role ticket visibility checks. `^~ /{role}/attachments/` now goes to Laravel. |
+| Ticket-detail UI flags | Same compose defaults **`true`**; soak **`false`** |
+| Express | Redirects to `/laravel/{role}/attachments/:id` when the matching ticket-detail UI flag is on |
+| Health | `phase: 8`, `slice: 9` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-role-attachments
+curl.exe -sI http://localhost:8080/dept/attachments/x
+```
+
+Expected: guest URL → Laravel `302` to `/login` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 8 (Other-role notification open)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET /{dept,officer,executive,president}/notifications/open/:id` | Laravel mark-read + redirect to role ticket/home. `^~ /{role}/notifications/` now goes to Laravel (read-all still uses exact `location =`). |
+| Dashboard UI flags | Same compose defaults **`true`**; soak **`false`** |
+| Express | Redirects to `/laravel/{role}/notifications/open/:id` when the matching dashboard UI flag is on |
+| Still Express | Role attachment downloads |
+| Health | `phase: 8`, `slice: 8` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-role-notification-open
+curl.exe -sI http://localhost:8080/dept/notifications/open/x
+```
+
+Expected: guest URL → Laravel `302` to `/login` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 7 (Admin audit CSV export)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `GET /admin/audit-logs/export` | Laravel CSV (same filters as the list, limit 1000). Exact `location =` so it wins over prefix `/admin`. |
+| `USE_LARAVEL_ADMIN_AUDIT_LOGS_UI` | Same compose default **`true`**; soak **`false`** |
+| Express | Redirects to `/laravel/admin/audit-logs/export` when the flag is on |
+| Still Express | Notification open links for other roles |
+| Health | `phase: 8`, `slice: 7` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-admin-audit-export
+curl.exe -sI http://localhost:8080/admin/audit-logs/export
+```
+
+Expected: guest URL → Laravel `302` to `/login` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 6 (Other-role notifications read-all)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `POST /{dept,officer,executive,president}/notifications/read-all` | Laravel mark-all-read (CSRF). Exact `location =` so it wins over `^~ /{role}/notifications/` (open GETs stay Express). |
+| Dashboard UI flags | Same compose defaults **`true`**; soak **`false`** |
+| Still Express | Notification open links for other roles |
+| Health | `phase: 8`, `slice: 6` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-role-notifications
+curl.exe -sI http://localhost:8080/dept/notifications/read-all
+```
+
+Expected: guest URL → Laravel `302` to `/login` or `405 Allow: POST` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 5 (Comment edit/react)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `POST /dept/tickets/:ref/comment/{edit,react}` | Laravel own-comment edit + emoji reaction toggle |
+| nginx `POST /supervisor/tickets/:ref/comment` + `/comment/{edit,react}` | Laravel reporter thread add/edit/react |
+| `USE_LARAVEL_DEPT_TICKET_MUTATIONS` | Compose default **`true`** (dept edit/react) |
+| `USE_LARAVEL_REPORTER_TICKET_MUTATIONS` | Compose default **`true`** (reporter comment + edit/react) |
+| Express mirror | Laravel writes Postgres, then upserts Express `store.json` via `/internal/tickets/upsert` |
+| Health | `phase: 8`, `slice: 5` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-comment-edit
+curl.exe -sI http://localhost:8080/dept/tickets/RISK-SMOKE-AAAAAA/comment/edit
+curl.exe -sI http://localhost:8080/supervisor/tickets/RISK-SMOKE-AAAAAA/comment/react
+```
+
+Expected: guest URLs → Laravel `302` to `/login` or `405 Allow: POST` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 4 (Dept personnel + resolution)
+
+| Piece | Notes |
+|-------|--------|
+| nginx `POST /dept/tickets/:ref/{personnel,resolution}` | Laravel personnel assign + resolution (alias of close) |
+| `USE_LARAVEL_DEPT_TICKET_MUTATIONS` | Compose default **`true`** (same flag as workflow/comment/documents) |
+| Express mirror | Laravel writes Postgres, then upserts Express `store.json` via `/internal/tickets/upsert` |
+| Health | `phase: 8`, `slice: 4` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice8-dept-personnel
+curl.exe -sI http://localhost:8080/dept/tickets/RISK-SMOKE-AAAAAA/personnel
+```
+
+Expected: guest personnel URL → Laravel `302` to `/login` or `405 Allow: POST` (no `X-Powered-By: Express`).
+
+### Opt out
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
+```
+
+## Phase 8 slice 3 (Dept documents)
 
 | Piece | Notes |
 |-------|--------|
 | nginx `POST /dept/tickets/:ref/documents` | Laravel multipart dept documents (CSRF, MinIO + Postgres) |
 | `USE_LARAVEL_DEPT_TICKET_MUTATIONS` | Compose default **`true`** (same flag as workflow/comment) |
 | Express mirror | Laravel writes Postgres + MinIO, then upserts Express `store.json` via `/internal/tickets/upsert` |
-| Still Express | Comment edit/react; personnel/resolution Blade UI; admin audit CSV |
 | Health | `phase: 8`, `slice: 3` |
 
 ### Verify
@@ -758,8 +1078,7 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/co
 ```
 
 ## Remaining
-1. Optional leftovers: dept personnel/resolution Blade UI, comment edit/react, notifications read-all (other roles), admin audit CSV export
-2. Then retire Express / flip soak defaults
+1. Flip soak defaults / retire the `web` service
 
 ## Related
 

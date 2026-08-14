@@ -7,6 +7,7 @@ use App\Services\ExpressOrgMirrorService;
 use App\Services\ReporterEvidenceMutationService;
 use App\Services\SupervisorDashboardService;
 use App\Services\SupervisorTicketDetailService;
+use App\Services\ThreadCommentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * Phase 5 slice 8–9 + Phase 7 slice 7 + Phase 8 slice 2: Ticket Reporter list/detail + draft delete + evidence/accomplishment POSTs.
+ * Phase 5 slice 8–9 + Phase 7 slice 7 + Phase 8 slice 2 + slice 5: Ticket Reporter list/detail + draft delete + evidence/accomplishment + comment edit/react POSTs.
  */
 class SupervisorTicketController extends Controller
 {
@@ -25,6 +26,7 @@ class SupervisorTicketController extends Controller
         private readonly DraftTicketService $drafts,
         private readonly ExpressOrgMirrorService $orgMirror,
         private readonly ReporterEvidenceMutationService $evidence,
+        private readonly ThreadCommentService $threadComments,
     ) {}
 
     public function index(Request $request): View
@@ -77,9 +79,63 @@ class SupervisorTicketController extends Controller
             'capabilities' => $payload['capabilities'],
             'implementationEvidence' => $payload['implementationEvidence'],
             'actionPlanSummary' => $payload['actionPlanSummary'],
+            'threadComments' => $payload['threadComments'],
             'error' => $request->query('error'),
             'flash' => $request->query('flash'),
         ]);
+    }
+
+    public function comment(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutateThread($request, $reference, fn ($ticket, $user, $input) => $this->threadComments->add($ticket, $user, $input), 'comment_posted');
+    }
+
+    public function editComment(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutateThread($request, $reference, fn ($ticket, $user, $input) => $this->threadComments->edit($ticket, $user, $input), 'comment_posted');
+    }
+
+    public function reactComment(Request $request, string $reference): RedirectResponse
+    {
+        $commentId = trim((string) $request->input('commentId', ''));
+
+        return $this->mutateThread(
+            $request,
+            $reference,
+            fn ($ticket, $user, $input) => $this->threadComments->react($ticket, $user, $input),
+            null,
+            $commentId !== '' ? '#comment-'.rawurlencode($commentId) : '',
+        );
+    }
+
+    /**
+     * @param  callable(\App\Models\RiskTicket, \App\Models\User, array<string, mixed>): \App\Models\RiskTicket  $op
+     */
+    private function mutateThread(
+        Request $request,
+        string $reference,
+        callable $op,
+        ?string $flash,
+        string $hash = '',
+    ): RedirectResponse {
+        $user = $request->user();
+        $ticket = $this->threadComments->findAccessible($reference, $user);
+        if (! $ticket) {
+            return redirect()->away('/supervisor/tickets?flash=not_found');
+        }
+
+        try {
+            $ticket = $op($ticket, $user, $request->all());
+        } catch (ValidationException $e) {
+            $msg = collect($e->errors())->flatten()->first() ?: 'Unable to update comment.';
+
+            return redirect()->away('/supervisor/tickets/'.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
+        }
+
+        $this->orgMirror->syncTicket($ticket->toExpressArray());
+        $query = $flash ? '?flash='.$flash : '';
+
+        return redirect()->away('/supervisor/tickets/'.rawurlencode($reference).$query.$hash);
     }
 
     public function addEvidence(Request $request, string $reference): RedirectResponse

@@ -8,6 +8,7 @@
       'submitted' => 'Ticket submitted successfully.',
       'draft_saved' => 'Draft saved.',
       'evidence_added' => 'Evidence uploaded.',
+      'comment_posted' => 'Comment posted.',
       'not_found' => 'Ticket not found.',
     ];
     $flashKey = is_string($flash ?? null) ? $flash : '';
@@ -190,4 +191,16 @@
       </ul>
     @endif
   </section>
+
+  @include('partials.thread-discussion', [
+    'threadComments' => $threadComments ?? [],
+    'user' => $user ?? [],
+    'canPost' => true,
+    'postAction' => '/supervisor/tickets/'.urlencode($t['reference']).'/comment',
+    'editAction' => '/supervisor/tickets/'.urlencode($t['reference']).'/comment/edit',
+    'reactAction' => '/supervisor/tickets/'.urlencode($t['reference']).'/comment/react',
+    'composeId' => 'sup-comment-'.$t['reference'],
+    'composeLabel' => 'Add comment',
+    'composePlaceholder' => 'Write a comment…',
+  ])
 @endsection

@@ -5,7 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Phase 7 slice 1–13 + Phase 8 slice 1–3: fire-and-forget Laravel → Express store.json org/user/settings/ticket mirror.
+ * Phase 7 slice 1–13 + Phase 8 slice 1–5: fire-and-forget Laravel → Express store.json org/user/settings mirror.
+ * Phase 9 slice 5–6: ticket/org dual-write store.json in-process when internal flags are on.
  */
 class ExpressOrgMirrorService
 {
@@ -16,6 +17,10 @@ class ExpressOrgMirrorService
      */
     public function syncDepartment(string $op, array $department, ?array $audit = null, ?array $notification = null): void
     {
+        if ($this->writeLocalOrg(fn (StoreJsonOrgMirror $mirror) => $mirror->applyDepartment($op, $department, $audit, $notification))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -43,6 +48,10 @@ class ExpressOrgMirrorService
      */
     public function syncPosition(string $op, array $position, ?array $audit = null): void
     {
+        if ($this->writeLocalOrg(fn (StoreJsonOrgMirror $mirror) => $mirror->applyPosition($op, $position, $audit))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -71,6 +80,10 @@ class ExpressOrgMirrorService
      */
     public function syncUser(string $op, array $user, ?array $audit = null, ?array $notification = null, ?array $credential = null): void
     {
+        if ($this->writeLocalOrg(fn (StoreJsonOrgMirror $mirror) => $mirror->applyUser($op, $user, $audit, $notification, $credential))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -99,6 +112,10 @@ class ExpressOrgMirrorService
      */
     public function syncSettings(array $settings, ?array $audit = null): void
     {
+        if ($this->writeLocalOrg(fn (StoreJsonOrgMirror $mirror) => $mirror->applySettings($settings, $audit))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -125,6 +142,10 @@ class ExpressOrgMirrorService
      */
     public function syncTicketSoftDelete(array $ticket, ?array $audit = null, ?array $notification = null): void
     {
+        if ($this->writeLocalTicket(fn (StoreJsonTicketMirror $mirror) => $mirror->softDelete($ticket, $audit, $notification))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -150,6 +171,10 @@ class ExpressOrgMirrorService
      */
     public function syncTicket(array $ticket): void
     {
+        if ($this->writeLocalTicket(fn (StoreJsonTicketMirror $mirror) => $mirror->upsert($ticket))) {
+            return;
+        }
+
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
         if ($token === '' || $base === '') {
@@ -172,19 +197,59 @@ class ExpressOrgMirrorService
     {
         $token = (string) config('rms.internal_service_token', '');
         $base = rtrim((string) config('rms.express_web_url', ''), '/');
-        if ($token === '' || $base === '' || $reference === '') {
-            return;
+        if ($token !== '' && $base !== '' && $reference !== '') {
+            try {
+                Http::timeout(3)
+                    ->acceptJson()
+                    ->withHeaders(['X-RMS-Service-Token' => $token])
+                    ->post($base.'/internal/tickets/delete-draft', [
+                        'ticket' => ['reference' => $reference],
+                    ]);
+            } catch (\Throwable $e) {
+                logger()->warning('express ticket mirror failed: '.$e->getMessage());
+            }
+        }
+
+        $this->writeLocalTicket(fn (StoreJsonTicketMirror $mirror) => $mirror->deleteDraft($reference));
+    }
+
+    /**
+     * @param  callable(StoreJsonOrgMirror): mixed  $writer
+     */
+    private function writeLocalOrg(callable $writer): bool
+    {
+        if (! (bool) config('rms.store_json_org_mirror', true)) {
+            return false;
         }
 
         try {
-            Http::timeout(3)
-                ->acceptJson()
-                ->withHeaders(['X-RMS-Service-Token' => $token])
-                ->post($base.'/internal/tickets/delete-draft', [
-                    'ticket' => ['reference' => $reference],
-                ]);
+            $writer(app(StoreJsonOrgMirror::class));
+
+            return true;
         } catch (\Throwable $e) {
-            logger()->warning('express ticket mirror failed: '.$e->getMessage());
+            logger()->warning('store.json org mirror failed: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * @param  callable(StoreJsonTicketMirror): mixed  $writer
+     */
+    private function writeLocalTicket(callable $writer): bool
+    {
+        if (! (bool) config('rms.store_json_ticket_mirror', true)) {
+            return false;
+        }
+
+        try {
+            $writer(app(StoreJsonTicketMirror::class));
+
+            return true;
+        } catch (\Throwable $e) {
+            logger()->warning('store.json ticket mirror failed: '.$e->getMessage());
+
+            return false;
         }
     }
 }

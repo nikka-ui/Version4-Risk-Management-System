@@ -15,6 +15,8 @@ use App\Http\Controllers\ExecutiveDashboardController;
 use App\Http\Controllers\ExecutiveTicketDetailController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InternalOrgMirrorController;
+use App\Http\Controllers\InternalTicketMirrorController;
 use App\Http\Controllers\OfficerDashboardController;
 use App\Http\Controllers\OfficerQueueController;
 use App\Http\Controllers\OfficerTicketDetailController;
@@ -23,6 +25,8 @@ use App\Http\Controllers\PresidentDashboardController;
 use App\Http\Controllers\PresidentQueueController;
 use App\Http\Controllers\PresidentTicketDetailController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RoleAttachmentController;
+use App\Http\Controllers\RoleNotificationController;
 use App\Http\Controllers\SupervisorAccomplishmentController;
 use App\Http\Controllers\SupervisorActionController;
 use App\Http\Controllers\SupervisorDashboardController;
@@ -47,7 +51,24 @@ Route::middleware(['auth'])->get('/dashboard', [DashboardController::class, 'ind
 */
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login', [LoginController::class, 'store']);
-Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/auth/bridge', [LoginController::class, 'bridge'])->name('auth.bridge');
+Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->name('logout'); // Phase 9 slice 3: edge /logout
+
+/*
+| Phase 9 slice 5–6: dual-write internals (service token; CSRF exempt).
+*/
+Route::middleware('rms.service_token')->prefix('internal/tickets')->group(function () {
+    Route::post('/upsert', [InternalTicketMirrorController::class, 'upsert']);
+    Route::post('/soft-delete', [InternalTicketMirrorController::class, 'softDelete']);
+    Route::post('/delete-draft', [InternalTicketMirrorController::class, 'deleteDraft']);
+});
+
+Route::middleware('rms.service_token')->prefix('internal/org')->group(function () {
+    Route::post('/departments', [InternalOrgMirrorController::class, 'departments']);
+    Route::post('/positions', [InternalOrgMirrorController::class, 'positions']);
+    Route::post('/users', [InternalOrgMirrorController::class, 'users']);
+    Route::post('/settings', [InternalOrgMirrorController::class, 'settings']);
+});
 
 /*
 | Phase 5 slice 5: authenticated Blade pages (edge /laravel/admin/...).
@@ -108,6 +129,8 @@ Route::middleware(['auth', 'rms.web_admin'])->group(function () {
         ->name('admin.tickets.destroy');
     Route::get('/admin/audit-logs', [AdminAuditLogsController::class, 'index'])
         ->name('admin.audit.logs');
+    Route::get('/admin/audit-logs/export', [AdminAuditLogsController::class, 'export'])
+        ->name('admin.audit.logs.export');
     Route::get('/admin/settings', [AdminSettingsController::class, 'index'])
         ->name('admin.settings');
     Route::post('/admin/settings', [AdminSettingsController::class, 'update'])
@@ -120,7 +143,7 @@ Route::middleware(['auth', 'rms.web_admin'])->group(function () {
 });
 
 /*
-| Phase 5 slice 22–24 + Phase 7 slice 6 + slice 13 + Phase 8 slice 3: Department Head Blade dashboard + queues + ticket detail + workflow + comment + document POSTs.
+| Phase 5 slice 22–24 + Phase 7 slice 6 + slice 13 + Phase 8 slice 3–5: Department Head Blade dashboard + queues + ticket detail + workflow + comment + document + personnel/resolution + comment edit/react POSTs.
 */
 Route::middleware(['auth', 'rms.web_dept_head'])->group(function () {
     Route::get('/dept', [DeptDashboardController::class, 'index'])->name('dept.dashboard');
@@ -134,6 +157,9 @@ Route::middleware(['auth', 'rms.web_dept_head'])->group(function () {
     Route::get('/dept/tickets/{reference}', [DeptTicketDetailController::class, 'show'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('dept.tickets.show');
+    Route::get('/dept/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('dept.attachments.download');
     Route::post('/dept/tickets/{reference}/accept', [DeptTicketDetailController::class, 'accept'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('dept.tickets.accept');
@@ -152,12 +178,29 @@ Route::middleware(['auth', 'rms.web_dept_head'])->group(function () {
     Route::post('/dept/tickets/{reference}/close', [DeptTicketDetailController::class, 'close'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('dept.tickets.close');
+    Route::post('/dept/tickets/{reference}/personnel', [DeptTicketDetailController::class, 'assignPersonnel'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('dept.tickets.personnel');
+    Route::post('/dept/tickets/{reference}/resolution', [DeptTicketDetailController::class, 'resolution'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('dept.tickets.resolution');
     Route::post('/dept/tickets/{reference}/comment', [DeptTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('dept.tickets.comment');
+    Route::post('/dept/tickets/{reference}/comment/edit', [DeptTicketDetailController::class, 'editComment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('dept.tickets.comment.edit');
+    Route::post('/dept/tickets/{reference}/comment/react', [DeptTicketDetailController::class, 'reactComment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('dept.tickets.comment.react');
     Route::post('/dept/tickets/{reference}/documents', [DeptTicketDetailController::class, 'uploadDocuments'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('dept.tickets.documents');
+    Route::post('/dept/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
+        ->name('dept.notifications.read-all');
+    Route::get('/dept/notifications/open/{id}', [RoleNotificationController::class, 'open'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('dept.notifications.open');
 });
 
 /*
@@ -175,12 +218,20 @@ Route::middleware(['auth', 'rms.web_officer'])->group(function () {
     Route::get('/officer/tickets/{reference}', [OfficerTicketDetailController::class, 'show'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('officer.tickets.show');
+    Route::get('/officer/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('officer.attachments.download');
     Route::post('/officer/tickets/{reference}/reopen', [OfficerTicketDetailController::class, 'reopen'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('officer.tickets.reopen');
     Route::post('/officer/tickets/{reference}/thread-comment', [OfficerTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('officer.tickets.thread-comment');
+    Route::post('/officer/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
+        ->name('officer.notifications.read-all');
+    Route::get('/officer/notifications/open/{id}', [RoleNotificationController::class, 'open'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('officer.notifications.open');
 });
 
 /*
@@ -199,9 +250,17 @@ Route::middleware(['auth', 'rms.web_executive'])->group(function () {
     Route::get('/executive/tickets/{reference}', [ExecutiveTicketDetailController::class, 'show'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('executive.tickets.show');
+    Route::get('/executive/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('executive.attachments.download');
     Route::post('/executive/tickets/{reference}/comment', [ExecutiveTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('executive.tickets.comment');
+    Route::post('/executive/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
+        ->name('executive.notifications.read-all');
+    Route::get('/executive/notifications/open/{id}', [RoleNotificationController::class, 'open'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('executive.notifications.open');
 });
 
 /*
@@ -216,12 +275,20 @@ Route::middleware(['auth', 'rms.web_president'])->group(function () {
     Route::get('/president/tickets/{reference}', [PresidentTicketDetailController::class, 'show'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('president.tickets.show');
+    Route::get('/president/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('president.attachments.download');
     Route::post('/president/tickets/{reference}/decision', [PresidentTicketDetailController::class, 'decide'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('president.tickets.decision');
     Route::post('/president/tickets/{reference}/comment', [PresidentTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('president.tickets.comment');
+    Route::post('/president/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
+        ->name('president.notifications.read-all');
+    Route::get('/president/notifications/open/{id}', [RoleNotificationController::class, 'open'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('president.notifications.open');
 });
 
 /*
@@ -265,9 +332,21 @@ Route::middleware(['auth', 'rms.web_supervisor'])->group(function () {
     Route::post('/supervisor/tickets/{reference}/accomplishment', [SupervisorTicketController::class, 'submitAccomplishment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('supervisor.tickets.accomplishment');
+    Route::post('/supervisor/tickets/{reference}/comment', [SupervisorTicketController::class, 'comment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('supervisor.tickets.comment');
+    Route::post('/supervisor/tickets/{reference}/comment/edit', [SupervisorTicketController::class, 'editComment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('supervisor.tickets.comment.edit');
+    Route::post('/supervisor/tickets/{reference}/comment/react', [SupervisorTicketController::class, 'reactComment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('supervisor.tickets.comment.react');
     Route::get('/supervisor/tickets/{reference}', [SupervisorTicketController::class, 'show'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('supervisor.tickets.show');
+    Route::get('/supervisor/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('supervisor.attachments.download');
 
     Route::get('/supervisor/actions', [SupervisorActionController::class, 'index'])
         ->name('supervisor.actions');

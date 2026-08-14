@@ -5,6 +5,10 @@
     $stats = $stats ?? [];
     $departments = $departments ?? [];
     $matrix = $matrix ?? array_fill(0, 5, array_fill(0, 5, 0));
+    $flashMsg = match (is_string($flash ?? null) ? $flash : '') {
+      'notifications_read' => 'All notifications marked as read.',
+      default => null,
+    };
     $impactLabels = ['Negligible', 'Minor', 'Moderate', 'Major', 'Severe'];
     $likelihoodLabels = ['Almost certain', 'Likely', 'Possible', 'Unlikely', 'Rare'];
     $palette = ['#B7DBE1', '#FFEFAD', '#FFADC0', '#EEF6F8'];
@@ -16,6 +20,10 @@
       return 'critical';
     };
   @endphp
+
+  @if (!empty($flashMsg))
+    <div class="alert alert--ok" role="status">{{ $flashMsg }}</div>
+  @endif
 
   <div class="sup-page-head">
     <div>

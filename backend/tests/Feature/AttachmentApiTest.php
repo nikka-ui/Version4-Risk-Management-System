@@ -21,8 +21,8 @@ class AttachmentApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 8)
-            ->assertJsonPath('slice', 3);
+            ->assertJsonPath('phase', 9)
+            ->assertJsonPath('slice', 6);
     }
 
     public function test_register_list_get_and_sync_attachments(): void

@@ -126,7 +126,7 @@ Versioned REST under `/api/v1/` (Laravel). **Express still owns browser login an
 - AI classify/summarize (proxied to `ai-service`)
 - Dashboards and reporting
 
-Today, comment edit/react and a few optional leftovers still live on the **Express web** service. nginx proxies exact `/`, unprefixed Blade GETs, admin mutations, Department Head workflow + comment + document POSTs, reporter preview save/submit + draft delete + create/edit/evidence/accomplishment uploads, RMO reopen + thread-comment, President decision + comment, Executive comment, `/laravel/`, and `/api/` to Laravel (Phase 8 slice 3). See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
+Today, default nginx sends Blade pages, mutations, attachments, static assets, `/auth/bridge`, `/logout`, unmatched paths, `/internal/` dual-write, `/laravel/`, and `/api/` to Laravel (Phase 9 slice 6). Express `web` remains for soak and direct `:3000`. See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
 
 ## Data model
 

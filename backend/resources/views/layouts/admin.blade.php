@@ -59,6 +59,7 @@
       </div>
     </div>
     <form class="supervisor-sidebar__logout" method="post" action="/logout">
+      @csrf
       <button type="submit" class="supervisor-sidebar__signout">Logout</button>
     </form>
   </aside>

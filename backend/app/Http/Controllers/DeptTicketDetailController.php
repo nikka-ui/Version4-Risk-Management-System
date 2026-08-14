@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Phase 5 slice 24 + Phase 7 slice 6 + slice 13 + Phase 8 slice 3: Department Head ticket detail + workflow/comment/document POSTs.
+ * Phase 5 slice 24 + Phase 7 slice 6 + slice 13 + Phase 8 slice 3–5: Department Head ticket detail + workflow/comment/document/personnel + comment edit/react POSTs.
  */
 class DeptTicketDetailController extends Controller
 {
@@ -45,6 +45,7 @@ class DeptTicketDetailController extends Controller
             'accomplishment' => $payload['accomplishment'],
             'timeline' => $payload['timeline'],
             'reassignments' => $payload['reassignments'],
+            'personnel' => $payload['personnel'],
             'threadComments' => $payload['threadComments'],
             'departments' => $payload['departments'],
             'capabilities' => $payload['capabilities'],
@@ -125,6 +126,26 @@ class DeptTicketDetailController extends Controller
         );
     }
 
+    public function assignPersonnel(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutate(
+            $request,
+            $reference,
+            fn ($ticket, $user, $input) => $this->deptTickets->assignPersonnel($ticket, $user, $input),
+            '/dept/tickets/'.rawurlencode($reference).'?flash=personnel_assigned',
+        );
+    }
+
+    public function resolution(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutate(
+            $request,
+            $reference,
+            fn ($ticket, $user, $input) => $this->deptTickets->close($ticket, $user, $input),
+            '/dept/tickets/'.rawurlencode($reference).'?flash=resolution_submitted',
+        );
+    }
+
     public function uploadDocuments(Request $request, string $reference): RedirectResponse
     {
         $user = $request->user();
@@ -171,6 +192,54 @@ class DeptTicketDetailController extends Controller
         $this->orgMirror->syncTicket($ticket->toExpressArray());
 
         return redirect()->away('/dept/tickets/'.rawurlencode($reference).'?flash=dept_comment_posted');
+    }
+
+    public function editComment(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutateThread($request, $reference, fn ($ticket, $user, $input) => $this->threadComments->edit($ticket, $user, $input), 'dept_comment_posted');
+    }
+
+    public function reactComment(Request $request, string $reference): RedirectResponse
+    {
+        $commentId = trim((string) $request->input('commentId', ''));
+
+        return $this->mutateThread(
+            $request,
+            $reference,
+            fn ($ticket, $user, $input) => $this->threadComments->react($ticket, $user, $input),
+            null,
+            $commentId !== '' ? '#comment-'.rawurlencode($commentId) : '',
+        );
+    }
+
+    /**
+     * @param  callable(\App\Models\RiskTicket, \App\Models\User, array<string, mixed>): \App\Models\RiskTicket  $op
+     */
+    private function mutateThread(
+        Request $request,
+        string $reference,
+        callable $op,
+        ?string $flash,
+        string $hash = '',
+    ): RedirectResponse {
+        $user = $request->user();
+        $ticket = $this->threadComments->findAccessible($reference, $user);
+        if (! $ticket) {
+            return redirect()->away('/dept/tickets?flash=not_found');
+        }
+
+        try {
+            $ticket = $op($ticket, $user, $request->all());
+        } catch (ValidationException $e) {
+            $msg = collect($e->errors())->flatten()->first() ?: 'Unable to update comment.';
+
+            return redirect()->away('/dept/tickets/'.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
+        }
+
+        $this->orgMirror->syncTicket($ticket->toExpressArray());
+        $query = $flash ? '?flash='.$flash : '';
+
+        return redirect()->away('/dept/tickets/'.rawurlencode($reference).$query.$hash);
     }
 
     /**

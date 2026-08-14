@@ -18,10 +18,14 @@
     };
 
     $byCategory = $stats['byCategory'] ?? [];
+    $flashMsg = match (is_string($flash ?? null) ? $flash : '') {
+      'notifications_read' => 'All notifications marked as read.',
+      default => is_string($flash ?? null) && $flash !== '' ? $flash : null,
+    };
   @endphp
 
-  @if (!empty($flash))
-    <div class="alert alert--ok" role="status">{{ $flash }}</div>
+  @if (!empty($flashMsg))
+    <div class="alert alert--ok" role="status">{{ $flashMsg }}</div>
   @endif
 
   <div class="sup-page-head">

@@ -6,6 +6,7 @@
     $recent = $recent ?? [];
     $flashMsg = match (is_string($flash ?? null) ? $flash : '') {
       'not_found' => 'Ticket not found or not visible to your department.',
+      'notifications_read' => 'All notifications marked as read.',
       default => null,
     };
   @endphp

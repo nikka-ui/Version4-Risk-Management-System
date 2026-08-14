@@ -64,3 +64,5 @@ services:
     environment:
       USE_LARAVEL_EDGE_ROOT: "false"
       USE_LARAVEL_EDGE_UI: "false"
+      USE_LARAVEL_INTERNAL_TICKETS: "false"
+      USE_LARAVEL_INTERNAL_ORG: "false"

@@ -16,8 +16,8 @@ class ReporterTicketMutationTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 8)
-            ->assertJsonPath('slice', 3);
+            ->assertJsonPath('phase', 9)
+            ->assertJsonPath('slice', 6);
     }
 
     public function test_guest_cannot_submit_or_delete_draft(): void
@@ -96,6 +96,81 @@ class ReporterTicketMutationTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('draft', RiskTicket::query()->where('reference', 'RISK-TEST-R005')->value('status'));
+    }
+
+    public function test_reporter_can_comment_edit_and_react(): void
+    {
+        $reporter = User::factory()->create([
+            'role' => Roles::SUPERVISOR,
+            'role_label' => Roles::label(Roles::SUPERVISOR),
+            'department' => 'Information Technology',
+        ]);
+        $ticket = RiskTicket::query()->create([
+            'external_id' => 'ext-RISK-TEST-R006',
+            'reference' => 'RISK-TEST-R006',
+            'title' => 'RISK-TEST-R006',
+            'status' => 'assigned',
+            'submitted_by' => $reporter->username,
+            'department' => 'Information Technology',
+            'deleted' => false,
+            'thread_comments' => [],
+        ]);
+
+        $this->actingAs($reporter)
+            ->post('/supervisor/tickets/RISK-TEST-R006/comment', [
+                'comment' => 'Original reporter note',
+            ])
+            ->assertRedirect();
+        $ticket->refresh();
+        $id = $ticket->thread_comments[0]['id'] ?? '';
+        $this->assertSame('Original reporter note', $ticket->thread_comments[0]['body'] ?? null);
+
+        $this->actingAs($reporter)
+            ->post('/supervisor/tickets/RISK-TEST-R006/comment/edit', [
+                'commentId' => $id,
+                'comment' => 'Edited reporter note',
+            ])
+            ->assertRedirect();
+        $ticket->refresh();
+        $this->assertSame('Edited reporter note', $ticket->thread_comments[0]['body'] ?? null);
+
+        $this->actingAs($reporter)
+            ->post('/supervisor/tickets/RISK-TEST-R006/comment/react', [
+                'commentId' => $id,
+                'reaction' => '🎉',
+            ])
+            ->assertRedirect();
+        $ticket->refresh();
+        $this->assertContains($reporter->username, $ticket->thread_comments[0]['reactions']['🎉'] ?? []);
+    }
+
+    public function test_guest_cannot_post_reporter_comment_edit_or_react(): void
+    {
+        RiskTicket::query()->create([
+            'external_id' => 'ext-RISK-TEST-R007',
+            'reference' => 'RISK-TEST-R007',
+            'title' => 'RISK-TEST-R007',
+            'status' => 'assigned',
+            'submitted_by' => 'reporter1',
+            'department' => 'Information Technology',
+            'deleted' => false,
+            'thread_comments' => [],
+        ]);
+
+        $this->post('/supervisor/tickets/RISK-TEST-R007/comment', [
+            'comment' => 'Guest note',
+        ])->assertRedirect();
+        $this->post('/supervisor/tickets/RISK-TEST-R007/comment/edit', [
+            'commentId' => 'thr-x',
+            'comment' => 'Hijack',
+        ])->assertRedirect();
+        $this->post('/supervisor/tickets/RISK-TEST-R007/comment/react', [
+            'commentId' => 'thr-x',
+            'reaction' => '🎉',
+        ])->assertRedirect();
+
+        $ticket = RiskTicket::query()->where('reference', 'RISK-TEST-R007')->first();
+        $this->assertSame([], $ticket?->thread_comments ?? []);
     }
 
     private function draftTicket(string $ref, string $username): RiskTicket

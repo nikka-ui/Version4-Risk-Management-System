@@ -102,6 +102,33 @@ class AdminAuditLogsService
     }
 
     /**
+     * @param  list<array<string, mixed>>  $logs
+     */
+    public function toCsv(array $logs): string
+    {
+        $header = 'Date,User,Role,Action,Module,Description,IP,Device,Browser';
+        $rows = array_map(function (array $l): string {
+            $cells = [
+                $l['at'] ?? '',
+                $l['username'] ?? '',
+                $l['roleLabel'] ?? '',
+                $l['action'] ?? '',
+                $l['module'] ?? '',
+                $l['description'] ?? '',
+                $l['ip'] ?? '',
+                $l['device'] ?? '',
+                $l['browser'] ?? '',
+            ];
+
+            return implode(',', array_map(function (mixed $v): string {
+                return '"'.str_replace('"', '""', (string) $v).'"';
+            }, $cells));
+        }, $logs);
+
+        return $header."\n".implode("\n", $rows);
+    }
+
+    /**
      * @param mixed $auditLogs
      * @return array{users: list<string>, actions: list<string>, modules: list<string>}
      */

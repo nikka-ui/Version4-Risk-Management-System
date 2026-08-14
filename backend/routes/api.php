@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 | API routes (served under /v1 after nginx strips the public /api prefix)
 |--------------------------------------------------------------------------
 |
-| Phase 8 slice 3: Admin + dept (incl. documents) + reporter (incl. create/edit/evidence/accomplishment) + officer + president + executive POSTs on Blade; comment edit/react still Express.
+| Phase 9 slice 6: POST /internal/* dual-write on Laravel store.json. Soak keeps Express internals.
 |
 */
 
@@ -26,8 +26,8 @@ Route::get('/', function () {
         'status' => 'ok',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 8,
-        'slice' => 3,
+        'phase' => 9,
+        'slice' => 6,
     ]);
 });
 
@@ -37,8 +37,8 @@ Route::get('/health', function () {
         'service' => 'rms-api',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 8,
-        'slice' => 3,
+        'phase' => 9,
+        'slice' => 6,
     ]);
 });
 

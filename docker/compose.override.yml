@@ -76,11 +76,13 @@ services:
       STORE_JSON_PATH: /import/store.json
       USE_LARAVEL_EDGE_ROOT: ${USE_LARAVEL_EDGE_ROOT:-true}
       USE_LARAVEL_EDGE_UI: ${USE_LARAVEL_EDGE_UI:-true}
+      USE_LARAVEL_INTERNAL_TICKETS: ${USE_LARAVEL_INTERNAL_TICKETS:-true}
+      USE_LARAVEL_INTERNAL_ORG: ${USE_LARAVEL_INTERNAL_ORG:-true}
       RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
       EXPRESS_WEB_INTERNAL_URL: ${EXPRESS_WEB_INTERNAL_URL:-http://web:3000}
     volumes:
       # Ensure import path is available in dev even if base compose is overridden.
-      - ./web/data/store.json:/import/store.json:ro
+      - ./web/data/store.json:/import/store.json
 
   ai-service:
     environment:

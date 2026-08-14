@@ -33,6 +33,18 @@ return [
     'express_web_url' => env('EXPRESS_WEB_INTERNAL_URL', 'http://web:3000'),
 
     /*
+    | Phase 9 slice 5: write ticket dual-write to store.json in Laravel (upsert/soft-delete).
+    | Soak sets false so Express /internal/tickets/* remain the write path.
+    */
+    'store_json_ticket_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_TICKETS', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    | Phase 9 slice 6: write org dual-write to store.json in Laravel (departments/positions/users/settings).
+    | Soak sets false so Express /internal/org/* remain the write path.
+    */
+    'store_json_org_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_ORG', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
     | Phase 6 slice 1: edge nginx `location = /` proxies to Laravel.
     | When true (compose default), `/` redirects to Blade login or role console.
     | When false (soak), `/` redirects to Express `/login` or Express role path.

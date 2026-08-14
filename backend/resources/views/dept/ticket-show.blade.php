@@ -7,11 +7,6 @@
     $caps = $capabilities ?? [];
     $plan = $actionPlan ?? null;
     $ref = $t['reference'] ?? '';
-    $comments = $threadComments ?? [];
-    $tops = array_values(array_filter($comments, fn ($c) => empty($c['parentId'])));
-    $childrenOf = function (string $parentId) use ($comments) {
-      return array_values(array_filter($comments, fn ($c) => ($c['parentId'] ?? null) === $parentId));
-    };
     $flashLabels = [
       'ownership_accepted' => 'Ownership accepted.',
       'ownership_rejected' => 'Ownership rejected.',
@@ -239,6 +234,48 @@
         @endif
       </section>
 
+      @if (count($personnel ?? []) > 0 || !empty($caps['canAssignPersonnel']))
+        <section class="sup-card">
+          <h2>Assigned personnel</h2>
+          @if (count($personnel ?? []) === 0)
+            <p class="sup-muted-block">No personnel assigned yet.</p>
+          @else
+            <ul class="audit-trail-list">
+              @foreach ($personnel as $person)
+                <li class="audit-trail-item">
+                  <div class="audit-trail-meta">
+                    <span class="audit-trail-action">{{ $person['name'] }}</span>
+                    @if (!empty($person['role']))
+                      <span class="audit-trail-user">{{ $person['role'] }}</span>
+                    @endif
+                    @if (!empty($person['assignedAt']))
+                      <span class="audit-trail-time">{{ \Illuminate\Support\Carbon::parse($person['assignedAt'])->format('Y-m-d H:i') }}</span>
+                    @endif
+                  </div>
+                  @if (!empty($person['assignedByName']))
+                    <p class="audit-trail-current__plan">Assigned by {{ $person['assignedByName'] }}</p>
+                  @endif
+                </li>
+              @endforeach
+            </ul>
+          @endif
+          @if (!empty($caps['canAssignPersonnel']))
+            <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/personnel" class="stack-form stack-form--console" style="margin-top:1rem">
+              @csrf
+              <div class="field field--console">
+                <label for="personName">Name <span class="text-muted">(required)</span></label>
+                <input id="personName" name="personName" type="text" required placeholder="Staff member name">
+              </div>
+              <div class="field field--console">
+                <label for="personRole">Role <span class="text-muted">(optional)</span></label>
+                <input id="personRole" name="personRole" type="text" placeholder="e.g. Implementer">
+              </div>
+              <button type="submit" class="btn-primary btn-primary--auto">Assign personnel</button>
+            </form>
+          @endif
+        </section>
+      @endif
+
       @if ($accomplishment)
         <section class="sup-card">
           <h2>Accomplishment report</h2>
@@ -273,76 +310,17 @@
         </section>
       @endif
 
-      <section class="sup-card">
-        <h2>Discussion thread</h2>
-        @if (count($tops) === 0)
-          <div class="reddit-thread reddit-thread--empty">
-            <p class="reddit-empty">No comments yet. Start the discussion below.</p>
-          </div>
-        @else
-          <div class="reddit-thread">
-            @foreach ($tops as $c)
-              <div class="reddit-comment" id="comment-{{ $c['id'] }}">
-                <div class="reddit-comment__main">
-                  <header class="reddit-comment__header">
-                    <span class="reddit-author">{{ $c['authorName'] }}</span>
-                    @if (($c['roleLabel'] ?? '') !== '')
-                      <span class="reddit-role">{{ $c['roleLabel'] }}</span>
-                    @endif
-                    @if (!empty($c['at']))
-                      <span class="reddit-sep" aria-hidden="true">·</span>
-                      <time class="reddit-time">{{ \Illuminate\Support\Carbon::parse($c['at'])->format('Y-m-d H:i') }}</time>
-                    @endif
-                  </header>
-                  <div class="reddit-body">{{ $c['body'] }}</div>
-                  @if (!empty($caps['canPostComment']))
-                    <details class="reddit-reply-box">
-                      <summary class="reddit-action-btn">Reply</summary>
-                      <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-reply-form">
-                        @csrf
-                        <input type="hidden" name="parentId" value="{{ $c['id'] }}">
-                        <div class="field">
-                          <label class="visually-hidden" for="reply-{{ $c['id'] }}">Reply</label>
-                          <textarea id="reply-{{ $c['id'] }}" name="comment" rows="3" required placeholder="Write a reply…"></textarea>
-                        </div>
-                        <button type="submit" class="btn-outline btn-primary--auto">Reply</button>
-                      </form>
-                    </details>
-                  @endif
-                  @foreach ($childrenOf($c['id']) as $reply)
-                    <div class="reddit-comment reddit-comment--reply" id="comment-{{ $reply['id'] }}">
-                      <div class="reddit-comment__main">
-                        <header class="reddit-comment__header">
-                          <span class="reddit-author">{{ $reply['authorName'] }}</span>
-                          @if (($reply['roleLabel'] ?? '') !== '')
-                            <span class="reddit-role">{{ $reply['roleLabel'] }}</span>
-                          @endif
-                          @if (!empty($reply['at']))
-                            <span class="reddit-sep" aria-hidden="true">·</span>
-                            <time class="reddit-time">{{ \Illuminate\Support\Carbon::parse($reply['at'])->format('Y-m-d H:i') }}</time>
-                          @endif
-                        </header>
-                        <div class="reddit-body">{{ $reply['body'] }}</div>
-                      </div>
-                    </div>
-                  @endforeach
-                </div>
-              </div>
-            @endforeach
-          </div>
-        @endif
-
-        @if (!empty($caps['canPostComment']))
-          <form method="post" action="/dept/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-compose">
-            @csrf
-            <div class="field">
-              <label for="dept-comment-{{ $ref }}">Add comment</label>
-              <textarea id="dept-comment-{{ $ref }}" name="comment" rows="3" required placeholder="Comment visible to the reporter and Risk Management Officer…"></textarea>
-            </div>
-            <button type="submit" class="btn-primary btn-primary--auto">Post comment</button>
-          </form>
-        @endif
-      </section>
+      @include('partials.thread-discussion', [
+        'threadComments' => $threadComments ?? [],
+        'user' => $user ?? [],
+        'canPost' => !empty($caps['canPostComment']),
+        'postAction' => '/dept/tickets/'.urlencode($ref).'/comment',
+        'editAction' => '/dept/tickets/'.urlencode($ref).'/comment/edit',
+        'reactAction' => '/dept/tickets/'.urlencode($ref).'/comment/react',
+        'composeId' => 'dept-comment-'.$ref,
+        'composeLabel' => 'Add comment',
+        'composePlaceholder' => 'Comment visible to the reporter and Risk Management Officer…',
+      ])
     </div>
 
     <aside class="dept-detail__side">
@@ -467,7 +445,7 @@
             @csrf
             <div class="field field--console">
               <label for="closeComment">Closure note <span class="text-muted">(optional)</span></label>
-              <textarea id="closeComment" name="comment" rows="2"></textarea>
+              <textarea id="closeComment" name="closingNotes" rows="2"></textarea>
             </div>
             <button type="submit" class="btn-primary btn-primary--auto">Close ticket</button>
           </form>

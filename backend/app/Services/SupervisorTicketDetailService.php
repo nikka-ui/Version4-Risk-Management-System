@@ -28,7 +28,8 @@ class SupervisorTicketDetailService
      *   accomplishment: array<string, mixed>|null,
      *   capabilities: array<string, bool>,
      *   implementationEvidence: list<array<string, mixed>>,
-     *   actionPlanSummary: string|null
+     *   actionPlanSummary: string|null,
+     *   threadComments: list<array<string, mixed>>
      * }|null
      */
     public function forUsername(string $username, string $reference): ?array
@@ -147,7 +148,50 @@ class SupervisorTicketDetailService
             ],
             'implementationEvidence' => $this->evidence->implementationEvidenceList($ticket),
             'actionPlanSummary' => is_array($plan) ? (trim((string) ($plan['summary'] ?? '')) ?: null) : null,
+            'threadComments' => $this->normalizeThreadComments(
+                is_array($ticket->thread_comments) ? $ticket->thread_comments : []
+            ),
         ];
+    }
+
+    /**
+     * @param  list<mixed>  $comments
+     * @return list<array<string, mixed>>
+     */
+    private function normalizeThreadComments(array $comments): array
+    {
+        $rows = [];
+        foreach ($comments as $c) {
+            if (! is_array($c) || empty($c['id'])) {
+                continue;
+            }
+            $reactions = [];
+            foreach (is_array($c['reactions'] ?? null) ? $c['reactions'] : [] as $emoji => $users) {
+                $names = array_values(array_filter(
+                    is_array($users) ? $users : [],
+                    fn ($name) => is_string($name) && $name !== '',
+                ));
+                if ($names !== []) {
+                    $reactions[(string) $emoji] = $names;
+                }
+            }
+            $rows[] = [
+                'id' => (string) $c['id'],
+                'body' => (string) ($c['body'] ?? ''),
+                'authorName' => (string) ($c['authorName'] ?? $c['authorUsername'] ?? 'Unknown'),
+                'authorUsername' => (string) ($c['authorUsername'] ?? ''),
+                'roleLabel' => (string) ($c['authorPosition'] ?? $c['roleLabel'] ?? $c['authorRole'] ?? ''),
+                'kind' => (string) ($c['kind'] ?? 'comment'),
+                'parentId' => isset($c['parentId']) && $c['parentId'] ? (string) $c['parentId'] : null,
+                'at' => (string) ($c['at'] ?? ''),
+                'editedAt' => (string) ($c['editedAt'] ?? ''),
+                'reactions' => $reactions,
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b) => strcmp($a['at'] ?? '', $b['at'] ?? ''));
+
+        return $rows;
     }
 
     private function statusLabel(?string $status): string

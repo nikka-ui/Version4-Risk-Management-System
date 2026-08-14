@@ -24,6 +24,7 @@
         <span class="profile-name">{{ $displayName }}</span>
       </div>
       <form class="inline" method="post" action="/logout">
+        @csrf
         <button type="submit" class="btn-text">Sign out</button>
       </form>
     </div>

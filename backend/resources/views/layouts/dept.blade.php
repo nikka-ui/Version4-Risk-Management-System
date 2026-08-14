@@ -67,6 +67,7 @@
       </div>
     </div>
     <form class="supervisor-sidebar__logout" method="post" action="/logout">
+      @csrf
       <button type="submit" class="supervisor-sidebar__signout">Sign out</button>
     </form>
   </aside>
@@ -75,6 +76,10 @@
       <div class="console-topbar__title">{{ $title }}</div>
       <div class="console-topbar__actions">
         <span class="console-topbar__role-pill">Department Head / VP</span>
+        <form method="post" action="/dept/notifications/read-all" class="notif-panel__mark-all">
+          @csrf
+          <button type="submit" class="btn-text">Mark all read</button>
+        </form>
       </div>
     </header>
     <main class="supervisor-main">

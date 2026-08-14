@@ -86,7 +86,7 @@ services:
       # Phase 5 slice 12: Blade Ticket Reporter actions queue.
       USE_LARAVEL_REPORTER_ACTIONS_UI: ${USE_LARAVEL_REPORTER_ACTIONS_UI:-true}
       USE_LARAVEL_REPORTER_TICKET_FORM_UI: ${USE_LARAVEL_REPORTER_TICKET_FORM_UI:-true}
-      # Phase 7 slice 7: Blade reporter preview save/submit + draft delete POSTs.
+      # Phase 7 slice 7 + Phase 8 slice 5: Blade reporter preview save/submit + draft delete + comment edit/react POSTs.
       USE_LARAVEL_REPORTER_TICKET_MUTATIONS: ${USE_LARAVEL_REPORTER_TICKET_MUTATIONS:-true}
       # Phase 8 slice 1–2: Blade reporter create/edit + evidence + accomplishment uploads.
       USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS: ${USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS:-true}
@@ -122,7 +122,7 @@ services:
       USE_LARAVEL_DEPT_QUEUES_UI: ${USE_LARAVEL_DEPT_QUEUES_UI:-true}
       # Phase 5 slice 24: Blade dept ticket detail at /laravel/dept/tickets/:ref.
       USE_LARAVEL_DEPT_TICKET_DETAIL_UI: ${USE_LARAVEL_DEPT_TICKET_DETAIL_UI:-true}
-      # Phase 7 slice 6 + slice 13 + Phase 8 slice 3: Blade dept workflow + comment + document POSTs.
+      # Phase 7 slice 6 + slice 13 + Phase 8 slice 3–5: Blade dept workflow + comment + document + personnel/resolution + comment edit/react POSTs.
       USE_LARAVEL_DEPT_TICKET_MUTATIONS: ${USE_LARAVEL_DEPT_TICKET_MUTATIONS:-true}
       # Phase 5 slice 25: Blade officer dashboard at /laravel/officer.
       USE_LARAVEL_OFFICER_DASHBOARD_UI: ${USE_LARAVEL_OFFICER_DASHBOARD_UI:-true}
@@ -221,6 +221,9 @@ services:
       USE_LARAVEL_EDGE_ROOT: ${USE_LARAVEL_EDGE_ROOT:-true}
       # Phase 6 slice 2: unprefixed Blade URLs (/login, /admin, …) when true.
       USE_LARAVEL_EDGE_UI: ${USE_LARAVEL_EDGE_UI:-true}
+      # Phase 9 slice 5–6: Laravel writes ticket/org dual-write to store.json.
+      USE_LARAVEL_INTERNAL_TICKETS: ${USE_LARAVEL_INTERNAL_TICKETS:-true}
+      USE_LARAVEL_INTERNAL_ORG: ${USE_LARAVEL_INTERNAL_ORG:-true}
       # Phase 3 slice 10: shared MinIO bucket (same S3_* names + values as web) for the
       # `evidence` filesystem disk. Express stays the live upload/download path (flag OFF).
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
@@ -233,8 +236,8 @@ services:
       - db_password
       - app_key
     volumes:
-      # Read-only Express store for user import only — never written by Laravel.
-      - ./web/data/store.json:/import/store.json:ro
+      # Express store.json — Laravel ticket/org mirrors write this path (Phase 9 slice 5–6).
+      - ./web/data/store.json:/import/store.json
     networks:
       - rms_app
       - rms_data

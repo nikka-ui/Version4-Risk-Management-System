@@ -1,6 +1,6 @@
 # Login and built-in accounts (development)
 
-The Sign In UI is **Laravel Blade** at `/login` (Phase 6 slice 2; `/laravel/login` still works). Success bridges via `/auth/bridge` into the Express cookie session **and** establishes a Laravel web session. Migrated Blade pages: admin, Ticket Reporter, Department Head, RMO (including legacy aliases), President, Executive dashboard + oversight + ticket detail, and the employee `/dashboard` stub (GET). Admin mutations, Department Head workflow + comment + document POSTs, Ticket Reporter preview save/submit + draft delete + create/edit/evidence/accomplishment uploads, RMO reopen + thread-comment, President decision + comment, and Executive comment are Laravel (Phase 8 slice 3). Comment edit/react remain Express.
+The Sign In UI is **Laravel Blade** at `/login` (Phase 6 slice 2; `/laravel/login` still works). Success goes to Laravel `/auth/bridge` (Phase 9 slice 2). Sign-out is Laravel `GET`/`POST /logout` (Phase 9 slice 3). Unmatched edge paths (including `/favicon.ico`) are Laravel (Phase 9 slice 4). A Laravel web session is established at POST `/login`. Soak still uses Express `/auth/bridge`, `/logout`, and unmatched `location /`. Blade static `/css` and `/img` are Laravel (Phase 9 slice 1).
 
 ## Access URL
 

@@ -11,7 +11,7 @@ use App\Support\Departments;
 use Illuminate\Support\Carbon;
 
 /**
- * Phase 5 slice 24 + Phase 7 slice 6 + slice 13: Department Head ticket detail (read + workflow + comment).
+ * Phase 5 slice 24 + Phase 7 slice 6 + slice 13 + Phase 8 slice 3–5: Department Head ticket detail (read + workflow + comment + documents + personnel + comment edit/react).
  */
 class DeptTicketDetailService
 {
@@ -40,6 +40,7 @@ class DeptTicketDetailService
      *   accomplishment: array<string, mixed>|null,
      *   timeline: list<array<string, mixed>>,
      *   reassignments: list<array<string, mixed>>,
+     *   personnel: list<array<string, mixed>>,
      *   threadComments: list<array<string, mixed>>,
      *   departments: list<string>,
      *   capabilities: array<string, bool>,
@@ -235,6 +236,7 @@ class DeptTicketDetailService
             ] : null,
             'timeline' => $timeline,
             'reassignments' => $reassignments,
+            'personnel' => $this->personnelList($ticket),
             'threadComments' => $this->normalizeThreadComments(
                 is_array($ticket->thread_comments) ? $ticket->thread_comments : []
             ),
@@ -248,6 +250,7 @@ class DeptTicketDetailService
                 'canClose' => $canClose,
                 'canPostComment' => true,
                 'canUploadDocuments' => $canExecute,
+                'canAssignPersonnel' => $canExecute,
             ],
             'stats' => $dashboard['stats'],
             'activeNav' => $activeNav,
@@ -268,6 +271,32 @@ class DeptTicketDetailService
         }
 
         return false;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function personnelList(RiskTicket $ticket): array
+    {
+        $rows = [];
+        foreach (is_array($ticket->personnel) ? $ticket->personnel : [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+            $rows[] = [
+                'id' => (string) ($row['id'] ?? ''),
+                'name' => $name,
+                'role' => trim((string) ($row['role'] ?? '')) ?: null,
+                'assignedAt' => (string) ($row['assignedAt'] ?? ''),
+                'assignedByName' => (string) ($row['assignedByName'] ?? ''),
+            ];
+        }
+
+        return $rows;
     }
 
     private function returnedByPresident(RiskTicket $ticket): bool
@@ -365,11 +394,32 @@ class DeptTicketDetailService
                 'kind' => (string) ($c['kind'] ?? 'comment'),
                 'parentId' => isset($c['parentId']) && $c['parentId'] ? (string) $c['parentId'] : null,
                 'at' => (string) ($c['at'] ?? ''),
+                'editedAt' => (string) ($c['editedAt'] ?? ''),
+                'reactions' => $this->normalizeReactions($c['reactions'] ?? null),
             ];
         }
 
         usort($rows, fn (array $a, array $b) => strcmp($a['at'] ?? '', $b['at'] ?? ''));
 
         return $rows;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function normalizeReactions(mixed $raw): array
+    {
+        $reactions = [];
+        foreach (is_array($raw) ? $raw : [] as $emoji => $users) {
+            $names = array_values(array_filter(
+                is_array($users) ? $users : [],
+                fn ($name) => is_string($name) && $name !== '',
+            ));
+            if ($names !== []) {
+                $reactions[(string) $emoji] = $names;
+            }
+        }
+
+        return $reactions;
     }
 }

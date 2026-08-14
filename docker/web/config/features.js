@@ -1,6 +1,18 @@
 /**
  * Feature flags for gradual Laravel migration.
  *
+ * Phase 9 slice 6: nginx /internal/* → Laravel store.json (tickets + org). Soak keeps Express.
+ * Phase 9 slice 4: unmatched nginx location / → Laravel; /internal/* stays Express.
+ * Phase 9 slice 3: nginx GET/POST /logout → Laravel (same USE_LARAVEL_LOGIN_UI soak opt-out).
+ * Phase 9 slice 2: USE_LARAVEL_LOGIN_UI also covers GET /auth/bridge → Laravel.
+ * Phase 9 slice 1: nginx serves /css and /img from Laravel public (Blade no longer depends on Express static).
+ * Phase 8 slice 9: ticket-detail UI flags also cover GET /{role}/attachments/:id.
+ * Phase 8 slice 8: dashboard UI flags also cover GET /{dept,officer,executive,president}/notifications/open/:id.
+ * Phase 8 slice 7: USE_LARAVEL_ADMIN_AUDIT_LOGS_UI also covers GET /admin/audit-logs/export.
+ * Phase 8 slice 6: other-role POST /{dept,officer,executive,president}/notifications/read-all redirect to Blade.
+ * Phase 8 slice 5: USE_LARAVEL_DEPT_TICKET_MUTATIONS also covers POST /dept/tickets/:ref/comment/{edit,react};
+ *   USE_LARAVEL_REPORTER_TICKET_MUTATIONS also covers POST /supervisor/tickets/:ref/comment + /comment/{edit,react}.
+ * Phase 8 slice 4: USE_LARAVEL_DEPT_TICKET_MUTATIONS also covers POST /dept/tickets/:ref/{personnel,resolution}.
  * Phase 8 slice 3: USE_LARAVEL_DEPT_TICKET_MUTATIONS also covers POST /dept/tickets/:ref/documents.
  * Phase 8 slice 2: USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS also covers POST /supervisor/tickets/:ref/{evidence,accomplishment}.
  * Phase 8 slice 1: USE_LARAVEL_REPORTER_UPLOAD_MUTATIONS — Express POST /supervisor/tickets/new/preview + /:ref/edit redirect to Blade.
@@ -144,7 +156,7 @@ module.exports = {
   USE_LARAVEL_ADMIN_SETTINGS_UI: process.env.USE_LARAVEL_ADMIN_SETTINGS_UI === 'true',
   /**
    * When true, Express GET /dept redirects to Laravel Blade.
-   * Compose default true as of Phase 5 slice 22. Queues/detail stay on Express.
+   * Compose default true as of Phase 5 slice 22. Mark-all-read POST as of Phase 8 slice 6.
    */
   USE_LARAVEL_DEPT_DASHBOARD_UI: process.env.USE_LARAVEL_DEPT_DASHBOARD_UI === 'true',
   /**
@@ -160,7 +172,7 @@ module.exports = {
   USE_LARAVEL_DEPT_TICKET_DETAIL_UI: process.env.USE_LARAVEL_DEPT_TICKET_DETAIL_UI === 'true',
   /**
    * When true, Express GET /officer redirects to Laravel Blade.
-   * Compose default true as of Phase 5 slice 25. Queues/detail stay on Express.
+   * Compose default true as of Phase 5 slice 25. Mark-all-read POST as of Phase 8 slice 6.
    */
   USE_LARAVEL_OFFICER_DASHBOARD_UI: process.env.USE_LARAVEL_OFFICER_DASHBOARD_UI === 'true',
   /**
@@ -180,7 +192,7 @@ module.exports = {
   USE_LARAVEL_OFFICER_ALIASES_UI: process.env.USE_LARAVEL_OFFICER_ALIASES_UI === 'true',
   /**
    * When true, Express GET /executive redirects to Laravel Blade.
-   * Compose default true as of Phase 5 slice 28.
+   * Compose default true as of Phase 5 slice 28. Mark-all-read POST as of Phase 8 slice 6.
    */
   USE_LARAVEL_EXECUTIVE_DASHBOARD_UI: process.env.USE_LARAVEL_EXECUTIVE_DASHBOARD_UI === 'true',
   /**
@@ -195,7 +207,7 @@ module.exports = {
   USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI: process.env.USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI === 'true',
   /**
    * When true, Express GET /president redirects to Laravel Blade.
-   * Compose default true as of Phase 5 slice 29.
+   * Compose default true as of Phase 5 slice 29. Mark-all-read POST as of Phase 8 slice 6.
    */
   USE_LARAVEL_PRESIDENT_DASHBOARD_UI: process.env.USE_LARAVEL_PRESIDENT_DASHBOARD_UI === 'true',
   /**
@@ -250,14 +262,15 @@ module.exports = {
    */
   USE_LARAVEL_ADMIN_TICKET_MUTATIONS: process.env.USE_LARAVEL_ADMIN_TICKET_MUTATIONS === 'true',
   /**
-   * When true, Express POST /dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents}
-   * redirect to Laravel Blade. Compose default true as of Phase 7 slice 6; comment as of slice 13; documents as of Phase 8 slice 3.
+   * When true, Express POST /dept/tickets/:ref/{accept,reject,return,reassign,action-plan,close,comment,documents,personnel,resolution,comment/edit,comment/react}
+   * redirect to Laravel Blade. Compose default true as of Phase 7 slice 6; comment as of slice 13; documents as of Phase 8 slice 3; personnel/resolution as of slice 4; comment edit/react as of slice 5.
    */
   USE_LARAVEL_DEPT_TICKET_MUTATIONS: process.env.USE_LARAVEL_DEPT_TICKET_MUTATIONS === 'true',
   /**
-   * When true, Express POST /supervisor/tickets/:ref/delete and
-   * /supervisor/tickets/new/preview/:ref/{save,submit} redirect to Laravel Blade.
-   * Compose default true as of Phase 7 slice 7.
+   * When true, Express POST /supervisor/tickets/:ref/delete,
+   * /supervisor/tickets/new/preview/:ref/{save,submit}, and
+   * /supervisor/tickets/:ref/comment + /comment/{edit,react} redirect to Laravel Blade.
+   * Compose default true as of Phase 7 slice 7; comments as of Phase 8 slice 5.
    */
   USE_LARAVEL_REPORTER_TICKET_MUTATIONS: process.env.USE_LARAVEL_REPORTER_TICKET_MUTATIONS === 'true',
   /**

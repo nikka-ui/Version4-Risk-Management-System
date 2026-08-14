@@ -21,8 +21,8 @@ class NotificationApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 8)
-            ->assertJsonPath('slice', 3);
+            ->assertJsonPath('phase', 9)
+            ->assertJsonPath('slice', 6);
     }
 
     public function test_create_list_unread_and_mark_read(): void
