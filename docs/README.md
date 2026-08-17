@@ -2,7 +2,7 @@
 
 Documentation for the **Version 3 AI Risk Management System** — ISO 31000-aligned enterprise risk workflow with Docker-based deployment.
 
-The **running application** is the Express RMS app in `docker/web` (session login, department ownership workflow, RMO oversight, President High/Critical approval). Treat [LOGIN.md](LOGIN.md) and [ARCHITECTURE.md](ARCHITECTURE.md) as current; older Word/flowchart assets are historical requirements.
+The **running application** is Laravel Blade in `backend/` (session login, department ownership workflow, RMO oversight, President High/Critical approval). Treat [LOGIN.md](LOGIN.md) and [ARCHITECTURE.md](ARCHITECTURE.md) as current; older Word/flowchart assets are historical requirements.
 
 ## Source specifications
 
@@ -28,6 +28,6 @@ These in-repo Word documents and diagram are the original requirements (may stil
 ## Quick links
 
 - Docker files: [`docker/`](../docker/)
-- Role registry: [`docker/web/config/roles.js`](../docker/web/config/roles.js)
+- Role registry: [`backend/app/Support/Roles.php`](../backend/app/Support/Roles.php)
 - Environment template: [`.env.example`](../.env.example)
 - Root README: [`README.md`](../README.md)

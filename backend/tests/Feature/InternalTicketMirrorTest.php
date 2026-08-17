@@ -32,12 +32,12 @@ class InternalTicketMirrorTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_health_reports_phase_nine_slice_six(): void
+    public function test_health_reports_phase_nine_slice_seven(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_guest_upsert_without_token_is_unauthorized(): void

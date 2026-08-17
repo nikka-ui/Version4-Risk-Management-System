@@ -4,17 +4,16 @@ namespace App\Services;
 
 use App\Models\RiskTicket;
 use App\Models\User;
-use App\Support\DraftAiAnalysis;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Phase 3 slice 2: draft CRUD against Postgres only.
- * Express/store.json remains the live browser workflow until USE_LARAVEL_API is enabled.
- * File bytes / MinIO stay on Express — this service accepts evidence metadata/count only.
+ * Phase 3 slice 2 + Phase 11: draft CRUD against Postgres; AI via AiAnalysisService (persisted).
  */
 class DraftTicketService
 {
+    public function __construct(private readonly AiAnalysisService $aiAnalysis) {}
+
     /**
      * @param  array<string, mixed>  $input
      */
@@ -33,12 +32,12 @@ class DraftTicketService
                 ]);
             }
 
-            $ai = DraftAiAnalysis::analyze([
+            $ai = $this->aiAnalysis->analyze([
                 'title' => $fields['title'],
                 'location' => $fields['location'],
                 'fiveW1H' => $fields['five_w1h'],
                 'evidenceCount' => $evidenceCount,
-            ]);
+            ], $reference);
 
             $now = now();
 
@@ -222,12 +221,12 @@ class DraftTicketService
         $fields = $this->validatedFields($input);
         $evidenceCount = $this->resolveEvidenceCount($input, $ticket->evidence_count);
 
-        $ai = DraftAiAnalysis::analyze([
+        $ai = $this->aiAnalysis->analyze([
             'title' => $fields['title'],
             'location' => $fields['location'],
             'fiveW1H' => $fields['five_w1h'],
             'evidenceCount' => $evidenceCount,
-        ]);
+        ], (string) $ticket->reference);
 
         $ticket->fill([
             'title' => $fields['title'],

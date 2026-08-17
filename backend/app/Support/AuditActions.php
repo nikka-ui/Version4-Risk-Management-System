@@ -39,4 +39,26 @@ final class AuditActions
 
         return self::LABELS[$action] ?? $action;
     }
+
+    /**
+     * Action keys whose human label contains $needle (case-insensitive).
+     *
+     * @return list<string>
+     */
+    public static function matchingActions(string $needle): array
+    {
+        $needle = mb_strtolower(trim($needle));
+        if ($needle === '') {
+            return [];
+        }
+
+        $matches = [];
+        foreach (self::LABELS as $action => $label) {
+            if (str_contains(mb_strtolower($label), $needle) || str_contains(mb_strtolower($action), $needle)) {
+                $matches[] = $action;
+            }
+        }
+
+        return $matches;
+    }
 }

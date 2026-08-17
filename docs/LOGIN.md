@@ -1,6 +1,6 @@
 # Login and built-in accounts (development)
 
-The Sign In UI is **Laravel Blade** at `/login` (Phase 6 slice 2; `/laravel/login` still works). Success goes to Laravel `/auth/bridge` (Phase 9 slice 2). Sign-out is Laravel `GET`/`POST /logout` (Phase 9 slice 3). Unmatched edge paths (including `/favicon.ico`) are Laravel (Phase 9 slice 4). A Laravel web session is established at POST `/login`. Soak still uses Express `/auth/bridge`, `/logout`, and unmatched `location /`. Blade static `/css` and `/img` are Laravel (Phase 9 slice 1).
+The Sign In UI is **Laravel Blade** at `/login` (`/laravel/login` still works). Success goes to Laravel `/auth/bridge`. Sign-out is Laravel `GET`/`POST /logout`. Unmatched edge paths (including `/favicon.ico`) are Laravel. A Laravel web session is established at POST `/login`. Blade static `/css` and `/img` are Laravel.
 
 ## Access URL
 
@@ -8,11 +8,10 @@ The Sign In UI is **Laravel Blade** at `/login` (Phase 6 slice 2; `/laravel/logi
 |-------------|-----|
 | Docker (default) | http://localhost:8080/login |
 | Legacy Blade path | http://localhost:8080/laravel/login |
-| Web container direct | http://localhost:3000/login (internal; redirects when flag on) |
 
 ## Roles (canonical)
 
-Source of truth: [`docker/web/config/roles.js`](../docker/web/config/roles.js).
+Source of truth: [`backend/app/Support/Roles.php`](../backend/app/Support/Roles.php).
 
 | Role id | Label | Console path | Assignable in User Management |
 |---------|-------|--------------|-------------------------------|
@@ -28,7 +27,7 @@ There is **no Audit Officer** console. RMO is **governance oversight only** — 
 
 ## Built-in credentials (seed accounts)
 
-Defined in [`docker/web/config/users.js`](../docker/web/config/users.js). Usernames are case-insensitive at login.
+Defined in Laravel seed users / `store.json` import. Usernames are case-insensitive at login.
 
 | Username | Password | Role |
 |----------|----------|------|
@@ -138,7 +137,7 @@ Sign in as `admin` / `a3c1993` (or `sys-admin` / `a3c2026`) → http://localhost
 
 Administrators **cannot** approve risk reports, publish mitigation as owners, or override RMO/President workflow decisions.
 
-Operational data lives mainly in `docker/web/data/store.json` (Docker volume). Attachment metadata: PostgreSQL; files: MinIO/S3.
+Operational data lives in PostgreSQL. `docker/data/store.json` is import-only (optional dual-write). Attachment files: MinIO/S3.
 
 ## End-to-end workflow (current)
 
@@ -155,23 +154,17 @@ See [Architecture](ARCHITECTURE.md) for statuses and design notes.
 ## Security notes
 
 - Seed credentials are for **development only**.
-- Set a strong `SESSION_SECRET` in `.env` for shared/production deployments.
-- Sessions expire after 8 hours (cookie `maxAge`).
 
 ## Implementation files
 
 | Path | Purpose |
 |------|---------|
-| `docker/web/config/roles.js` | Role registry (labels, paths, assignable) |
-| `docker/web/config/users.js` | Seed accounts |
-| `docker/web/config/tickets.js` | Statuses and workflow constants |
-| `docker/web/server.js` | HTTP routes |
-| `docker/web/lib/auth.js` | Session guards |
-| `docker/web/lib/tickets.js` | Ticket CRUD and transitions |
-| `docker/web/lib/templates/*.js` | Role consoles (supervisor, dept-head, officer, president, executive, admin) |
+| `backend/app/Support/Roles.php` | Role registry (labels, paths, assignable) |
+| `backend/routes/web.php` | Blade HTTP routes |
+| `backend/resources/views` | Blade consoles |
 
 ## Rebuild after code changes
 
 ```powershell
-docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d web
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d api
 ```

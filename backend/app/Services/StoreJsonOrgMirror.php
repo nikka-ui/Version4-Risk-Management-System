@@ -363,13 +363,19 @@ class StoreJsonOrgMirror
     {
         $now = now()->toIso8601String();
         if (is_array($audit)) {
-            if (! isset($data['auditLogs']) || ! is_array($data['auditLogs'])) {
-                $data['auditLogs'] = [];
-            }
-            $data['auditLogs'][] = array_merge([
+            $entry = array_merge([
                 'id' => 'alog-'.now()->getTimestampMs(),
                 'at' => $now,
             ], $audit);
+            try {
+                app(AuditLogService::class)->record($entry);
+            } catch (\Throwable $e) {
+                logger()->warning('audit_logs write failed: '.$e->getMessage());
+            }
+            if (! isset($data['auditLogs']) || ! is_array($data['auditLogs'])) {
+                $data['auditLogs'] = [];
+            }
+            $data['auditLogs'][] = $entry;
             if (count($data['auditLogs']) > 1000) {
                 $data['auditLogs'] = array_slice($data['auditLogs'], -1000);
             }

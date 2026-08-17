@@ -1,6 +1,6 @@
 # Laravel Migration Notes
 
-Incremental cutover from Express (`docker/web`) to Laravel (`backend/`). Blade owns GETs, mutations, static assets, `/auth/bridge`, `/logout`, unmatched edge paths, and dual-write `/internal/*` (Phase 9 slice 6). Express internals remain for soak. Soak still opts out.
+Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is complete for the running stack. Blade owns the edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` through admin reclassify. Phase 12 adds CI.
 
 ## Phase 0–5 slice 17 (complete)
 
@@ -351,7 +351,274 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php
 docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice5-president-queues
 ```
 
-## Phase 9 slice 6 (Org dual-write internals on Laravel — current)
+Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is complete for the running stack. Blade owns the edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` classify/summarize through admin reclassify (slice 6). Phase 12 adds CI verification.
+
+## Phase 12 slice 1 (GitHub Actions CI — current)
+
+| Piece | Notes |
+|-------|--------|
+| `.github/workflows/ci.yml` | PHPUnit on push/PR; ai-service `test_classify.py` job |
+| `composer test` | Runs `php artisan test` in `backend/` |
+| `rms:smoke-phase12-ci` | Docker stack health gate (`phase: 12`, `slice: 1`); uses `RMS_SMOKE_API_URL` default `http://127.0.0.1:8080/v1/health` inside the api container |
+| Health | `phase: 12`, `slice: 1` |
+
+### Verify
+
+```powershell
+cd backend; composer install; composer test
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase12-ci
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: local `composer test` passes. Stack health `phase:12`,`slice:1`. Smoke gate OK.
+
+## Phase 11 slice 6 (Admin ticket AI reclassify — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `POST /api/v1/tickets/{ref}/ai/reclassify` | Sanctum + admin; re-runs classify, persists history, refreshes `risk_tickets.ai` |
+| `POST /admin/tickets/{ref}/reclassify` | Blade admin ticket detail button |
+| Workflow | Status, department, and priority on the ticket are **not** changed |
+| Live display | `risk_tickets.ai` + category/likelihood/impact updated after reclassify |
+| Health | `phase: 11`, `slice: 6` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai-reclassify
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:11`,`slice:6`. Smoke reclassifies a ticket, persists a new history row, refreshes live AI fields without changing workflow status.
+
+## Phase 11 slice 5 (NLP hybrid classify + PHP taxonomy stub — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Flask `POST /classify` | Taxonomy-v1 base + scikit-learn TF-IDF cosine refinement (`nlp-hybrid-v1`) |
+| Flask `POST /summarize` | Same hybrid engine, summary-only payload |
+| `nlpScores` | Top category/department similarity scores on each classify result |
+| PHP stub | `DraftAiTaxonomy` mirrors Express ISO categories when ai-service is down |
+| Health | `phase: 11`, `slice: 5` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec ai-service python test_classify.py
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/ai-health
+```
+
+Expected: health `phase:11`,`slice:5`. `/ai-health` reports `mode: nlp-hybrid`. Smoke classifies network outage as operational → IT; PHP fallback uses taxonomy-v1.
+
+## Phase 11 slice 4 (Express taxonomy classify — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Flask `POST /classify` | Port of Express `generateAiAnalysisFromReport` (ISO categories, weighted department routing, mitigation templates) |
+| Flask `POST /summarize` | Same taxonomy, summary-only payload |
+| Department labels | Mapped onto Laravel org seed names (e.g. IT → Information Technology) |
+| Laravel client | Unchanged HTTP contract; PHP stub remains last-resort fallback |
+| Health | `phase: 11`, `slice: 4` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec ai-service python test_classify.py
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/ai-health
+```
+
+Expected: health `phase:11`,`slice:4`. `/ai-health` reports `mode: taxonomy`. Smoke classifies a network outage as operational → Information Technology.
+
+## Phase 11 slice 3 (AI history Blade + API — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `GET /admin/ai-analysis` | Admin list of classify runs (search/filter by ticket, source, category) |
+| Admin ticket detail | Recent AI runs strip + link to history |
+| `GET /api/v1/tickets/{ref}/ai-analysis` | Sanctum ticket-scoped history |
+| Live display | Still `risk_tickets.ai` JSON |
+| Health | `phase: 11`, `slice: 3` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai-history
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -sI http://localhost:8080/admin/ai-analysis
+```
+
+Expected: health `phase:11`,`slice:3`. Smoke renders the admin AI history Blade. Guest `/admin/ai-analysis` redirects to login.
+
+## Phase 11 slice 2 (AI analysis history table — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `ai_analysis_results` table | One row per classify run (source, scores, input/result JSON) |
+| `AiAnalysisService::analyze` | Persists after remote or PHP-stub result; optional `ticket_reference` |
+| Live display | Still `risk_tickets.ai` JSON (Blade unchanged) |
+| Import/list | `listForTicket($reference)` for history reads |
+| Health | `phase: 11`, `slice: 2` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan migrate --force
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai-results
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:11`,`slice:2`. Smoke persists a classify row and lists it by ticket reference.
+
+## Phase 11 slice 1 (AI classify via ai-service — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Flask `POST /classify` | Heuristic analysis matching Laravel `DraftAiAnalysis` contract |
+| Flask `POST /summarize` | Thin summary from the same heuristics |
+| Laravel `AiAnalysisService` | HTTP to `AI_SERVICE_URL`; falls back to PHP stub on failure |
+| Ticket storage | Still `risk_tickets.ai` JSON (unchanged Blade contract) |
+| Health | `phase: 11`, `slice: 1` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/ai-health
+```
+
+Expected: health `phase:11`,`slice:1`. Smoke classify via ai-service + PHP stub fallback. `/ai-health` reports `mode: heuristic`.
+
+## Phase 10 slice 3 (Postgres sole SoT — dual-write off — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `USE_LARAVEL_INTERNAL_TICKETS` | Default **`false`** — no ticket writes to `store.json` |
+| `USE_LARAVEL_INTERNAL_ORG` | Default **`false`** — no org/settings/user writes to `store.json` |
+| Audits | Still written to Postgres when mirrors are off (`ExpressOrgMirrorService::persistAudit`) |
+| `store.json` | Import-only (`rms:import-*`); optional re-enable via the two flags |
+| Flags cleanup | Obsolete Express `USE_LARAVEL_*_UI` / mutation flags removed from `.env.example` |
+| Health | `phase: 10`, `slice: 3` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice10-no-dual-write
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:10`,`slice:3`. Smoke confirms dual-write flags off, Postgres audit write, `store.json` hash unchanged.
+
+## Phase 10 slice 2 (Admin settings on Postgres — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `system_settings` table | Postgres SoT for admin settings Blade GET/POST |
+| Reads | `AdminSettingsService::get()` uses Postgres row or in-code defaults (no `store.json` read) |
+| Import | `php artisan rms:import-settings` |
+| `store.json` | Still dual-writes `systemSettings` for compatibility |
+| Health | `phase: 10`, `slice: 2` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-settings
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice10-settings
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:10`,`slice:2`. Smoke reads defaults then writes/reads a Postgres settings row.
+
+## Phase 10 slice 1 (Admin audit logs on Postgres — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `audit_logs` table | Postgres SoT for admin audit list, CSV export, dashboard recent strip |
+| Writes | `AuditLogService` via store dual-write path (org/ticket mirrors) + fallback when store write fails |
+| Import | `php artisan rms:import-audit-logs` |
+| `store.json` | Still dual-writes `auditLogs` for compatibility |
+| Health | `phase: 10`, `slice: 1` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan migrate --force
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice10-audit-logs
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:10`,`slice:1`. Smoke records + lists a Postgres audit row.
+
+## Phase 9 slice 8 (Remove Express `web` source)
+
+| Piece | Notes |
+|-------|--------|
+| compose | No `web` service. nginx + `api` only. |
+| `docker/web` | Deleted. |
+| `store.json` | `docker/data/store.json` mounted at `/import/store.json`. |
+| Dual-write | Laravel writes store.json in-process (no HTTP to Express). |
+| Health | `phase: 9`, `slice: 8` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-remove-express
+curl.exe -sI http://localhost:8080/login
+docker compose -f docker/compose.yml -f docker/compose.override.yml config --services
+```
+
+Expected: `/login` → Laravel `200`. Compose services do not include `web`.
+
+## Phase 9 slice 7 (Retire Express `web` from the default stack)
+
+| Piece | Notes |
+|-------|--------|
+| compose `web` | Profile **`express`**. Default `up` does not start `rms-web`. |
+| nginx `depends_on` | `api` + `ai-service` only (no `web`). |
+| soak | Matches Laravel (flags ON). Does not swap nginx to Express. |
+| Express fallback | `-f docker/compose.express.yml --profile express` |
+| Health | `phase: 9`, `slice: 7` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice9-retire-web
+curl.exe -sI http://localhost:8080/login
+docker compose -f docker/compose.yml -f docker/compose.override.yml ps
+```
+
+Expected: `/login` → Laravel (`rms_api_session`, no `X-Powered-By: Express`). `rms-web` is not running.
+
+### Express fallback
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.express.yml --profile express up -d
+```
+
+## Phase 9 slice 6 (Org dual-write internals on Laravel)
 
 | Piece | Notes |
 |-------|--------|
@@ -1078,7 +1345,9 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/co
 ```
 
 ## Remaining
-1. Flip soak defaults / retire the `web` service
+
+1. Drop store.json dual-write (or migrate settings fallback) once remaining live reads are Postgres
+2. Clean obsolete `USE_LARAVEL_*` env flags / docs leftovers
 
 ## Related
 

@@ -2,8 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Support\AuditActions;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * Phase 10 slice 1: admin audit list/export from Postgres (store.json is dual-write only).
+ */
 class AdminAuditLogsService
 {
     /**
@@ -21,13 +26,6 @@ class AdminAuditLogsService
         ?string $module,
         int $limit = 300,
     ): array {
-        $storePath = (string) config('rms.store_json_path');
-        $raw = @file_get_contents($storePath);
-        $data = $raw ? json_decode($raw, true) : [];
-
-        $auditLogs = is_array($data['auditLogs'] ?? null) ? (array) $data['auditLogs'] : [];
-
-        $needle = $q !== null ? mb_strtolower(trim($q)) : '';
         $filters = [
             'q' => $q ?? '',
             'date' => $date ?? '',
@@ -36,67 +34,18 @@ class AdminAuditLogsService
             'module' => $module ?? '',
         ];
 
-        if ($needle !== '') {
-            $auditLogs = array_values(array_filter($auditLogs, function (array $l) use ($needle): bool {
-                $hay = mb_strtolower(trim((string) ($l['description'] ?? ''))) ?: '';
-                $hay .= ' ' . mb_strtolower(trim((string) ($l['username'] ?? ''))) ;
-                $hay .= ' ' . mb_strtolower(trim((string) ($l['module'] ?? ''))) ;
-                $hay .= ' ' . mb_strtolower(trim((string) ($l['action'] ?? ''))) ;
-                $hay .= ' ' . mb_strtolower(trim(AuditActions::label($l['action'] ?? ''))) ;
-                return str_contains($hay, $needle);
-            }));
-        }
+        $query = AuditLog::query()->orderByDesc('occurred_at');
+        $this->applyFilters($query, $filters);
 
-        if (! empty($filters['date'])) {
-            $day = mb_substr($filters['date'], 0, 10);
-            $auditLogs = array_values(array_filter($auditLogs, function (array $l) use ($day): bool {
-                return str_starts_with((string) ($l['at'] ?? ''), $day);
-            }));
-        }
-
-        if (! empty($filters['user'])) {
-            $uq = mb_strtolower(trim($filters['user']));
-            $auditLogs = array_values(array_filter($auditLogs, function (array $l) use ($uq): bool {
-                $u1 = mb_strtolower(trim((string) ($l['username'] ?? '')));
-                $u2 = mb_strtolower(trim((string) ($l['roleLabel'] ?? '')));
-                return str_contains($u1, $uq) || str_contains($u2, $uq);
-            }));
-        }
-
-        if (! empty($filters['action'])) {
-            $aq = mb_strtolower(trim($filters['action']));
-            $auditLogs = array_values(array_filter($auditLogs, function (array $l) use ($aq): bool {
-                $a = mb_strtolower(trim((string) ($l['action'] ?? '')));
-                $label = mb_strtolower(trim(AuditActions::label($l['action'] ?? '')));
-                return str_contains($a, $aq) || str_contains($label, $aq);
-            }));
-        }
-
-        if (! empty($filters['module'])) {
-            $mq = mb_strtolower(trim($filters['module']));
-            $auditLogs = array_values(array_filter($auditLogs, function (array $l) use ($mq): bool {
-                $m = mb_strtolower(trim((string) ($l['module'] ?? '')));
-                return str_contains($m, $mq);
-            }));
-        }
-
-        // Options used to populate selects in the filter bar.
-        $options = $this->options($data['auditLogs'] ?? []);
-
-        usort($auditLogs, fn (array $a, array $b) => strcmp((string) ($b['at'] ?? ''), (string) ($a['at'] ?? '')));
-        $auditLogs = array_slice($auditLogs, 0, max(1, $limit));
-
-        // Ensure roleLabel exists for the view.
-        $auditLogs = array_map(function (array $l): array {
-            if (empty($l['roleLabel']) && ! empty($l['role'])) {
-                $l['roleLabel'] = (string) $l['role'];
-            }
-            return $l;
-        }, $auditLogs);
+        $logs = $query
+            ->limit(max(1, $limit))
+            ->get()
+            ->map(fn (AuditLog $row) => $row->toStoreArray())
+            ->all();
 
         return [
-            'logs' => $auditLogs,
-            'options' => $options,
+            'logs' => $logs,
+            'options' => $this->options(),
             'filters' => $filters,
         ];
     }
@@ -129,31 +78,84 @@ class AdminAuditLogsService
     }
 
     /**
-     * @param mixed $auditLogs
-     * @return array{users: list<string>, actions: list<string>, modules: list<string>}
+     * @param  Builder<AuditLog>  $query
+     * @param  array<string, string>  $filters
      */
-    private function options(mixed $auditLogs): array
+    private function applyFilters(Builder $query, array $filters): void
     {
-        $auditLogs = is_array($auditLogs) ? $auditLogs : [];
-
-        $users = [];
-        $actions = [];
-        $modules = [];
-
-        foreach ($auditLogs as $l) {
-            if (! is_array($l)) continue;
-            if (! empty($l['username'])) $users[] = (string) $l['username'];
-            if (! empty($l['action'])) $actions[] = (string) $l['action'];
-            if (! empty($l['module'])) $modules[] = (string) $l['module'];
+        $needle = mb_strtolower(trim($filters['q']));
+        if ($needle !== '') {
+            $query->where(function (Builder $inner) use ($needle): void {
+                $inner->whereRaw('LOWER(COALESCE(description, \'\')) LIKE ?', ['%'.$needle.'%'])
+                    ->orWhereRaw('LOWER(COALESCE(username, \'\')) LIKE ?', ['%'.$needle.'%'])
+                    ->orWhereRaw('LOWER(COALESCE(module, \'\')) LIKE ?', ['%'.$needle.'%'])
+                    ->orWhereRaw('LOWER(COALESCE(action, \'\')) LIKE ?', ['%'.$needle.'%']);
+                foreach (AuditActions::matchingActions($needle) as $action) {
+                    $inner->orWhere('action', $action);
+                }
+            });
         }
 
-        $users = array_values(array_unique($users));
-        $actions = array_values(array_unique($actions));
-        $modules = array_values(array_unique($modules));
+        if ($filters['date'] !== '') {
+            $day = mb_substr($filters['date'], 0, 10);
+            $query->whereDate('occurred_at', $day);
+        }
 
-        sort($users);
-        sort($actions);
-        sort($modules);
+        if ($filters['user'] !== '') {
+            $uq = mb_strtolower(trim($filters['user']));
+            $query->where(function (Builder $inner) use ($uq): void {
+                $inner->whereRaw('LOWER(COALESCE(username, \'\')) LIKE ?', ['%'.$uq.'%'])
+                    ->orWhereRaw('LOWER(COALESCE(role_label, \'\')) LIKE ?', ['%'.$uq.'%']);
+            });
+        }
+
+        if ($filters['action'] !== '') {
+            $aq = mb_strtolower(trim($filters['action']));
+            $query->where(function (Builder $inner) use ($aq): void {
+                $inner->whereRaw('LOWER(COALESCE(action, \'\')) LIKE ?', ['%'.$aq.'%']);
+                foreach (AuditActions::matchingActions($aq) as $action) {
+                    $inner->orWhere('action', $action);
+                }
+            });
+        }
+
+        if ($filters['module'] !== '') {
+            $mq = mb_strtolower(trim($filters['module']));
+            $query->whereRaw('LOWER(COALESCE(module, \'\')) LIKE ?', ['%'.$mq.'%']);
+        }
+    }
+
+    /**
+     * @return array{users: list<string>, actions: list<string>, modules: list<string>}
+     */
+    private function options(): array
+    {
+        $users = AuditLog::query()
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->distinct()
+            ->orderBy('username')
+            ->pluck('username')
+            ->map(fn ($v) => (string) $v)
+            ->all();
+
+        $actions = AuditLog::query()
+            ->whereNotNull('action')
+            ->where('action', '!=', '')
+            ->distinct()
+            ->orderBy('action')
+            ->pluck('action')
+            ->map(fn ($v) => (string) $v)
+            ->all();
+
+        $modules = AuditLog::query()
+            ->whereNotNull('module')
+            ->where('module', '!=', '')
+            ->distinct()
+            ->orderBy('module')
+            ->pluck('module')
+            ->map(fn ($v) => (string) $v)
+            ->all();
 
         return [
             'users' => $users,
@@ -162,4 +164,3 @@ class AdminAuditLogsService
         ];
     }
 }
-

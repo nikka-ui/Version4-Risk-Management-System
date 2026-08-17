@@ -3,8 +3,7 @@
 namespace App\Support;
 
 /**
- * Canonical role registry — mirrors docker/web/config/roles.js 1:1.
- * Express remains the live RBAC source; this copy is for Laravel identity only.
+ * Canonical role registry for Laravel Blade RBAC.
  */
 final class Roles
 {

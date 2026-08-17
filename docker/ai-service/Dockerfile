@@ -7,9 +7,10 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY docker/ai-service/requirements.txt docker/ai-service/app.py ./
+COPY docker/ai-service/requirements.txt docker/ai-service/app.py docker/ai-service/classify.py docker/ai-service/nlp.py docker/ai-service/test_classify.py ./
 
 RUN pip install --no-cache-dir -r requirements.txt \
+    && python test_classify.py \
     && chown -R rms:rms /app
 
 USER rms

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -11,12 +12,12 @@ class AdminAuditLogsExportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_health_reports_phase_eight_slice_seven(): void
+    public function test_health_reports_phase_ten_slice_one(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_guest_cannot_export_audit_csv(): void
@@ -26,21 +27,19 @@ class AdminAuditLogsExportTest extends TestCase
 
     public function test_admin_can_export_audit_csv(): void
     {
-        $path = storage_path('app/testing-audit-export-store.json');
-        file_put_contents($path, json_encode([
-            'auditLogs' => [[
-                'at' => '2026-08-14T01:00:00.000Z',
-                'username' => 'admin',
-                'roleLabel' => 'System Administrator',
-                'action' => 'login',
-                'module' => 'Auth',
-                'description' => 'Signed in "ok"',
-                'ip' => '127.0.0.1',
-                'device' => 'PC',
-                'browser' => 'Chrome',
-            ]],
-        ], JSON_UNESCAPED_SLASHES));
-        config(['rms.store_json_path' => $path]);
+        AuditLog::query()->create([
+            'id' => 'alog-test-export',
+            'occurred_at' => '2026-08-14T01:00:00.000Z',
+            'username' => 'admin',
+            'role' => Roles::ADMIN,
+            'role_label' => 'System Administrator',
+            'action' => 'login',
+            'module' => 'Auth',
+            'description' => 'Signed in "ok"',
+            'ip' => '127.0.0.1',
+            'device' => 'PC',
+            'browser' => 'Chrome',
+        ]);
 
         $admin = User::factory()->admin()->create([
             'role' => Roles::ADMIN,
@@ -54,7 +53,5 @@ class AdminAuditLogsExportTest extends TestCase
         $this->assertStringStartsWith('Date,User,Role,Action,Module,Description,IP,Device,Browser', $body);
         $this->assertStringContainsString('"Signed in ""ok"""', $body);
         $this->assertStringContainsString('"admin"', $body);
-
-        @unlink($path);
     }
 }

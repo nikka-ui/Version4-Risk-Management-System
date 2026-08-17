@@ -103,14 +103,13 @@ Mount certificates in prod via `docker/nginx/certs/` (gitignored) or external se
 
 ## RBAC and containers
 
-Application RBAC (Ticket Reporter, Department Head, RMO, President, Executive, Administrator) for the **live Express app** is enforced in **`docker/web`** (`lib/auth.js`), not by Docker. When workflow moves to Laravel, enforce the same roles in the API.
+Application RBAC (Ticket Reporter, Department Head, RMO, President, Executive, Administrator) is enforced in **Laravel** (`backend/app/Support/Roles.php` and web middleware), not by Docker.
 
 Container boundaries:
 
-- `web` reaches PostgreSQL for attachment metadata and MinIO/S3 for evidence files; ticket/org data also lives in the `store.json` volume.
-- `api` is intended for future business API access to `postgres` / `redis`.
+- `api` reaches PostgreSQL, Redis, MinIO/S3, and the `store.json` dual-write file.
 - `ai-service` should receive only what the app proxies (no direct browser access in production).
-- nginx sits on `rms_edge` / `rms_app` and proxies exact `/` + `/laravel/` + `/api/` to Laravel, remaining `/` paths to Express, and AI health.
+- nginx sits on `rms_edge` / `rms_app` and proxies browser UI + `/api/` to Laravel.
 
 ## Audit and logging
 

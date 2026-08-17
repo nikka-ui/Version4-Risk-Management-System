@@ -14,15 +14,18 @@ class DeptTicketApiTest extends TestCase
 
     private function token(string $username, string $password): string
     {
-        return $this->postJson('/v1/auth/token', compact('username', 'password'))->json('token');
+        $response = $this->postJson('/v1/auth/token', compact('username', 'password'));
+        $response->assertOk();
+
+        return (string) $response->json('token');
     }
 
     public function test_health_slice_six(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_accept_reject_and_action_plan_flow(): void
@@ -46,8 +49,8 @@ class DeptTicketApiTest extends TestCase
 
         $reference = $this->withToken($reporterToken)
             ->postJson('/v1/tickets', [
-                'title' => 'IT outage risk',
-                'what' => 'Switch failed',
+                'title' => 'Network outage risk',
+                'what' => 'Core switch failed during network outage',
                 'why' => 'No redundancy',
                 'where' => 'DC',
                 'when' => 'Today',
@@ -174,8 +177,8 @@ class DeptTicketApiTest extends TestCase
 
         $reference = $this->withToken($reporterToken)
             ->postJson('/v1/tickets', [
-                'title' => 'Slice6 workflow',
-                'what' => 'Issue',
+                'title' => 'Network outage risk',
+                'what' => 'Core switch failed during network outage',
                 'why' => 'Cause',
                 'where' => 'HQ',
                 'when' => 'Today',

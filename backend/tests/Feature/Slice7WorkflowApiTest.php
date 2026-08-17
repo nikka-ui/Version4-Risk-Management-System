@@ -22,8 +22,8 @@ class Slice7WorkflowApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_personnel_documents_comment_and_reopen(): void
@@ -62,8 +62,8 @@ class Slice7WorkflowApiTest extends TestCase
 
         $reference = $this->withToken($reporterToken)
             ->postJson('/v1/tickets', [
-                'title' => 'Slice7 workflow',
-                'what' => 'Issue',
+                'title' => 'Network outage risk',
+                'what' => 'Core switch failed during network outage',
                 'why' => 'Cause',
                 'where' => 'HQ',
                 'when' => 'Today',
@@ -139,8 +139,8 @@ class Slice7WorkflowApiTest extends TestCase
 
         $reference = $this->withToken($reporterToken)
             ->postJson('/v1/tickets', [
-                'title' => 'Personnel validation',
-                'what' => 'Issue',
+                'title' => 'Budget process gap',
+                'what' => 'Missing invoice controls in accounting workflow',
                 'why' => 'Cause',
                 'where' => 'HQ',
                 'when' => 'Today',

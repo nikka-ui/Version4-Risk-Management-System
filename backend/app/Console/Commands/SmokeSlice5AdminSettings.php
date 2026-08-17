@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Phase 5 slice 21: smoke System Administrator settings Blade + store.json read.
+ * Phase 5 slice 21: smoke System Administrator settings Blade + Postgres defaults.
  */
 class SmokeSlice5AdminSettings extends Command
 {

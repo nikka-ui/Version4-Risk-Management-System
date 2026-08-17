@@ -68,13 +68,13 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml --profile de
 ## Repository structure
 
 ```
-backend/          # Laravel 11 API (Phase 0 scaffold; served by docker/api)
-docker/           # Compose, Dockerfiles, nginx, Express web app, secrets templates
+backend/          # Laravel 11 Blade UI + API (docker/api)
+docker/           # Compose, Dockerfiles, nginx, secrets templates
 docs/             # Architecture, login, ports, security, operations
 .env.example      # Environment template
 ```
 
-The live product UI and ticket workflow run in **`docker/web`** (Express). Laravel (`backend/` → `api` container) is scaffolded with no domain cutover — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The live product UI and ticket workflow run in **Laravel** (`backend/` → `api` container) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## License
 

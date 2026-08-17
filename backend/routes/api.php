@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiAnalysisController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepartmentController;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 | API routes (served under /v1 after nginx strips the public /api prefix)
 |--------------------------------------------------------------------------
 |
-| Phase 9 slice 6: POST /internal/* dual-write on Laravel store.json. Soak keeps Express internals.
+| Phase 12 slice 1: GitHub Actions CI (PHPUnit + ai-service tests); health gate.
 |
 */
 
@@ -26,8 +27,8 @@ Route::get('/', function () {
         'status' => 'ok',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 9,
-        'slice' => 6,
+        'phase' => 12,
+        'slice' => 1,
     ]);
 });
 
@@ -37,8 +38,8 @@ Route::get('/health', function () {
         'service' => 'rms-api',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 9,
-        'slice' => 6,
+        'phase' => 12,
+        'slice' => 1,
     ]);
 });
 
@@ -62,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets', [TicketController::class, 'index']);
     Route::post('/tickets', [TicketController::class, 'store']);
     Route::get('/tickets/{reference}', [TicketController::class, 'show']);
+    Route::get('/tickets/{reference}/ai-analysis', [AiAnalysisController::class, 'index']);
+    Route::middleware('rms.admin')->post('/tickets/{reference}/ai/reclassify', [AiAnalysisController::class, 'reclassify']);
     Route::patch('/tickets/{reference}', [TicketController::class, 'update']);
     Route::delete('/tickets/{reference}', [TicketController::class, 'destroy']);
     Route::post('/tickets/{reference}/submit', [TicketController::class, 'submit']);

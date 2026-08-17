@@ -8,7 +8,7 @@ Day-two operations for the RMS Docker deployment.
 - Rebuild application images after dependency updates:
 
 ```powershell
-docker compose -f docker/compose.yml -f docker/compose.prod.yml build --no-cache api web ai-service
+docker compose -f docker/compose.yml -f docker/compose.prod.yml build --no-cache api ai-service
 ```
 
 - Scan images before release (Docker Scout, Trivy, or equivalent).
@@ -40,41 +40,23 @@ Redis holds ephemeral cache/queue data. Persist AOF volume `rms_redis_data` but 
 
 ### Application store (`store.json`)
 
-Ticket, user, department, position, notification, and log data for the live Express app live in:
+Ticket, user, department, position, notification, and log dual-write data live in:
 
-`docker/web/data/store.json` (compose volume `./web/data` → `/app/data`)
+`docker/data/store.json` (compose mount `./data/store.json` → `/import/store.json`)
 
-Back up this file with attachment metadata (PostgreSQL) and MinIO/S3 objects when taking application-level backups. The file is gitignored.
+Back up this file with PostgreSQL and MinIO/S3 objects when taking application-level backups. The file is gitignored. Live ticket workflow is Laravel/Postgres; `store.json` is the compatibility mirror.
 
 ## Resetting ticket data
 
-Preserve **users, departments, positions, settings**, and audit/credential logs while clearing tickets and related operational data:
+Preserve **users, departments, positions, settings** in PostgreSQL while clearing tickets in the database, MinIO objects, and the `store.json` ticket arrays if you still keep the mirror. There is no Express `rms-web` reset script after Phase 9 slice 8.
 
-```powershell
-# Copy script into the writable data mount if the image predates the script, then:
-docker cp docker\web\scripts\reset-ticket-data.js rms-web:/app/data/reset-ticket-data.js
-docker exec rms-web node /app/data/reset-ticket-data.js
-docker restart rms-web
-```
-
-Clears: `riskTickets`, accomplishments, report logs, notifications, deleted-ticket logs, `risk_attachments`, MinIO objects under the uploads bucket.
-
-After reset, the next ticket reference is `RISK-{currentYear}-00001`.
-
-**Broader wipe** (also filters seed users — use with care):
-
-```powershell
-docker exec rms-web node /app/data/reset-production-data.js
-# or with --keep-demo-accounts
-```
-
-Prefer `reset-ticket-data.js` when you only need a fresh ticket sequence.
+Prefer backing up `docker/data/store.json` plus `pg_dump` before wiping tickets.
 
 ## Updates and maintenance
 
 1. Announce maintenance window.
 2. `docker compose pull` for infrastructure images (postgres, redis, nginx).
-3. Rebuild custom images (`api`, `web`, `ai-service`).
+3. Rebuild custom images (`api`, `ai-service`).
 4. `docker compose up -d` with prod compose files.
 5. Run database migrations inside `api` container.
 6. Verify `/health` and smoke-test critical workflows.
@@ -114,7 +96,8 @@ Configure a log driver for production (e.g. `json-file` max-size or centralized 
 - [ ] Dev profiles (`dev`, MinIO, Mailpit) not enabled
 - [ ] Firewall allows only 80/443
 - [ ] Backups automated and tested
-- [ ] Image vulnerability scan in CI (planned)
+- [x] GitHub Actions CI: PHPUnit + ai-service tests (Phase 12 slice 1)
+- [ ] Image vulnerability scan in CI (Phase 12 slice 2)
 
 ## Related
 

@@ -4,9 +4,7 @@
 .env.*.local
 docker/secrets/db_password.txt
 docker/secrets/app_key.txt
-docker/web/data/store.json
-docker/web/uploads/*
-!docker/web/uploads/.gitkeep
+docker/data/store.json
 docker/nginx/certs/
 
 # Dependencies and build output

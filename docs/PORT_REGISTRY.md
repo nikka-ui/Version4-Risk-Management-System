@@ -25,7 +25,6 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 | Service | Container port(s) | Host (development) | Host (production) | Docker network(s) | Published to internet |
 |---------|-------------------|--------------------|-------------------|-------------------|----------------------|
 | `nginx` | 80, 443 | `8080` → 80 | `80`, `443` | `rms_edge`, `rms_app` | Yes (edge only) |
-| `web` | 3000 | — (via nginx) | — | `rms_app` | No |
 | `api` | 8080 (internal nginx) | — | — | `rms_app` | No |
 | `api-php` (php-fpm) | 9000 | — | — | `rms_app` | No (localhost only) |
 | `ai-service` | 5000 | `127.0.0.1:5001` (profile `ai-debug`) | — | `rms_app` | No |
@@ -53,10 +52,12 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 | `/logout` (GET+POST) | `api:8080` | Phase 9 slice 3: Blade session logout |
 | `/auth/bridge` (GET) | `api:8080` | Phase 9 slice 2: Blade login handoff |
 | `/css/`, `/img/` | `api:8080` | Phase 9 slice 1: Blade static CSS and images |
-| `/internal/tickets/` | `api:8080` | Phase 9 slice 5: Laravel ticket dual-write to `store.json` |
-| `/internal/` | `api:8080` | Phase 9 slice 6: Laravel org (+ remaining) dual-write to `store.json` |
+| `/internal/tickets/` | `api:8080` | Optional ticket dual-write to `store.json` (off by default, Phase 10 slice 3) |
+| `/internal/` | `api:8080` | Optional org dual-write to `store.json` (off by default, Phase 10 slice 3) |
 | `/{supervisor,dept,officer,executive,president}/attachments/:id` (GET) | `api:8080` | Phase 8 slice 9: Blade role attachment download |
 | `/{dept,officer,executive,president}/notifications/open/:id` (GET) | `api:8080` | Phase 8 slice 8: Blade mark-read + ticket/home redirect |
+| `/admin/tickets/:ref/reclassify` (POST) | `api:8080` | Phase 11 slice 6: Blade admin re-run AI classify |
+| `/admin/ai-analysis` (GET) | `api:8080` | Phase 11 slice 3: Blade admin AI classify history |
 | `/admin/audit-logs/export` (GET) | `api:8080` | Phase 8 slice 7: Blade admin audit CSV |
 | `/{dept,officer,executive,president}/notifications/read-all` (POST) | `api:8080` | Phase 8 slice 6: Blade mark-all-read for other consoles |
 | `/officer/tickets/:ref/reopen` (POST) | `api:8080` | Phase 7 slice 8: Blade RMO reopen + reassign |
@@ -64,13 +65,13 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 | `/president/tickets/:ref/decision` (POST) | `api:8080` | Phase 7 slice 9: Blade president action-plan + final decision |
 | `/president/tickets/:ref/comment` (POST) | `api:8080` | Phase 7 slice 12: Blade president thread comment |
 | `/executive/tickets/:ref/comment` (POST) | `api:8080` | Phase 7 slice 10: Blade executive thread comment |
-| `/admin`, `/supervisor`, `/dept`, `/officer`, `/president` (GET) | `api:8080` | Phase 6 slice 2: Blade consoles; other POSTs stay on Express |
+| `/admin`, `/supervisor`, `/dept`, `/officer`, `/president` (GET) | `api:8080` | Phase 6 slice 2: Blade consoles |
 | `/executive` (GET) | `api:8080` | Phase 6 slice 4: Blade executive dashboard + oversight + ticket detail; comment POST is Laravel |
 | `/` (other paths) | `api:8080` | Phase 9 slice 4: unmatched fallback (favicon, 404s); `/internal/` is Laravel via blade-roots |
 | `/laravel/` | `api:8080` | Blade UI compatibility rewrite |
 | `/api/` | `api:8080` | Laravel 11; rewrite strips `/api` so app routes are `/v1/...` |
 | `/health` | nginx local | Stack health check |
-| `/ai-health` | `ai-service:5000/health` | AI service health (internal route) |
+| `/ai-health` | `ai-service:5000/health` | Phase 11 slice 5: NLP hybrid classify (`mode: nlp-hybrid`) |
 
 ## Environment-driven URLs
 

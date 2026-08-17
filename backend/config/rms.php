@@ -2,60 +2,58 @@
 
 /*
 |--------------------------------------------------------------------------
-| RMS application settings (Phase 3 — identity + org + ticket read foundation)
+| RMS application settings
 |--------------------------------------------------------------------------
 |
-| Express (docker/web) still owns browser login, sessions, and RBAC.
-| These settings support Laravel user import and future service-to-service
-| calls only. Do not flip feature flags that cut over live auth.
+| Laravel owns browser login, sessions, RBAC, and Postgres SoT.
+| store.json is import-only unless dual-write flags are re-enabled.
 |
 */
 
 return [
 
     /*
-    | Path to Express store.json for `php artisan rms:import-users`.
-    | In Docker, compose mounts docker/web/data/store.json at /import/store.json.
+    | Path to store.json for import (and optional dual-write).
+    | In Docker, compose mounts docker/data/store.json at /import/store.json.
     */
     'store_json_path' => env('STORE_JSON_PATH', storage_path('app/import/store.json')),
 
     /*
-    | Optional shared secret for Express → Laravel service calls later.
+    | Shared secret for /internal/* dual-write routes (optional; off by default).
     | Send as header: X-RMS-Service-Token: <value>
-    | Empty = middleware rejects service-token auth (not used by live login).
     */
     'internal_service_token' => env('RMS_INTERNAL_SERVICE_TOKEN', ''),
 
     /*
-    | Phase 7 slice 1: Express base URL for Laravel → store.json org mirror.
-    | Empty disables the mirror (Postgres still updates).
+    | Phase 10 slice 3: ticket dual-write to store.json is OFF by default.
+    | Set USE_LARAVEL_INTERNAL_TICKETS=true to re-enable the mirror.
     */
-    'express_web_url' => env('EXPRESS_WEB_INTERNAL_URL', 'http://web:3000'),
+    'store_json_ticket_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_TICKETS', false), FILTER_VALIDATE_BOOLEAN),
 
     /*
-    | Phase 9 slice 5: write ticket dual-write to store.json in Laravel (upsert/soft-delete).
-    | Soak sets false so Express /internal/tickets/* remain the write path.
+    | Phase 10 slice 3: org dual-write to store.json is OFF by default.
+    | Set USE_LARAVEL_INTERNAL_ORG=true to re-enable the mirror.
     */
-    'store_json_ticket_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_TICKETS', true), FILTER_VALIDATE_BOOLEAN),
-
-    /*
-    | Phase 9 slice 6: write org dual-write to store.json in Laravel (departments/positions/users/settings).
-    | Soak sets false so Express /internal/org/* remain the write path.
-    */
-    'store_json_org_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_ORG', true), FILTER_VALIDATE_BOOLEAN),
+    'store_json_org_mirror' => filter_var(env('USE_LARAVEL_INTERNAL_ORG', false), FILTER_VALIDATE_BOOLEAN),
 
     /*
     | Phase 6 slice 1: edge nginx `location = /` proxies to Laravel.
-    | When true (compose default), `/` redirects to Blade login or role console.
-    | When false (soak), `/` redirects to Express `/login` or Express role path.
     */
     'edge_root' => filter_var(env('USE_LARAVEL_EDGE_ROOT', true), FILTER_VALIDATE_BOOLEAN),
 
     /*
     | Phase 6 slice 2: unprefixed Blade URLs (/login, /admin, /supervisor, …).
-    | When true (compose default), nginx GET role consoles → Laravel and redirects omit /laravel.
-    | When false (soak), keep /laravel/* rewrite paths.
     */
     'edge_ui' => filter_var(env('USE_LARAVEL_EDGE_UI', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    | Phase 11 slice 1: Flask ai-service base URL for /classify and /summarize.
+    */
+    'ai_service_url' => env('AI_SERVICE_URL', 'http://ai-service:5000'),
+
+    /*
+    | HTTP timeout (seconds) when calling ai-service. On failure, PHP stub is used.
+    */
+    'ai_service_timeout' => (int) env('AI_SERVICE_TIMEOUT', 3),
 
 ];

@@ -58,15 +58,13 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 |------|---------|
 | [`docker/compose.yml`](../docker/compose.yml) | Base services, networks, volumes, secrets |
 | [`docker/compose.override.yml`](../docker/compose.override.yml) | Dev: localhost DB/AI ports, optional profiles |
-| [`docker/compose.soak.yml`](../docker/compose.soak.yml) | Phase 5–6 opt-out: forces Laravel API/auth/Blade UI/edge-root flags off |
 | [`docker/compose.prod.yml`](../docker/compose.prod.yml) | Prod: resource limits, read-only roots, 80/443 |
 
 ## Development vs production
 
 | Mode | Command |
 |------|---------|
-| **Development** | `docker compose -f docker/compose.yml -f docker/compose.override.yml up -d` (dual-write ON by default) |
-| **Bridge opt-out** | Add `-f docker/compose.soak.yml` to force API/auth/login-UI/edge-root flags off |
+| **Development** | `docker compose -f docker/compose.yml -f docker/compose.override.yml up -d` (Laravel Blade + API) |
 | **Blade login** | Phase 5 slice 4: edge `/laravel/` → Laravel; Express `/login` redirects when `USE_LARAVEL_LOGIN_UI=true` |
 | **Blade admin profile** | Phase 5 slice 5: `/admin/profile` → `/laravel/admin/profile` when `USE_LARAVEL_PROFILE_UI=true` |
 | **Blade reporter profile** | Phase 5 slice 6: `/supervisor/profile` → `/laravel/supervisor/profile` when `USE_LARAVEL_REPORTER_PROFILE_UI=true` |
@@ -109,9 +107,10 @@ Expected: JSON `{"status":"ok"}` from `/health` and `/ai-health`.
 | **Blade static assets** | Phase 9 slice 1: `GET /css/*` + `/img/*` → Laravel `public/` |
 | **Blade login bridge** | Phase 9 slice 2: `GET /auth/bridge` → Laravel when `USE_LARAVEL_LOGIN_UI=true` |
 | **Blade logout** | Phase 9 slice 3: `GET`/`POST /logout` → Laravel when `USE_LARAVEL_LOGIN_UI=true` |
-| **Unmatched edge fallback** | Phase 9 slice 4: unmatched `location /` → Laravel (`/favicon.ico`, 404s). Soak keeps Express. |
+| **Unmatched edge fallback** | Phase 9 slice 4: unmatched `location /` → Laravel (`/favicon.ico`, 404s). |
 | **Ticket dual-write internals** | Phase 9 slice 5: `POST /internal/tickets/*` → Laravel `store.json` when `USE_LARAVEL_INTERNAL_TICKETS=true`. |
-| **Org dual-write internals** | Phase 9 slice 6: `POST /internal/org/*` → Laravel `store.json` when `USE_LARAVEL_INTERNAL_ORG=true`. Default nginx `^~ /internal/` → Laravel. Soak keeps Express. |
+| **Org dual-write internals** | Phase 9 slice 6: `POST /internal/org/*` → Laravel `store.json` when `USE_LARAVEL_INTERNAL_ORG=true`. Default nginx `^~ /internal/` → Laravel. |
+| **Retire Express web** | Phase 9 slice 7–8: `web` service and `docker/web` source removed. |
 | **Blade executive dashboard** | Phase 5 slice 28: `GET /executive` → `/laravel/executive` when `USE_LARAVEL_EXECUTIVE_DASHBOARD_UI=true` |
 | **Blade executive pages** | Phase 6 slice 3: `GET /executive/{heatmap,reports,trends,statistics,departments,register}` → Laravel when `USE_LARAVEL_EXECUTIVE_PAGES_UI=true` |
 | **Blade executive ticket detail** | Phase 6 slice 4: `GET /executive/tickets/:ref` → Laravel when `USE_LARAVEL_EXECUTIVE_TICKET_DETAIL_UI=true` |
@@ -185,24 +184,29 @@ curl http://localhost:8080/login
 curl http://localhost:8080/
 ```
 
-Nginx still strips `/api` before proxying: public `/api/v1` → container `/v1`. Product UI/login remain on Express (`/`).
+Nginx still strips `/api` before proxying: public `/api/v1` → container `/v1`. Product UI/login are Laravel Blade (`/login`).
 
-`store.json` is mounted read-only into the API container at `/import/store.json` for import only.
+`store.json` is mounted into the API container at `/import/store.json` for import and dual-write (`docker/data/store.json`).
 
 #### Next.js frontend (optional future UI)
 
 1. Scaffold Next.js 14 in `frontend/`.
-2. Update `docker/web/Dockerfile` for `output: 'standalone'` build **or** introduce a separate UI service.
+2. Introduce a separate UI service (or serve from Laravel).
 3. Set `NEXT_PUBLIC_API_URL` to `/api/v1`.
 
 #### AI service
 
-1. Expand NLP and classification in `docker/ai-service/`.
-2. Expose `/classify` and `/summarize` per V2 API contract.
+1. Optional transformer/GPU model swap in `docker/ai-service/` behind the same `/classify` and `/summarize` contract (Phase 11 slice 5 already ships TF-IDF NLP hybrid over taxonomy-v1; slices 1–4 wire HTTP, persistence, admin history, and Express taxonomy).
+2. Optional stronger NLP / model swap without changing Blade or API contracts.
 
 ### Ticket data reset
 
-See [Operations — Resetting ticket data](OPERATIONS.md#resetting-ticket-data). Scripts live under `docker/web/scripts/`.
+See [Operations — Resetting ticket data](OPERATIONS.md#resetting-ticket-data).
+
+#### CI (Phase 12 slice 1)
+
+- Push/PR runs [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): Laravel PHPUnit + ai-service unit tests.
+- Local: `cd backend && composer test`
 
 ## Troubleshooting
 

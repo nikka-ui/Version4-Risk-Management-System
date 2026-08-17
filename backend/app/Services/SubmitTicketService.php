@@ -4,17 +4,17 @@ namespace App\Services;
 
 use App\Models\RiskTicket;
 use App\Models\User;
-use App\Support\DraftAiAnalysis;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Phase 3 slice 4: submit draft/revision → assigned (Postgres only).
- * Express remains live SoT; notifications/report logs stay Express-owned for now.
+ * Phase 3 slice 4 + Phase 11: submit draft/revision → assigned; AI via AiAnalysisService (persisted).
  */
 class SubmitTicketService
 {
     /** @var list<string> */
     private const REVISION_STATUSES = ['returned', 'ownership_rejected'];
+
+    public function __construct(private readonly AiAnalysisService $aiAnalysis) {}
 
     public function submit(RiskTicket $ticket, User $user): RiskTicket
     {
@@ -39,12 +39,12 @@ class SubmitTicketService
         $wasRevision = in_array($status, self::REVISION_STATUSES, true);
         $five = is_array($ticket->five_w1h) ? $ticket->five_w1h : [];
 
-        $ai = DraftAiAnalysis::analyze([
+        $ai = $this->aiAnalysis->analyze([
             'title' => (string) $ticket->title,
             'location' => (string) $ticket->location,
             'fiveW1H' => $five,
             'evidenceCount' => (int) $ticket->evidence_count,
-        ]);
+        ], (string) $ticket->reference);
 
         $now = now();
         $department = (string) ($ai['responsibleDepartment'] ?? 'Operations');

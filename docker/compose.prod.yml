@@ -17,24 +17,6 @@ services:
       - /var/run
       - /tmp
 
-  web:
-    read_only: true
-    tmpfs:
-      - /tmp
-    volumes:
-      - rms_web_data:/app/data
-    environment:
-      FILE_STORAGE_DRIVER: ${FILE_STORAGE_DRIVER:-s3}
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
-      S3_BUCKET: ${S3_BUCKET:-rms-uploads}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-rmsminio}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-rmsminio-dev-change-me}
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-
   api:
     read_only: true
     tmpfs:

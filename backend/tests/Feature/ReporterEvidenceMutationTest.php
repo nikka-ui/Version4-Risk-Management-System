@@ -19,8 +19,8 @@ class ReporterEvidenceMutationTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_guest_cannot_upload_evidence_or_accomplishment(): void

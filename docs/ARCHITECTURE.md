@@ -9,13 +9,13 @@ The AI Risk Management System (RMS) is an ISO **31000:2018**-aligned risk workfl
 | Layer | **Current (running)** | **Planned / target** |
 |-------|----------------------|----------------------|
 | Edge | nginx reverse proxy | Same |
-| Application UI + workflow | **Express (Node 20)** in `docker/web` — sessions, tickets, RBAC | Next.js frontend (future) |
-| API | Laravel 11 in `backend/` (Phase 1: identity + Sanctum tokens; no browser auth cutover) | Laravel 11 + Sanctum owns REST ([ADR 001](adr/001-backend-laravel.md)) |
-| AI | Flask health/classify service | Expanded NLP pipeline |
-| Persistence | `store.json` (tickets/users/org) + PostgreSQL (`risk_attachments`) + MinIO/S3 | Full relational model in PostgreSQL |
+| Application UI + workflow | **Laravel Blade** in `backend/` | Next.js frontend (future) |
+| API | Laravel 11 in `backend/` (Sanctum tokens + Blade sessions) | Laravel 11 + Sanctum owns REST ([ADR 001](adr/001-backend-laravel.md)) |
+| AI | Flask NLP-hybrid `/classify` + `/summarize` (Phase 11 slice 5) | Optional transformer/GPU model swap |
+| Persistence | PostgreSQL + MinIO/S3 (`store.json` import-only) | Full relational model in PostgreSQL |
 | Cache | Redis (compose) | Queues / cache for Laravel |
 
-Documented “planned” API tables and Next.js UI remain the long-term target. Day-to-day behavior below matches the **Express web app**.
+Documented “planned” API tables and Next.js UI remain the long-term target. Day-to-day behavior below matches the **Laravel Blade** app.
 
 ## Logical architecture (current)
 
@@ -28,8 +28,7 @@ flowchart TB
     Nginx[nginx reverse proxy]
   end
   subgraph app [Application tier]
-    Web[Express RMS web]
-    API[Laravel API Phase 1 identity]
+    API[Laravel Blade + API]
     AI[AI service Flask]
   end
   subgraph data [Data tier]
@@ -39,20 +38,18 @@ flowchart TB
     S3[MinIO / S3]
   end
   Browser --> Nginx
-  Nginx --> Web
   Nginx --> API
   Nginx --> AI
-  Web --> Store
-  Web --> PG
-  Web --> S3
-  Web --> AI
+  API --> Store
   API --> PG
   API --> Redis
+  API --> S3
+  API --> AI
 ```
 
 ## Roles and responsibilities
 
-Canonical registry: [`docker/web/config/roles.js`](../docker/web/config/roles.js). Details and seed logins: [LOGIN.md](LOGIN.md).
+Canonical registry: [`backend/app/Support/Roles.php`](../backend/app/Support/Roles.php). Details and seed logins: [LOGIN.md](LOGIN.md).
 
 | Role | Path | Responsibilities |
 |------|------|------------------|
@@ -87,7 +84,7 @@ Historical swimlane art in [`RMS FLOWCHART.png`](../RMS%20FLOWCHART.png) may sti
 
 ## Ticket state machine
 
-Statuses from [`docker/web/config/tickets.js`](../docker/web/config/tickets.js):
+Statuses:
 
 | Status | Description |
 |--------|-------------|
@@ -110,30 +107,36 @@ Ticket references: `RISK-{YEAR}-{#####}` (e.g. `RISK-2026-00001`), assigned as m
 
 ## API surface (Phase 1 + planned)
 
-Versioned REST under `/api/v1/` (Laravel). **Express still owns browser login and workflow HTTP.**
+Versioned REST under `/api/v1/` (Laravel). Browser login and workflow HTTP are Laravel Blade.
 
-**Phase 1 (live on Laravel, not used by browser UI):**
+**Live on Laravel:**
 
-- `GET /api/v1/health` — API health
-- `POST /api/v1/auth/token` — Sanctum personal access token (username/password)
-- `GET /api/v1/users/me` — current user (Bearer token)
-- `php artisan rms:import-users` — import identity from `store.json` into Postgres
+- Blade UI (`/login`, role consoles, mutations)
+- Sanctum tokens (`POST /api/v1/auth/token`)
+- Admin audit logs in Postgres (`audit_logs`, Phase 10 slice 1)
+- Admin settings in Postgres (`system_settings`, Phase 10 slice 2)
+- `store.json` dual-write off by default (Phase 10 slice 3)
+- Draft/submit AI via `ai-service` `/classify` with PHP stub fallback (Phase 11 slice 1)
+- AI classify history in Postgres (`ai_analysis_results`, Phase 11 slice 2)
+- Admin AI history Blade + ticket-scoped API (Phase 11 slice 3)
+- Express taxonomy classify in `ai-service` (Phase 11 slice 4)
+- TF-IDF NLP hybrid classify + taxonomy PHP stub fallback (Phase 11 slice 5)
+- Admin ticket AI reclassify API + Blade (Phase 11 slice 6)
+- GitHub Actions CI: PHPUnit + ai-service tests (Phase 12 slice 1)
 
 **Planned later:**
 
-- Risk tickets CRUD and workflow transitions
-- Attachments and evidence
-- AI classify/summarize (proxied to `ai-service`)
-- Dashboards and reporting
+- Transformer/GPU model swap behind the same classify/summarize contract
+- Next.js frontend scaffold
 
-Today, default nginx sends Blade pages, mutations, attachments, static assets, `/auth/bridge`, `/logout`, unmatched paths, `/internal/` dual-write, `/laravel/`, and `/api/` to Laravel (Phase 9 slice 6). Express `web` remains for soak and direct `:3000`. See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
+Today, nginx sends all browser traffic to Laravel (Phase 9 slice 8+). Postgres is the live SoT; `store.json` is import-only unless dual-write flags are re-enabled. See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
 
 ## Data model
 
 ### Current
 
-- **`docker/web/data/store.json`** — users, departments, positions, `riskTickets`, accomplishments, notifications, report/audit/credential logs, settings (**source of truth for live app**)
-- **PostgreSQL `users`** — Laravel copy of identity (bcrypt passwords) for Sanctum tokens; optional import from store.json
+- **PostgreSQL** — live identity, tickets, settings, notifications, audit logs (Laravel)
+- **`docker/data/store.json`** — import source / optional mirror (dual-write OFF by default)
 - **PostgreSQL `risk_attachments`** — evidence metadata keyed by `ticket_ref`
 - **MinIO/S3** — file bytes under `{ticketRef}/...`
 
@@ -145,8 +148,8 @@ Today, default nginx sends Blade pages, mutations, attachments, static assets, `
 
 | Layer | Current | Target |
 |-------|---------|--------|
-| Web / workflow | Node 20, Express, server-rendered HTML | React / Next.js UI |
-| API | Laravel 11 Phase 1 (identity + Sanctum) | Laravel 11, Sanctum, PHP 8.3 |
+| Web / workflow | Laravel 11 Blade + PHP 8.3 | React / Next.js UI |
+| API | Laravel 11 + Sanctum | Same |
 | Database | PostgreSQL 16 (attachments + future API) | Same |
 | Cache/queue | Redis 7 | Same |
 | AI | Python 3.11, Flask | Expanded models |
@@ -158,8 +161,7 @@ Today, default nginx sends Blade pages, mutations, attachments, static assets, `
 | Logical component | Container |
 |-------------------|-----------|
 | Reverse proxy | `nginx` (`rms-nginx`) |
-| RMS web app | `web` (`rms-web`) |
-| API | `api` (`rms-api`) |
+| App (Blade + API) | `api` (`rms-api`) |
 | AI | `ai-service` |
 | Database | `postgres` |
 | Cache | `redis` |
@@ -170,7 +172,7 @@ See [Docker Guide](DOCKER.md) and [Port Registry](PORT_REGISTRY.md).
 ## Security architecture
 
 - TLS at nginx (production)
-- **RBAC enforced in Express** (`docker/web/lib/auth.js`) for the live app; Laravel holds a mirror of roles/users for API tokens only (Phase 1)
+- **RBAC enforced in Laravel** (`backend/app/Support/Roles.php` + web middleware)
 - Secrets via Docker secrets files (not in git)
 - Network segmentation: `rms_edge`, `rms_app`, `rms_data`
 - nginx re-resolves Docker DNS for upstreams (avoids stale IP **502** after container recreate)
@@ -179,11 +181,10 @@ Details: [Container Security](CONTAINER_SECURITY.md).
 
 ## Operations hooks
 
-- Ticket-only reset: `docker/web/scripts/reset-ticket-data.js` (preserves users/departments/positions)
-- Broader production wipe: `docker/web/scripts/reset-production-data.js`
+- Ticket data lives in PostgreSQL. `docker/data/store.json` is import-only (optional dual-write). Back up Postgres with MinIO/S3.
 
 See [Operations](OPERATIONS.md).
 
 ## Alternate backend
 
-Node.js 20 + Express remains an alternate for the **`api`** container in [ADR 001](adr/001-backend-laravel.md). The **web** container already runs Express for the current product UI and workflow.
+Node.js 20 + Express remains an alternate for the **`api`** container in [ADR 001](adr/001-backend-laravel.md).

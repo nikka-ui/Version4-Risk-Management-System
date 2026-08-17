@@ -8,8 +8,6 @@ backend/storage/logs/*
 backend/storage/framework/cache/data/*
 backend/storage/framework/sessions/*
 backend/storage/framework/views/*
-docker/web/node_modules
-docker/web/data/store.json
 docker/secrets/*.txt
 *.md
 !backend/README.md

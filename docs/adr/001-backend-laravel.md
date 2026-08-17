@@ -6,7 +6,7 @@ Accepted (target for `api` container)
 
 ## Reality check
 
-The **current product UI and ticket workflow** run in **`docker/web`** (Node 20 + Express, session auth, `store.json`). This ADR still defines the default for the separate **`api`** service when REST ownership moves off the Express app.
+The **current product UI and ticket workflow** run in **Laravel** (`backend/` → `api` container). This ADR defines Laravel 11 as the default `api` service.
 
 ## Context
 

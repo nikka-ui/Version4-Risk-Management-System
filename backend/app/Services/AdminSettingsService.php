@@ -6,8 +6,9 @@ use App\Models\SystemSetting;
 use App\Support\SystemSettings;
 
 /**
- * Phase 5 slice 21 + Phase 7 slice 4: System Administrator settings (Blade GET + POST).
- * Postgres is the write path; Express store.json is mirrored after mutations.
+ * Phase 5 slice 21 + Phase 7 slice 4 + Phase 10 slice 2:
+ * System Administrator settings (Blade GET + POST).
+ * Postgres is the sole live read SoT; store.json dual-write is optional (off by default).
  */
 class AdminSettingsService
 {
@@ -21,7 +22,7 @@ class AdminSettingsService
             return SystemSettings::merge($row->payload);
         }
 
-        return $this->fromStoreJson();
+        return SystemSettings::defaults();
     }
 
     /**
@@ -79,19 +80,6 @@ class AdminSettingsService
         }
 
         return $merged;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function fromStoreJson(): array
-    {
-        $storePath = (string) config('rms.store_json_path');
-        $raw = @file_get_contents($storePath);
-        $data = $raw ? json_decode($raw, true) : [];
-        $stored = is_array($data['systemSettings'] ?? null) ? $data['systemSettings'] : [];
-
-        return SystemSettings::merge($stored);
     }
 
     /**

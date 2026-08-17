@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminAiAnalysisController;
 use App\Http\Controllers\AdminAuditLogsController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminDepartmentController;
@@ -40,6 +41,13 @@ use Illuminate\Support\Facades\Route;
 | JSON identity remains on /v1 and /v1/health. POSTs stay on Express.
 */
 Route::get('/', HomeController::class)->name('home');
+
+Route::get('/favicon.ico', function () {
+    $path = public_path('favicon.ico');
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, ['Content-Type' => 'image/x-icon']);
+});
 
 /*
 | Phase 6 slice 6: Employee stub /dashboard; other roles redirect to their console.
@@ -124,9 +132,14 @@ Route::middleware(['auth', 'rms.web_admin'])->group(function () {
     Route::get('/admin/tickets/{ref}', [AdminTicketDetailController::class, 'index'])
         ->where('ref', 'RISK-[A-Za-z0-9\\-]+')
         ->name('admin.tickets.detail');
+    Route::post('/admin/tickets/{ref}/reclassify', [AdminTicketDetailController::class, 'reclassify'])
+        ->where('ref', 'RISK-[A-Za-z0-9\\-]+')
+        ->name('admin.tickets.reclassify');
     Route::post('/admin/tickets/{ref}/delete', [AdminTicketController::class, 'destroy'])
         ->where('ref', 'RISK-[A-Za-z0-9\\-]+')
         ->name('admin.tickets.destroy');
+    Route::get('/admin/ai-analysis', [AdminAiAnalysisController::class, 'index'])
+        ->name('admin.ai.analysis');
     Route::get('/admin/audit-logs', [AdminAuditLogsController::class, 'index'])
         ->name('admin.audit.logs');
     Route::get('/admin/audit-logs/export', [AdminAuditLogsController::class, 'export'])

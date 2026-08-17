@@ -24,6 +24,7 @@
       ['id' => 'positions', 'href' => '/admin/positions', 'label' => 'Position Management'],
       ['id' => 'tickets', 'href' => '/admin/tickets', 'label' => 'Ticket Management'],
       ['id' => 'audit', 'href' => '/admin/audit-logs', 'label' => 'Audit Logs'],
+      ['id' => 'ai', 'href' => '/admin/ai-analysis', 'label' => 'AI Analysis'],
       ['id' => 'settings', 'href' => '/admin/settings', 'label' => 'System Settings'],
       ['id' => 'profile', 'href' => '/admin/profile', 'label' => 'Profile'],
     ];

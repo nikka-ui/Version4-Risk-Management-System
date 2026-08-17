@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\RiskTicket;
 use App\Models\User;
@@ -52,13 +53,13 @@ class AdminDashboardService
      */
     private function recentAuditLogs(): array
     {
-        $storePath = (string) config('rms.store_json_path');
-        $raw = @file_get_contents($storePath);
-        $data = $raw ? json_decode($raw, true) : [];
-        $logs = is_array($data['auditLogs'] ?? null) ? (array) $data['auditLogs'] : [];
-
-        usort($logs, fn (array $a, array $b) => strcmp((string) ($b['at'] ?? ''), (string) ($a['at'] ?? '')));
-        return array_values(array_slice($logs, 0, 8));
+        return AuditLog::query()
+            ->orderByDesc('occurred_at')
+            ->limit(8)
+            ->get()
+            ->map(fn (AuditLog $row) => $row->toStoreArray())
+            ->values()
+            ->all();
     }
 
     /**

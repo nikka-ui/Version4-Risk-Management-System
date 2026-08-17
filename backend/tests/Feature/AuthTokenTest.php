@@ -16,8 +16,8 @@ class AuthTokenTest extends TestCase
         $this->getJson('/v1/health')
             ->assertOk()
             ->assertJsonPath('status', 'ok')
-            ->assertJsonPath('phase', 9)
-            ->assertJsonPath('slice', 6);
+            ->assertJsonPath('phase', 12)
+            ->assertJsonPath('slice', 1);
     }
 
     public function test_verify_credentials_without_token(): void
@@ -101,6 +101,7 @@ class AuthTokenTest extends TestCase
             ->assertJsonPath('user.username', 'reporter')
             ->assertJsonPath('user.role', Roles::SUPERVISOR);
 
+        $this->resetAuthState();
         $this->getJson('/v1/users/me')->assertUnauthorized();
     }
 
