@@ -188,25 +188,29 @@ Nginx still strips `/api` before proxying: public `/api/v1` → container `/v1`.
 
 `store.json` is mounted into the API container at `/import/store.json` for import and dual-write (`docker/data/store.json`).
 
-#### Next.js frontend (optional future UI)
-
-1. Scaffold Next.js 14 in `frontend/`.
-2. Introduce a separate UI service (or serve from Laravel).
-3. Set `NEXT_PUBLIC_API_URL` to `/api/v1`.
-
 #### AI service
 
-1. Optional transformer/GPU model swap in `docker/ai-service/` behind the same `/classify` and `/summarize` contract (Phase 11 slice 5 already ships TF-IDF NLP hybrid over taxonomy-v1; slices 1–4 wire HTTP, persistence, admin history, and Express taxonomy).
-2. Optional stronger NLP / model swap without changing Blade or API contracts.
+1. Phase 13 slice 1 ships a CPU transformer encoder (`transformer-hybrid-v1`) on top of taxonomy + TF-IDF, same `/classify` and `/summarize` JSON.
+2. Optional GPU/ONNX model swap without changing Blade or API contracts.
+
+#### Next.js frontend (Phase 14–15 — optional read UI)
+
+1. Next.js 14 scaffold in `frontend/` (App Router, TypeScript, standalone Docker image).
+2. Compose profile `frontend` publishes `127.0.0.1:3000` — Blade on `:8080` remains the live workflow edge.
+3. nginx proxies `http://localhost:8080/app/` → frontend (`basePath: /app`).
+4. Sanctum login, dashboard, tickets, reporter create/submit, notifications, departments at `/app/*`.
+5. Smoke: `php artisan rms:smoke-phase15-migration` (alias: `rms:smoke-phase14-frontend`).
+6. CI runs `npm run build` in `frontend/`.
 
 ### Ticket data reset
 
 See [Operations — Resetting ticket data](OPERATIONS.md#resetting-ticket-data).
 
-#### CI (Phase 12 slice 1)
+#### CI (Phase 12 slice 2 + Phase 15 slice 1)
 
-- Push/PR runs [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): Laravel PHPUnit + ai-service unit tests.
-- Local: `cd backend && composer test`
+- Push/PR runs [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): Laravel PHPUnit, ai-service unit tests, Next.js `npm run build`, and Trivy scans of `rms-api`, `rms-ai-service`, `rms-frontend`, and `nginx:1.27-alpine`.
+- Trivy **fails the job** on fixable **CRITICAL** CVEs; CRITICAL/HIGH are logged and uploaded as SARIF.
+- Local tests: `cd backend && composer test`
 
 ## Troubleshooting
 

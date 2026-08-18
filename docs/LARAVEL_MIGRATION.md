@@ -1,6 +1,6 @@
 # Laravel Migration Notes
 
-Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is complete for the running stack. Blade owns the edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` through admin reclassify. Phase 12 adds CI.
+Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is **complete**. Blade owns the workflow edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` through admin reclassify. Phase 12 added CI. Phase 13 adds a CPU transformer classify engine. Phase 14 added optional Next.js UI at `/app`. Phase 15 closes the migration track.
 
 ## Phase 0–5 slice 17 (complete)
 
@@ -351,15 +351,235 @@ docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php
 docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice5-president-queues
 ```
 
-Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is complete for the running stack. Blade owns the edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` classify/summarize through admin reclassify (slice 6). Phase 12 adds CI verification.
+Incremental cutover from Express (`docker/web`) to Laravel (`backend/`) is **complete**. Blade owns the workflow edge. Express source and the `web` service are removed (Phase 9 slice 8). Phase 10 made Postgres the sole live SoT (dual-write off). Phase 11 wired `ai-service` classify/summarize through admin reclassify (slice 6). Phase 12 added CI verification (PHPUnit, ai-service tests, Trivy image scan). Phase 13 adds a CPU transformer hybrid behind the same `/classify` contract. Phase 14 added optional Next.js UI at `/app`. Phase 15 closes the migration track.
 
-## Phase 12 slice 1 (GitHub Actions CI — current)
+## Phase 16 slice 3 (Next.js admin users/settings/audit — current)
+
+| Piece | Notes |
+|-------|--------|
+| `/app/users` | Admin user create/edit/activate/deactivate/reset/delete |
+| `/app/settings` | System settings GET/PATCH + landing/AI reset |
+| `/app/audit-logs` | Audit list + CSV export |
+| APIs | `/api/v1/users*`, `/api/v1/settings*`, `/api/v1/audit-logs*` |
+| Health | API + frontend → `phase: 16`, `slice: 3` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-users
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase15-migration
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:16`,`slice:3`. Sign in at `/app/login` as `admin` / `a3c1993` for users, settings, and audit logs.
+
+## Phase 16 slice 2 (Next.js workflow mutations — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Ticket detail | Dept accept/reject/plan/return/reassign/close/personnel; president decision; officer reopen; comments |
+| Reporter revision | `PATCH /api/v1/tickets/:ref` for `draft`, `returned`, and `ownership_rejected` |
+| Admin org | `/app/departments` and `/app/positions` create/edit/deactivate |
+| Blade | Parallel console |
+| Health | API + frontend → `phase: 16`, `slice: 2` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-users
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase15-migration
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:16`,`slice:2`. Sign in at `/app/login` as `dephead` / `a3c1993` to accept an assigned ticket, or as `admin` to create a department.
+
+## Phase 16 slice 1 (Next.js reporter create/submit — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `/app/tickets/new` | Reporter form → `POST /api/v1/tickets` + optional evidence upload |
+| Submit | `POST /api/v1/tickets/:ref/submit` (draft → assigned) |
+| Draft edit/delete | Ticket detail for owned drafts |
+| Blade | Still owns accept/reject/close/uploads for later workflow |
+| Health | API + frontend → `phase: 16`, `slice: 1` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-users
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase15-migration
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: health `phase:16`,`slice:1`. Sign in at `/app/login` as `reporter` / `a3c1993` and create a report at `/app/tickets/new`.
+
+## Phase 15 slice 1 (Migration closure — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Status | **Express → Laravel migration complete** |
+| Workflow UI | Blade on `:8080` (accept/reject/close/uploads unchanged) |
+| Next.js UI | `/app` read views: login, dashboard, tickets, notifications, departments |
+| Auth | Sanctum bearer tokens; Blade session login separate at `/login` |
+| `store.json` | Import-only; dual-write flags default **off** |
+| CI | Trivy scans `rms-frontend` image |
+| Health | API + frontend → `phase: 15`, `slice: 1`, `migration: complete` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:import-users
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase15-migration
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/app/tickets
+```
+
+Expected: health reports `migration: complete`. Sign in at `/app/login` as `admin` / `a3c1993`. Blade workflow remains at `/login`.
+
+## Phase 14 slice 3 (Sanctum bearer login — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `/app/login` | Next.js form → `POST /api/v1/auth/token` (Sanctum bearer) |
+| `/app/dashboard` | Protected page → `GET /api/v1/users/me` |
+| Token storage | `sessionStorage` in browser (not Blade cookie session) |
+| Health | API + frontend JSON → `phase: 14`, `slice: 3` |
+| Smoke | `rms:smoke-phase14-frontend` checks health, Sanctum token + `/users/me`, nginx `/app` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase14-frontend
+curl.exe -s http://localhost:8080/app/health
+```
+
+Expected: smoke reports Sanctum bearer auth OK. Open http://localhost:8080/app/login and sign in as `admin` / `a3c1993`. Blade login unchanged at `/login`.
+
+## Phase 14 slices 4–8 (Next.js read UI — complete)
+
+| Slice | Feature |
+|-------|---------|
+| 4 | App shell + role-aware dashboard |
+| 5 | `/app/tickets` list with search/filters |
+| 6 | `/app/tickets/:ref` detail (5W1H) |
+| 7 | `/app/notifications` + mark-all-read |
+| 8 | `/app/departments` registry view |
+
+## Phase 14 slice 2 (nginx /app proxy — complete)
+
+| Piece | Notes |
+|-------|--------|
+| nginx | `GET /app/` → `frontend:3000` (requires `--profile frontend`) |
+| Next.js | `basePath: /app`; browser uses same-origin `/api/v1` via nginx |
+| Home page | Client fetch to `/api/v1/health` proves edge + API wiring |
+| Health | API + frontend JSON → `phase: 14`, `slice: 2` |
+| Smoke | `rms:smoke-phase14-frontend` checks API, frontend, and nginx `/app/health` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase14-frontend
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/app/health
+curl.exe -s http://localhost:3000/app/health
+```
+
+Expected: API health `phase:14`,`slice:2`. `/app/health` via nginx and direct frontend both report `framework: nextjs`. Blade login still at `http://localhost:8080/login`.
+
+## Phase 14 slice 1 (Next.js frontend scaffold — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `frontend/` | Next.js 14 App Router + TypeScript; standalone Docker build |
+| Compose profile | `frontend` service on `127.0.0.1:3000` — **does not replace Blade on :8080** |
+| `NEXT_PUBLIC_API_URL` | Defaults to `/api/v1` (browser calls Laravel via nginx when proxied later) |
+| Health | `GET /health` → `phase: 14`, `slice: 1` |
+| API health | `phase: 14`, `slice: 1` |
+| CI | `npm run build` in `.github/workflows/ci.yml` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml --profile frontend up --build -d frontend
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase14-frontend
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:3000/health
+```
+
+Expected: API health `phase:14`,`slice:1`. Frontend `/health` reports `framework: nextjs`, `phase:14`,`slice:1`. Blade login still at `http://localhost:8080/login`.
+
+## Phase 13 slice 1 (CPU transformer hybrid classify — complete)
+
+| Piece | Notes |
+|-------|--------|
+| Flask `POST /classify` | Taxonomy + TF-IDF NLP hybrid, then CPU transformer encoder (`transformer-hybrid-v1`) |
+| Flask `POST /summarize` | Same engine, summary-only payload |
+| Device | CPU only (no GPU required); `device: cpu` on health and classify |
+| `transformerScores` | Top category/department cosine scores from the transformer encoder |
+| Contract | Same JSON as Phase 11; Blade and Laravel APIs unchanged |
+| PHP stub | Still `DraftAiTaxonomy` when ai-service is down |
+| Health | `phase: 13`, `slice: 1` |
+
+### Verify
+
+```powershell
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml up -d --force-recreate nginx
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec ai-service python test_classify.py
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase13-ai
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-slice11-ai
+curl.exe -s http://localhost:8080/api/v1/health
+curl.exe -s http://localhost:8080/ai-health
+```
+
+Expected: health `phase:13`,`slice:1`. `/ai-health` reports `mode: transformer-hybrid`, `device: cpu`. Smoke still classifies a network outage as operational → Information Technology.
+
+## Phase 12 slice 2 (Trivy image scan in CI — complete)
+
+| Piece | Notes |
+|-------|--------|
+| `.github/workflows/ci.yml` `trivy` job | Builds `rms-api` + `rms-ai-service`; pulls `nginx:1.27-alpine`; scans with Trivy |
+| Gate | Fails the job on **fixable CRITICAL** CVEs (`ignore-unfixed: true`) |
+| Report | Table log of CRITICAL/HIGH plus SARIF upload to GitHub code scanning |
+| Health | `phase: 12`, `slice: 2` |
+
+### Verify
+
+```powershell
+cd backend; composer install; composer test
+docker compose -f docker/compose.yml -f docker/compose.override.yml up --build -d nginx api ai-service
+docker compose -f docker/compose.yml -f docker/compose.override.yml exec api php artisan rms:smoke-phase12-ci
+curl.exe -s http://localhost:8080/api/v1/health
+```
+
+Expected: local `composer test` passes. Stack health `phase:12`,`slice:2`. Smoke gate OK. Push/PR also runs Trivy on api, ai-service, and nginx images.
+
+Optional local scan (requires Docker):
+
+```powershell
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.64.1 image --severity CRITICAL --ignore-unfixed rms-api:latest
+```
+
+## Phase 12 slice 1 (GitHub Actions CI — complete)
 
 | Piece | Notes |
 |-------|--------|
 | `.github/workflows/ci.yml` | PHPUnit on push/PR; ai-service `test_classify.py` job |
 | `composer test` | Runs `php artisan test` in `backend/` |
-| `rms:smoke-phase12-ci` | Docker stack health gate (`phase: 12`, `slice: 1`); uses `RMS_SMOKE_API_URL` default `http://127.0.0.1:8080/v1/health` inside the api container |
+| `rms:smoke-phase12-ci` | Docker stack health gate; uses `RMS_SMOKE_API_URL` default `http://127.0.0.1:8080/v1/health` inside the api container |
 | Health | `phase: 12`, `slice: 1` |
 
 ### Verify
@@ -1344,10 +1564,12 @@ Expected: guest POST → Laravel `302` to `/login` (XSRF cookie, no `X-Powered-B
 docker compose -f docker/compose.yml -f docker/compose.override.yml -f docker/compose.soak.yml up -d nginx api web
 ```
 
-## Remaining
+## Migration complete (Express → Laravel)
 
-1. Drop store.json dual-write (or migrate settings fallback) once remaining live reads are Postgres
-2. Clean obsolete `USE_LARAVEL_*` env flags / docs leftovers
+The Express → Laravel cutover is finished. Next.js at `/app` now covers reporter create/submit, role workflow mutations, and admin users/settings/audit. Blade remains a parallel session console. Remaining optional work:
+
+1. GPU/ONNX model swap for ai-service
+2. Dual-write `USE_LARAVEL_INTERNAL_*` flags stay off unless you re-enable `store.json` mirroring
 
 ## Related
 

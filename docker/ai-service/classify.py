@@ -409,6 +409,7 @@ def suggested_mitigation(category: str, risk_level: dict[str, str], w: dict[str,
 
 def classify_report(payload: dict[str, Any]) -> dict[str, Any]:
     from nlp import apply_nlp_hybrid
+    from transformer import apply_transformer_hybrid
 
     title = _norm(payload.get("title"))
     location = _norm(payload.get("location"))
@@ -476,6 +477,7 @@ def classify_report(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
     refined = apply_nlp_hybrid(base_result, incident_text, map_laravel_department)
+    refined = apply_transformer_hybrid(refined, incident_text, map_laravel_department)
     refined["summary"] = (
         f'AI analysis: "{title or "Untitled"}" — {what} ({cause}). '
         f"Classified as {category_label(refined['riskCategory'])} with {risk_level['label']} severity "

@@ -49,7 +49,7 @@ Connection URL (Laravel): `redis://redis:6379`
 
 | Variable | Default | Used by |
 |----------|---------|---------|
-| `AI_SERVICE_URL` | `.env` / compose | Laravel → Flask base URL (default `http://ai-service:5000`); classify uses NLP hybrid over taxonomy (Phase 11 slice 5) |
+| `AI_SERVICE_URL` | `.env` / compose | Laravel → Flask base URL (default `http://ai-service:5000`); classify uses CPU transformer hybrid over taxonomy + TF-IDF (Phase 13 slice 1) |
 | `AI_SERVICE_TIMEOUT` | `.env` / compose | Seconds for classify/summarize HTTP (default `3`); on failure Laravel uses PHP stub |
 
 Internal only — do not point browsers to this URL in production.

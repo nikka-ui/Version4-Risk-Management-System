@@ -21,6 +21,7 @@ use App\Http\Controllers\InternalTicketMirrorController;
 use App\Http\Controllers\OfficerDashboardController;
 use App\Http\Controllers\OfficerQueueController;
 use App\Http\Controllers\OfficerTicketDetailController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PresidentDashboardController;
 use App\Http\Controllers\PresidentQueueController;
@@ -59,6 +60,10 @@ Route::middleware(['auth'])->get('/dashboard', [DashboardController::class, 'ind
 */
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login', [LoginController::class, 'store']);
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showRequest'])->name('password.request');
+Route::post('/forgot-password', [ForgotPasswordController::class, 'send'])->name('password.email');
+Route::get('/forgot-password/reset', [ForgotPasswordController::class, 'showReset'])->name('password.reset');
+Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->name('password.update');
 Route::get('/auth/bridge', [LoginController::class, 'bridge'])->name('auth.bridge');
 Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->name('logout'); // Phase 9 slice 3: edge /logout
 

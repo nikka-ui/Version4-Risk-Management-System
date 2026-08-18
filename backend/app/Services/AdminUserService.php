@@ -48,6 +48,7 @@ class AdminUserService
         return [
             'users' => $users->map(fn (User $u) => $u->toIdentityArray())->values()->all(),
             'departments' => Department::query()
+                ->where('active', true)
                 ->orderBy('name')
                 ->get(['name', 'code'])
                 ->map(fn (Department $d) => ['name' => $d->name, 'code' => (string) $d->code])

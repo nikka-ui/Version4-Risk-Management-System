@@ -64,6 +64,10 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: file
+      SESSION_COOKIE: rms_session
+      SESSION_SECURE_COOKIE: "false"
+      SESSION_SAME_SITE: lax
+      SESSION_DOMAIN: ""
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080,127.0.0.1:8080}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:5000}
       # Path for import (+ optional dual-write if flags re-enabled).

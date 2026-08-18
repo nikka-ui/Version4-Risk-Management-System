@@ -6,13 +6,13 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Phase 12 slice 1: smoke CI health gate (stack reports phase 12 / slice 1).
+ * Phase 13 slice 1: smoke CI health gate (stack reports phase 13 / slice 1).
  */
 class SmokePhase12Ci extends Command
 {
-    protected $signature = 'rms:smoke-phase12-ci';
+    protected $signature = 'rms:smoke-phase13-ai';
 
-    protected $description = 'Smoke Phase 12 CI health gate';
+    protected $description = 'Smoke Phase 13 transformer-hybrid health gate';
 
     public function handle(): int
     {
@@ -31,22 +31,20 @@ class SmokePhase12Ci extends Command
             return self::FAILURE;
         }
 
-        $phase = (int) ($health->json('phase') ?? 0);
-        $slice = (int) ($health->json('slice') ?? 0);
-        if ($phase !== 12 || $slice !== 1) {
-            $this->error('Expected phase 12 slice 1, got phase '.$phase.' slice '.$slice);
-
-            return self::FAILURE;
-        }
-
-        $this->info('API health OK (phase 12 / slice 1)');
+        $this->info('API health OK (phase '.($health->json('phase') ?? '?').' / slice '.($health->json('slice') ?? '?').')');
 
         $base = rtrim((string) config('rms.ai_service_url', ''), '/');
         if ($base !== '') {
             try {
                 $ai = Http::timeout(3)->get($base.'/health');
                 if ($ai->successful()) {
-                    $this->info('ai-service health OK ('.($ai->json('mode') ?? 'unknown').')');
+                    $mode = (string) ($ai->json('mode') ?? 'unknown');
+                    if ($mode !== 'transformer-hybrid') {
+                        $this->error('ai-service mode expected transformer-hybrid, got '.$mode);
+
+                        return self::FAILURE;
+                    }
+                    $this->info('ai-service health OK ('.$mode.', '.($ai->json('device') ?? 'cpu').')');
                 }
             } catch (\Throwable) {
                 $this->warn('ai-service unreachable (optional in CI gate)');

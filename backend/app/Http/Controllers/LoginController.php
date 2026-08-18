@@ -31,9 +31,15 @@ class LoginController extends Controller
         ];
         $errorKey = (string) $request->query('error', '');
 
+        $success = $request->session()->get('status');
+        if (! $success && (string) $request->query('flash') === 'password_reset') {
+            $success = 'Password reset successfully. You can sign in with your new password.';
+        }
+
         return view('auth.login', [
             'error' => $request->session()->get('error')
                 ?: ($queryErrors[$errorKey] ?? null),
+            'success' => $success,
             'next' => $request->query('next', ''),
             'username' => old('username', ''),
         ]);

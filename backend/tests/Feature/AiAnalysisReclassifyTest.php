@@ -14,12 +14,12 @@ class AiAnalysisReclassifyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_health_reports_phase_twelve_slice_one(): void
+    public function test_health_reports_phase_thirteen_slice_one(): void
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 12)
-            ->assertJsonPath('slice', 1);
+            ->assertJsonPath('phase', 16)
+            ->assertJsonPath('slice', 3);
     }
 
     public function test_admin_can_reclassify_ticket_via_api(): void
@@ -42,8 +42,8 @@ class AiAnalysisReclassifyTest extends TestCase
                 'routingFieldsUsed' => ['title', 'what'],
                 'processedAt' => now()->toIso8601String(),
                 'source' => 'ai-service',
-                'engine' => 'nlp-hybrid-v1',
-                'mode' => 'nlp-hybrid',
+                'engine' => 'transformer-hybrid-v1',
+                'mode' => 'transformer-hybrid',
             ], 200),
         ]);
 

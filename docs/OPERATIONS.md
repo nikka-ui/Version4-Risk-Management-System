@@ -97,7 +97,7 @@ Configure a log driver for production (e.g. `json-file` max-size or centralized 
 - [ ] Firewall allows only 80/443
 - [ ] Backups automated and tested
 - [x] GitHub Actions CI: PHPUnit + ai-service tests (Phase 12 slice 1)
-- [ ] Image vulnerability scan in CI (Phase 12 slice 2)
+- [x] Image vulnerability scan in CI (Trivy — Phase 12 slice 2)
 
 ## Related
 

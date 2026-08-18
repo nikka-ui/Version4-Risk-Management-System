@@ -103,11 +103,7 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        if ($ticket->status !== 'draft') {
-            return response()->json(['message' => 'Only draft tickets can be edited from this API.'], 422);
-        }
-
-        $ticket = $this->drafts->updateDraft($ticket, $user, $request->all());
+        $ticket = $this->drafts->updateEditable($ticket, $user, $request->all());
 
         return response()->json(['ticket' => $ticket->toExpressArray()]);
     }

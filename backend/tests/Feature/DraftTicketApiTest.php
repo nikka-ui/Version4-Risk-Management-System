@@ -41,8 +41,8 @@ class DraftTicketApiTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 12)
-            ->assertJsonPath('slice', 1);
+            ->assertJsonPath('phase', 16)
+            ->assertJsonPath('slice', 3);
     }
 
     public function test_create_update_delete_draft(): void
@@ -148,5 +148,37 @@ class DraftTicketApiTest extends TestCase
         $this->withToken($token)
             ->patchJson('/v1/tickets/RISK-2026-00998', $this->draftPayload())
             ->assertStatus(422);
+    }
+
+    public function test_reporter_can_edit_returned_ticket(): void
+    {
+        User::factory()->create([
+            'username' => 'reporter',
+            'password' => 'a3c2026',
+            'role' => Roles::SUPERVISOR,
+        ]);
+
+        RiskTicket::query()->create([
+            'external_id' => 'tkt-returned',
+            'reference' => 'RISK-2026-00997',
+            'title' => 'Returned network risk',
+            'status' => 'ownership_rejected',
+            'submitted_by' => 'reporter',
+            'evidence_count' => 1,
+            'deleted' => false,
+            'five_w1h' => [
+                'what' => 'a', 'why' => 'b', 'where' => 'c', 'when' => 'd', 'who' => 'e', 'how' => 'f',
+            ],
+        ]);
+
+        $token = $this->tokenFor('reporter', 'a3c2026');
+
+        $this->withToken($token)
+            ->patchJson('/v1/tickets/RISK-2026-00997', $this->draftPayload([
+                'title' => 'Revised network risk',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('ticket.title', 'Revised network risk')
+            ->assertJsonPath('ticket.status', 'ownership_rejected');
     }
 }

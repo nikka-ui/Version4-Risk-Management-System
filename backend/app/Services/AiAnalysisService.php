@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * Phase 11 slice 1–6: call ai-service /classify; fall back to taxonomy PHP stub; persist each run.
+ * Phase 11–13: call ai-service /classify; fall back to taxonomy PHP stub; persist each run.
  */
 class AiAnalysisService
 {

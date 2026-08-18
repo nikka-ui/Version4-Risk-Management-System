@@ -1,4 +1,4 @@
-"""RMS AI service — Phase 11 slice 5: taxonomy + TF-IDF NLP hybrid classify."""
+"""RMS AI service — Phase 13 slice 1: CPU transformer hybrid classify."""
 from __future__ import annotations
 
 import os
@@ -6,6 +6,7 @@ import os
 from flask import Flask, jsonify, request
 
 from classify import classify_report, summarize_report
+from transformer import ENGINE, MODE
 
 app = Flask(__name__)
 
@@ -15,10 +16,11 @@ def health():
     return jsonify({
         "status": "ok",
         "service": "ai-service",
-        "mode": "nlp-hybrid",
-        "engine": "nlp-hybrid-v1",
-        "phase": 11,
-        "slice": 5,
+        "mode": MODE,
+        "engine": ENGINE,
+        "device": "cpu",
+        "phase": 13,
+        "slice": 1,
     })
 
 

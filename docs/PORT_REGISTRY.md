@@ -32,6 +32,7 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 | `redis` | 6379 | — | — | `rms_data` | No |
 | `minio` | 9000 (API), 9001 (console) | `127.0.0.1:9000`, `127.0.0.1:9001` (profile `dev`) | — | `rms_data` | No |
 | `mailpit` | 1025 (SMTP), 8025 (UI) | `127.0.0.1:8025` (profile `dev`) | — | `rms_app` | No |
+| `frontend` | 3000 | `127.0.0.1:3000` (profile `frontend`) | — | `rms_app` | No (optional dev UI) |
 
 ## URL routing (via nginx)
 
@@ -70,8 +71,17 @@ Authoritative port assignments for the AI Risk Management System (RMS) Docker st
 | `/` (other paths) | `api:8080` | Phase 9 slice 4: unmatched fallback (favicon, 404s); `/internal/` is Laravel via blade-roots |
 | `/laravel/` | `api:8080` | Blade UI compatibility rewrite |
 | `/api/` | `api:8080` | Laravel 11; rewrite strips `/api` so app routes are `/v1/...` |
+| `/app/` | `frontend:3000` | Phase 14 slice 2: Next.js UI (compose profile `frontend`) |
+| `/app/health` | `frontend:3000` | Phase 14 slice 2+: Next.js health JSON |
+| `/app/login` | `frontend:3000` | Phase 14 slice 3: Next.js Sanctum sign-in |
+| `/app/dashboard` | `frontend:3000` | Phase 14 slice 3+: authenticated dashboard |
+| `/app/tickets` | `frontend:3000` | Phase 14 slice 5: ticket list |
+| `/app/tickets/new` | `frontend:3000` | Phase 16 slice 1: reporter create/submit |
+| `/app/tickets/:ref` | `frontend:3000` | Phase 14 slice 6: ticket detail |
+| `/app/notifications` | `frontend:3000` | Phase 14 slice 7: notifications |
+| `/app/departments` | `frontend:3000` | Phase 14 slice 8: department registry |
 | `/health` | nginx local | Stack health check |
-| `/ai-health` | `ai-service:5000/health` | Phase 11 slice 5: NLP hybrid classify (`mode: nlp-hybrid`) |
+| `/ai-health` | `ai-service:5000/health` | Phase 13 slice 1: transformer-hybrid classify (`mode: transformer-hybrid`, `device: cpu`) |
 
 ## Environment-driven URLs
 
@@ -80,6 +90,10 @@ Containers communicate using **service names**, not `localhost`:
 | Variable | Default (compose) | Consumer |
 |----------|-------------------|----------|
 | `APP_URL` | `http://localhost:8080` | API, frontend (browser-facing) |
+| `FRONTEND_PORT` | `3000` | Compose profile `frontend` host bind |
+| `NEXT_PUBLIC_API_URL` | `/api/v1` | Next.js browser API base |
+| `NEXT_PUBLIC_BASE_PATH` | `/app` | Next.js base path behind nginx |
+| `NEXT_PUBLIC_BLADE_URL` | `http://localhost:8080/login` | Next.js scaffold link to Blade login |
 | `DB_HOST` | `postgres` | API, AI service |
 | `DB_PORT` | `5432` | API, AI service |
 | `REDIS_HOST` | `redis` | API |

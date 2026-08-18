@@ -263,6 +263,67 @@ body {
   transform: translateY(1px);
 }
 
+.login-forgot {
+  margin-top: 0.9rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.login-forgot a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-forgot a:hover {
+  text-decoration: underline;
+}
+
+.login-otp-input {
+  letter-spacing: 0.35em;
+  text-align: center;
+  font-weight: 700;
+}
+
+.login-resend {
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.login-resend__btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.login-resend__btn:hover {
+  text-decoration: underline;
+}
+
+.alert--success {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: #bbf7d0;
+}
+
+/* Admin flash messages (success vs error). */
+.alert--ok {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: #bbf7d0;
+}
+
+.alert--error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-color: #fecaca;
+}
+
 .login-foot {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -296,6 +357,19 @@ body {
   background: var(--error-bg);
   color: var(--error-text);
   border: 1px solid #fecaca;
+}
+
+/* Override base `.alert` error styling for specific variants. */
+.alert.alert--ok {
+  background: var(--success-bg) !important;
+  color: var(--success-text) !important;
+  border-color: #bbf7d0 !important;
+}
+
+.alert.alert--error {
+  background: var(--error-bg) !important;
+  color: var(--error-text) !important;
+  border-color: #fecaca !important;
 }
 
 .field {

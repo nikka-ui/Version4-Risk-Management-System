@@ -10,8 +10,8 @@ class StaticAssetsHealthTest extends TestCase
     {
         $this->getJson('/v1/health')
             ->assertOk()
-            ->assertJsonPath('phase', 12)
-            ->assertJsonPath('slice', 1);
+            ->assertJsonPath('phase', 16)
+            ->assertJsonPath('slice', 3);
     }
 
     public function test_blade_stylesheet_is_published(): void

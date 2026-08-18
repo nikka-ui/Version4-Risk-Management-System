@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\AdminAuditLogsApiController;
+use App\Http\Controllers\AdminSettingsApiController;
+use App\Http\Controllers\AdminUsersApiController;
 use App\Http\Controllers\AiAnalysisController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
@@ -17,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 | API routes (served under /v1 after nginx strips the public /api prefix)
 |--------------------------------------------------------------------------
 |
-| Phase 12 slice 1: GitHub Actions CI (PHPUnit + ai-service tests); health gate.
+| Phase 16 slice 3: Next.js admin users / settings / audit logs.
 |
 */
 
@@ -27,8 +30,9 @@ Route::get('/', function () {
         'status' => 'ok',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 12,
-        'slice' => 1,
+        'phase' => 16,
+        'slice' => 3,
+        'migration' => 'complete',
     ]);
 });
 
@@ -38,8 +42,9 @@ Route::get('/health', function () {
         'service' => 'rms-api',
         'framework' => 'laravel',
         'version' => 'v1',
-        'phase' => 12,
-        'slice' => 1,
+        'phase' => 16,
+        'slice' => 3,
+        'migration' => 'complete',
     ]);
 });
 
@@ -52,7 +57,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::middleware('rms.admin')->group(function () {
+        Route::get('/users', [AdminUsersApiController::class, 'index']);
+        Route::post('/users', [AdminUsersApiController::class, 'store']);
         Route::post('/users/sync', [UserController::class, 'sync']);
+        Route::get('/users/{username}', [AdminUsersApiController::class, 'show'])
+            ->where('username', '[A-Za-z0-9._-]+');
+        Route::patch('/users/{username}', [AdminUsersApiController::class, 'update'])
+            ->where('username', '[A-Za-z0-9._-]+');
+        Route::delete('/users/{username}', [AdminUsersApiController::class, 'destroy'])
+            ->where('username', '[A-Za-z0-9._-]+');
+        Route::post('/users/{username}/activate', [AdminUsersApiController::class, 'activate'])
+            ->where('username', '[A-Za-z0-9._-]+');
+        Route::post('/users/{username}/deactivate', [AdminUsersApiController::class, 'deactivate'])
+            ->where('username', '[A-Za-z0-9._-]+');
+        Route::post('/users/{username}/reset-password', [AdminUsersApiController::class, 'resetPassword'])
+            ->where('username', '[A-Za-z0-9._-]+');
+
+        Route::get('/settings', [AdminSettingsApiController::class, 'show']);
+        Route::patch('/settings', [AdminSettingsApiController::class, 'update']);
+        Route::post('/settings/reset-landing', [AdminSettingsApiController::class, 'resetLanding']);
+        Route::post('/settings/reset-ai', [AdminSettingsApiController::class, 'resetAi']);
+
+        Route::get('/audit-logs', [AdminAuditLogsApiController::class, 'index']);
+        Route::get('/audit-logs/export', [AdminAuditLogsApiController::class, 'export']);
     });
 
     Route::get('/departments', [DepartmentController::class, 'index']);

@@ -1,13 +1,9 @@
 <?php
 
 /*
-|--------------------------------------------------------------------------
-| RMS application settings
-|--------------------------------------------------------------------------
-|
 | Laravel owns browser login, sessions, RBAC, and Postgres SoT.
-| store.json is import-only unless dual-write flags are re-enabled.
-|
+| Express → Laravel migration is complete (Phase 15). store.json is import-only
+| unless dual-write flags are re-enabled. Edge UI flags default on permanently.
 */
 
 return [

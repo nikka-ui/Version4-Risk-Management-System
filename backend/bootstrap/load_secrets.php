@@ -23,10 +23,21 @@ foreach ([
     }
 }
 
-// Ephemeral key when secret is still the example placeholder (local scaffold only).
+// Never mint a new key per request: encrypted session cookies would fail MAC and
+// Blade POSTs (/login, /forgot-password) would 419. Reuse a file-backed fallback.
 $appKey = $_ENV['APP_KEY'] ?? $_SERVER['APP_KEY'] ?? getenv('APP_KEY');
-if ($appKey === false || $appKey === null || $appKey === '' || (is_string($appKey) && str_contains($appKey, 'CHANGE_ME'))) {
-    $generated = 'base64:'.base64_encode(random_bytes(32));
+$unusable = $appKey === false || $appKey === null || $appKey === ''
+    || (is_string($appKey) && str_contains($appKey, 'CHANGE_ME'));
+
+if ($unusable) {
+    $cache = dirname(__DIR__).'/storage/framework/app_key_generated';
+    $cached = is_readable($cache) ? trim((string) file_get_contents($cache)) : '';
+    if ($cached !== '' && ! str_contains($cached, 'CHANGE_ME')) {
+        $generated = $cached;
+    } else {
+        $generated = 'base64:'.base64_encode(random_bytes(32));
+        @file_put_contents($cache, $generated, LOCK_EX);
+    }
     putenv("APP_KEY={$generated}");
     $_ENV['APP_KEY'] = $generated;
     $_SERVER['APP_KEY'] = $generated;

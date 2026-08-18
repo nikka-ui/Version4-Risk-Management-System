@@ -9,13 +9,13 @@ The AI Risk Management System (RMS) is an ISO **31000:2018**-aligned risk workfl
 | Layer | **Current (running)** | **Planned / target** |
 |-------|----------------------|----------------------|
 | Edge | nginx reverse proxy | Same |
-| Application UI + workflow | **Laravel Blade** in `backend/` | Next.js frontend (future) |
+| Application UI + workflow | **Laravel Blade** + **Next.js `/app`** | Blade remains a parallel console; GPU/ONNX optional |
 | API | Laravel 11 in `backend/` (Sanctum tokens + Blade sessions) | Laravel 11 + Sanctum owns REST ([ADR 001](adr/001-backend-laravel.md)) |
-| AI | Flask NLP-hybrid `/classify` + `/summarize` (Phase 11 slice 5) | Optional transformer/GPU model swap |
+| AI | Flask transformer-hybrid `/classify` + `/summarize` (Phase 13 slice 1) | Optional GPU/ONNX model swap |
 | Persistence | PostgreSQL + MinIO/S3 (`store.json` import-only) | Full relational model in PostgreSQL |
 | Cache | Redis (compose) | Queues / cache for Laravel |
 
-Documented “planned” API tables and Next.js UI remain the long-term target. Day-to-day behavior below matches the **Laravel Blade** app.
+Documented “planned” API tables remain the long-term target. Day-to-day workflow is Laravel Blade plus Next.js mutations at `/app`.
 
 ## Logical architecture (current)
 
@@ -107,11 +107,12 @@ Ticket references: `RISK-{YEAR}-{#####}` (e.g. `RISK-2026-00001`), assigned as m
 
 ## API surface (Phase 1 + planned)
 
-Versioned REST under `/api/v1/` (Laravel). Browser login and workflow HTTP are Laravel Blade.
+Versioned REST under `/api/v1/` (Laravel). Browser login is Laravel Blade; Next.js at `/app` runs the same APIs.
 
 **Live on Laravel:**
 
-- Blade UI (`/login`, role consoles, mutations)
+- Blade UI (`/login`, role consoles)
+- Next.js `/app` reporter + workflow mutations (Phase 16)
 - Sanctum tokens (`POST /api/v1/auth/token`)
 - Admin audit logs in Postgres (`audit_logs`, Phase 10 slice 1)
 - Admin settings in Postgres (`system_settings`, Phase 10 slice 2)
@@ -123,11 +124,20 @@ Versioned REST under `/api/v1/` (Laravel). Browser login and workflow HTTP are L
 - TF-IDF NLP hybrid classify + taxonomy PHP stub fallback (Phase 11 slice 5)
 - Admin ticket AI reclassify API + Blade (Phase 11 slice 6)
 - GitHub Actions CI: PHPUnit + ai-service tests (Phase 12 slice 1)
+- Trivy image vulnerability scan in CI (Phase 12 slice 2)
+- CPU transformer-hybrid classify behind the same `/classify` contract (Phase 13 slice 1)
+- Next.js frontend scaffold on optional compose profile `frontend` (Phase 14 slice 1)
+- nginx `/app` proxy to Next.js with same-origin `/api/v1` (Phase 14 slice 2)
+- Next.js Sanctum bearer login + `/users/me` dashboard (Phase 14 slice 3)
+- Next.js read UI: tickets, notifications, departments (Phase 14 slices 4–8)
+- Migration closure — health `phase: 15`, `slice: 1` (Phase 15 slice 1)
+- Next.js reporter draft create/submit (Phase 16 slice 1)
+- Next.js department / president / officer / admin org mutations (Phase 16 slice 2)
+- Next.js admin users, settings, and audit logs (Phase 16 slice 3)
 
-**Planned later:**
+**Optional later:**
 
-- Transformer/GPU model swap behind the same classify/summarize contract
-- Next.js frontend scaffold
+- GPU/ONNX model swap behind the same classify/summarize contract
 
 Today, nginx sends all browser traffic to Laravel (Phase 9 slice 8+). Postgres is the live SoT; `store.json` is import-only unless dual-write flags are re-enabled. See [LARAVEL_MIGRATION.md](LARAVEL_MIGRATION.md).
 
@@ -148,7 +158,7 @@ Today, nginx sends all browser traffic to Laravel (Phase 9 slice 8+). Postgres i
 
 | Layer | Current | Target |
 |-------|---------|--------|
-| Web / workflow | Laravel 11 Blade + PHP 8.3 | React / Next.js UI |
+| Web / workflow | Laravel 11 Blade + PHP 8.3 | React / Next.js UI at `/app` |
 | API | Laravel 11 + Sanctum | Same |
 | Database | PostgreSQL 16 (attachments + future API) | Same |
 | Cache/queue | Redis 7 | Same |

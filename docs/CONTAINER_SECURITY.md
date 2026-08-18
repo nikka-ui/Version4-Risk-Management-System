@@ -65,10 +65,12 @@ New-Item -ItemType Directory -Force -Path docker/secrets
 
 - Pin image digests/tags in compose (`postgres:16-alpine`, `redis:7.4-alpine`, not `latest`).
 - Rebuild application images on dependency updates.
-- Scan images before deploy (recommended tools: Docker Scout, Trivy):
+- Scan images before deploy (recommended tools: Docker Scout, Trivy). Phase 12 slice 2 runs Trivy in GitHub Actions on `rms-api`, `rms-ai-service`, and `nginx:1.27-alpine` (fails on fixable CRITICAL).
 
 ```bash
 docker scout cves rms-api:latest
+# or
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.64.1 image --severity CRITICAL --ignore-unfixed rms-api:latest
 ```
 
 ## Runtime hardening (compose)

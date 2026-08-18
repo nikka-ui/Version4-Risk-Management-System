@@ -88,14 +88,11 @@ class AdminSettingsService
      */
     private function normalizeForm(array $input): array
     {
-        $riskLevels = array_values(array_filter(array_map(
-            'trim',
-            explode(',', (string) ($input['defaultRiskLevels'] ?? '')),
-        ), fn (string $v) => $v !== ''));
+        $riskLevels = $this->stringList($input['defaultRiskLevels'] ?? null);
         $fileTypes = array_values(array_filter(array_map(
-            fn (string $s) => strtolower(trim($s)),
-            explode(',', (string) ($input['allowedFileTypes'] ?? '')),
-        ), fn (string $v) => $v !== ''));
+            fn (string $s) => strtolower($s),
+            $this->stringList($input['allowedFileTypes'] ?? null),
+        )));
         $freq = (string) ($input['backupFrequency'] ?? 'daily');
         if (! in_array($freq, ['daily', 'weekly'], true)) {
             $freq = 'daily';
@@ -109,15 +106,37 @@ class AdminSettingsService
             'landingHeadline' => mb_substr(trim(str_replace("\r\n", "\n", (string) ($input['landingHeadline'] ?? ''))), 0, 200),
             'organizationName' => mb_substr(trim((string) ($input['organizationName'] ?? '')), 0, 80),
             'defaultRiskLevels' => $riskLevels,
-            'emailNotifications' => ($input['emailNotifications'] ?? '') === '1',
+            'emailNotifications' => $this->boolish($input['emailNotifications'] ?? false),
             'passwordMinLength' => $passwordMin > 0 ? $passwordMin : 8,
             'sessionTimeoutMinutes' => $sessionTimeout > 0 ? $sessionTimeout : 480,
-            'mfaEnabled' => ($input['mfaEnabled'] ?? '') === '1',
+            'mfaEnabled' => $this->boolish($input['mfaEnabled'] ?? false),
             'maxUploadSizeMb' => $maxUpload > 0 ? $maxUpload : 25,
             'allowedFileTypes' => $fileTypes,
-            'maintenanceMode' => ($input['maintenanceMode'] ?? '') === '1',
-            'backupEnabled' => ($input['backupEnabled'] ?? '') === '1',
+            'maintenanceMode' => $this->boolish($input['maintenanceMode'] ?? false),
+            'backupEnabled' => $this->boolish($input['backupEnabled'] ?? false),
             'backupFrequency' => $freq,
         ];
+    }
+
+    private function boolish(mixed $value): bool
+    {
+        return in_array($value, [true, 1, '1', 'true', 'on'], true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function stringList(mixed $value): array
+    {
+        if (is_array($value)) {
+            $parts = $value;
+        } else {
+            $parts = explode(',', (string) $value);
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($item) => trim((string) $item),
+            $parts,
+        ), static fn (string $item) => $item !== ''));
     }
 }

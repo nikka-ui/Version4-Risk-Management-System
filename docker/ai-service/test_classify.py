@@ -22,10 +22,13 @@ class ClassifyTaxonomyTest(unittest.TestCase):
         })
         self.assertEqual(result["riskCategory"], "operational")
         self.assertEqual(result["responsibleDepartment"], "Information Technology")
-        self.assertEqual(result["mode"], "nlp-hybrid")
-        self.assertEqual(result["engine"], "nlp-hybrid-v1")
+        self.assertEqual(result["mode"], "transformer-hybrid")
+        self.assertEqual(result["engine"], "transformer-hybrid-v1")
+        self.assertEqual(result["device"], "cpu")
         self.assertTrue(result["suggestedMitigation"])
         self.assertIn(result["priority"], ("urgent", "high", "medium", "low"))
+        self.assertIn("nlpScores", result)
+        self.assertIn("transformerScores", result)
 
     def test_budget_fraud_routes_to_finance(self):
         result = classify_report({
@@ -60,6 +63,7 @@ class ClassifyTaxonomyTest(unittest.TestCase):
         })
         self.assertEqual(result["riskCategory"], "reputational")
         self.assertIn("nlpScores", result)
+        self.assertIn("transformerScores", result)
 
     def test_description_fallback_when_five_w_empty(self):
         result = classify_report({

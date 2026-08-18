@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Phase 11 slice 5: smoke NLP-hybrid ai-service /classify + taxonomy PHP stub fallback.
+ * Phase 13 slice 1: smoke transformer-hybrid ai-service /classify + taxonomy PHP stub fallback.
  */
 class SmokeSlice11Ai extends Command
 {
@@ -31,12 +31,12 @@ class SmokeSlice11Ai extends Command
 
             return self::FAILURE;
         }
-        if (! $health->successful() || ($health->json('mode') ?? '') !== 'nlp-hybrid') {
+        if (! $health->successful() || ($health->json('mode') ?? '') !== 'transformer-hybrid') {
             $this->error('ai-service health unexpected: '.$health->body());
 
             return self::FAILURE;
         }
-        $this->info('ai-service health OK (nlp-hybrid)');
+        $this->info('ai-service health OK (transformer-hybrid)');
 
         $payload = [
             'title' => 'Network outage risk',
@@ -74,13 +74,18 @@ class SmokeSlice11Ai extends Command
 
             return self::FAILURE;
         }
-        if (($remote['engine'] ?? '') !== 'nlp-hybrid-v1') {
-            $this->error('classify expected engine nlp-hybrid-v1');
+        if (($remote['engine'] ?? '') !== 'transformer-hybrid-v1') {
+            $this->error('classify expected engine transformer-hybrid-v1');
 
             return self::FAILURE;
         }
         if (! is_array($remote['nlpScores'] ?? null)) {
             $this->error('classify missing nlpScores');
+
+            return self::FAILURE;
+        }
+        if (! is_array($remote['transformerScores'] ?? null)) {
+            $this->error('classify missing transformerScores');
 
             return self::FAILURE;
         }
