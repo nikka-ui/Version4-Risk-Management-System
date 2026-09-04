@@ -58,6 +58,14 @@ abstract class TestCase extends BaseTestCase
             file_put_contents($envPath, '');
         }
 
+        // Container env sets DB_* to live Postgres; never let RefreshDatabase wipe it.
+        putenv('DB_CONNECTION=sqlite');
+        putenv('DB_DATABASE=:memory:');
+        $_ENV['DB_CONNECTION'] = 'sqlite';
+        $_ENV['DB_DATABASE'] = ':memory:';
+        $_SERVER['DB_CONNECTION'] = 'sqlite';
+        $_SERVER['DB_DATABASE'] = ':memory:';
+
         $app = require __DIR__.'/../bootstrap/app.php';
 
         $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();

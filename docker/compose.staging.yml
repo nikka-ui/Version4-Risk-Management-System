@@ -1,0 +1,156 @@
+# Hardened staging / controlled-use overlay
+# Does NOT auto-merge compose.override.yml (dev conveniences / AI auto-route on).
+#
+# Start:
+#   docker compose -f docker/compose.yml -f docker/compose.staging.yml --env-file .env.staging up -d --build
+#
+# Optional Next.js UI:
+#   docker compose -f docker/compose.yml -f docker/compose.staging.yml --env-file .env.staging --profile frontend up -d --build
+
+services:
+  nginx:
+    ports:
+      - "${NGINX_HTTP_PORT:-8080}:80"
+    depends_on:
+      frontend:
+        condition: service_healthy
+        required: false
+
+  api:
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      LOG_CHANNEL: stderr
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
+      SESSION_SECURE_COOKIE: "false"
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080,127.0.0.1:8080}
+      SANCTUM_EXPIRATION_MINUTES: ${SANCTUM_EXPIRATION_MINUTES:-720}
+      # Hardened routing: AI never auto-assigns without RMO approval
+      RMS_AI_AUTO_ROUTE: "false"
+      RMS_AI_AUTO_ROUTE_MIN_CONFIDENCE: ${RMS_AI_AUTO_ROUTE_MIN_CONFIDENCE:-0.75}
+      RMS_RESPONSE_SLA_HOURS: ${RMS_RESPONSE_SLA_HOURS:-24}
+      RMS_SLA_APPROACHING_HOURS: ${RMS_SLA_APPROACHING_HOURS:-8}
+      # Empty unless explicitly set in .env.staging
+      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-}
+      USE_LARAVEL_INTERNAL_TICKETS: "false"
+      USE_LARAVEL_INTERNAL_ORG: "false"
+      USE_LARAVEL_EDGE_ROOT: "true"
+      USE_LARAVEL_EDGE_UI: "true"
+      # In-app + optional email (Mailpit for controlled review)
+      RMS_WORKFLOW_EMAIL: ${RMS_WORKFLOW_EMAIL:-true}
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@rms.staging.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-RMS Staging}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-rmsminio}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-rmsminio-dev-change-me}
+
+  scheduler:
+    build:
+      context: ../
+      dockerfile: docker/api/Dockerfile
+    container_name: rms-scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_KEY_FILE: /run/secrets/app_key
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE:-rms}
+      DB_USERNAME: ${DB_USERNAME:-rms}
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
+      CACHE_STORE: redis
+      RMS_AI_AUTO_ROUTE: "false"
+      RMS_WORKFLOW_EMAIL: ${RMS_WORKFLOW_EMAIL:-true}
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@rms.staging.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-RMS Staging}
+    secrets:
+      - db_password
+      - app_key
+    networks:
+      - rms_app
+      - rms_data
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  ai-service:
+    environment:
+      FLASK_ENV: production
+    # Keep AI debug port localhost-only if exposed
+    ports:
+      - "127.0.0.1:${AI_DEBUG_PORT:-5001}:5000"
+
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+
+  minio:
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-rmsminio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rmsminio-dev-change-me}
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: rms-mailpit
+    networks:
+      - rms_app
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    profiles:
+      - frontend
+    build:
+      context: ../
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/app}
+    container_name: rms-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/app}
+      NEXT_PUBLIC_BLADE_URL: ${NEXT_PUBLIC_BLADE_URL:-http://localhost:8080/login}
+    networks:
+      - rms_app
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/app/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

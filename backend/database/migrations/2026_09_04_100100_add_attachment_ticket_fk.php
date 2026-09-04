@@ -17,12 +17,10 @@ return new class extends Migration
             return;
         }
 
-        DB::statement(<<<'SQL'
-            DELETE FROM risk_attachments a
-            WHERE NOT EXISTS (
-                SELECT 1 FROM risk_tickets t WHERE t.reference = a.ticket_ref
-            )
-        SQL);
+        // Driver-safe orphan cleanup (SQLite rejects `DELETE FROM t alias` syntax).
+        DB::table('risk_attachments')
+            ->whereNotIn('ticket_ref', DB::table('risk_tickets')->select('reference'))
+            ->delete();
 
         try {
             Schema::table('risk_attachments', function (Blueprint $table) {
