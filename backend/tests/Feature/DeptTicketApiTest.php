@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\RiskAttachment;
 use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,6 +21,40 @@ class DeptTicketApiTest extends TestCase
         return (string) $response->json('token');
     }
 
+    private function seedDepartments(): void
+    {
+        config(['rms.ai_auto_route' => true]);
+        Department::query()->create([
+            'external_id' => 'dept-it',
+            'name' => 'Information Technology',
+            'code' => 'IT',
+            'active' => true,
+            'status' => 'active',
+        ]);
+        Department::query()->create([
+            'external_id' => 'dept-fin',
+            'name' => 'Finance',
+            'code' => 'FIN',
+            'active' => true,
+            'status' => 'active',
+        ]);
+    }
+
+    private function attachEvidence(string $reference, string $by = 'reporter'): void
+    {
+        RiskAttachment::query()->create([
+            'id' => 'att-'.md5($reference.microtime(true)),
+            'ticket_ref' => $reference,
+            'original_name' => 'evidence.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'storage_key' => "{$reference}/evidence.pdf",
+            'uploaded_by' => $by,
+            'legacy' => false,
+            'uploaded_at' => now(),
+        ]);
+    }
+
     public function test_health_slice_six(): void
     {
         $this->getJson('/v1/health')
@@ -30,6 +65,8 @@ class DeptTicketApiTest extends TestCase
 
     public function test_accept_reject_and_action_plan_flow(): void
     {
+        $this->seedDepartments();
+
         User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
@@ -60,6 +97,8 @@ class DeptTicketApiTest extends TestCase
             ])
             ->assertCreated()
             ->json('ticket.reference');
+
+        $this->attachEvidence($reference);
 
         $this->withToken($reporterToken)
             ->postJson("/v1/tickets/{$reference}/submit")
@@ -94,6 +133,8 @@ class DeptTicketApiTest extends TestCase
 
     public function test_reject_requires_reason(): void
     {
+        $this->seedDepartments();
+
         User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
@@ -123,6 +164,7 @@ class DeptTicketApiTest extends TestCase
             ])
             ->json('ticket.reference');
 
+        $this->attachEvidence($reference);
         $this->withToken($reporterToken)->postJson("/v1/tickets/{$reference}/submit")->assertOk();
 
         $this->withToken($deptToken)
@@ -137,20 +179,7 @@ class DeptTicketApiTest extends TestCase
 
     public function test_return_reassign_and_close_flow(): void
     {
-        Department::query()->create([
-            'external_id' => 'dept-it',
-            'name' => 'Information Technology',
-            'code' => 'IT',
-            'active' => true,
-            'status' => 'active',
-        ]);
-        Department::query()->create([
-            'external_id' => 'dept-fin',
-            'name' => 'Finance',
-            'code' => 'FIN',
-            'active' => true,
-            'status' => 'active',
-        ]);
+        $this->seedDepartments();
 
         User::factory()->create([
             'username' => 'reporter',
@@ -188,6 +217,7 @@ class DeptTicketApiTest extends TestCase
             ])
             ->json('ticket.reference');
 
+        $this->attachEvidence($reference);
         $this->withToken($reporterToken)->postJson("/v1/tickets/{$reference}/submit")->assertOk();
 
         $this->withToken($itToken)
@@ -208,6 +238,7 @@ class DeptTicketApiTest extends TestCase
         $this->withToken($itToken)
             ->postJson("/v1/tickets/{$reference}/reassign", [
                 'reason' => 'Finance owns this process',
+                'comment' => 'Handing off ownership with context for Finance.',
                 'targetDepartment' => 'Finance',
             ])
             ->assertOk()
@@ -229,6 +260,9 @@ class DeptTicketApiTest extends TestCase
         \App\Models\RiskTicket::query()->where('reference', $reference)->update([
             'status' => 'pending_audit',
             'accomplishment_external_id' => 'acc-smoke-1',
+            'likelihood' => 2,
+            'impact' => 2,
+            'ai' => ['riskLevel' => ['id' => 'low', 'label' => 'Low']],
         ]);
 
         $this->withToken($finToken)

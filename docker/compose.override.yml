@@ -19,6 +19,8 @@ services:
       USE_LARAVEL_INTERNAL_TICKETS: ${USE_LARAVEL_INTERNAL_TICKETS:-false}
       USE_LARAVEL_INTERNAL_ORG: ${USE_LARAVEL_INTERNAL_ORG:-false}
       RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
+      RMS_AI_AUTO_ROUTE: ${RMS_AI_AUTO_ROUTE:-true}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
@@ -26,6 +28,45 @@ services:
       MAIL_FROM_NAME: ACCC RMS
     volumes:
       - ./data/store.json:/import/store.json
+
+  queue-worker:
+    profiles:
+      - queue
+    build:
+      context: ../
+      dockerfile: docker/api/Dockerfile
+    container_name: rms-queue-worker
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--max-time=3600"]
+    environment:
+      APP_ENV: local
+      APP_KEY_FILE: /run/secrets/app_key
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE:-rms}
+      DB_USERNAME: ${DB_USERNAME:-rms}
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+    secrets:
+      - db_password
+      - app_key
+    networks:
+      - rms_app
+      - rms_data
+    depends_on:
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   ai-service:
     environment:

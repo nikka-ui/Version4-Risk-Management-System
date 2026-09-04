@@ -27,14 +27,23 @@ class OfficerTicketDetailController extends Controller
     {
         $user = $request->user();
         $payload = $this->detail->forReference($reference);
+        $isCompliance = str_starts_with($request->path(), 'compliance/');
+        $consolePrefix = $isCompliance ? '/compliance' : '/officer';
 
         if (! $payload) {
-            return redirect()->away('/officer/tickets?flash=not_found');
+            return redirect()->away($consolePrefix.($isCompliance ? '?flash=not_found' : '/tickets?flash=not_found'));
+        }
+
+        $caps = $payload['capabilities'];
+        if ($isCompliance) {
+            $caps['canReopen'] = false;
+            $caps['canApproveAiRoute'] = false;
+            $caps['canReviewDecision'] = false;
         }
 
         return view('officer.ticket-show', [
             'user' => $user->toIdentityArray(),
-            'activeNav' => $payload['activeNav'],
+            'activeNav' => $isCompliance ? 'validation' : $payload['activeNav'],
             'title' => $payload['ticket']['reference'],
             'stats' => $payload['stats'],
             'ticket' => $payload['ticket'],
@@ -45,7 +54,9 @@ class OfficerTicketDetailController extends Controller
             'closure' => $payload['closure'],
             'threadComments' => $payload['threadComments'],
             'departments' => $payload['departments'],
-            'capabilities' => $payload['capabilities'],
+            'capabilities' => $caps,
+            'consolePrefix' => $consolePrefix,
+            'layoutName' => $isCompliance ? 'layouts.compliance' : 'layouts.officer',
             'flash' => $request->query('flash'),
             'error' => $request->query('error'),
         ]);
@@ -75,9 +86,10 @@ class OfficerTicketDetailController extends Controller
     public function comment(Request $request, string $reference): RedirectResponse
     {
         $user = $request->user();
+        $prefix = str_starts_with($request->path(), 'compliance/') ? '/compliance/tickets/' : '/officer/tickets/';
         $ticket = $this->threadComments->findAccessible($reference, $user);
         if (! $ticket) {
-            return redirect()->away('/officer/tickets?flash=not_found');
+            return redirect()->away($prefix === '/compliance/tickets/' ? '/compliance?flash=not_found' : '/officer/tickets?flash=not_found');
         }
 
         try {
@@ -85,11 +97,76 @@ class OfficerTicketDetailController extends Controller
         } catch (ValidationException $e) {
             $msg = collect($e->errors())->flatten()->first() ?: 'Unable to post comment.';
 
-            return redirect()->away('/officer/tickets/'.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
+            return redirect()->away($prefix.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
         }
 
         $this->orgMirror->syncTicket($ticket->toExpressArray());
 
-        return redirect()->away('/officer/tickets/'.rawurlencode($reference).'?flash=rmu_thread_comment');
+        return redirect()->away($prefix.rawurlencode($reference).'?flash=rmu_thread_comment');
+    }
+
+    public function approveAiRoute(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutateOfficer($request, $reference, fn ($ticket, $user) => $this->officerTickets->approveAiRoute($ticket, $user, $request->all()), 'ai_route_approved');
+    }
+
+    public function reviewDecision(Request $request, string $reference): RedirectResponse
+    {
+        return $this->mutateOfficer($request, $reference, fn ($ticket, $user) => $this->officerTickets->recordReviewDecision($ticket, $user, $request->all()), 'review_recorded');
+    }
+
+    public function validateAccomplishment(Request $request, string $reference): RedirectResponse
+    {
+        $prefix = str_starts_with($request->path(), 'compliance/') ? '/compliance/tickets/' : '/officer/tickets/';
+
+        return $this->mutateOfficer(
+            $request,
+            $reference,
+            fn ($ticket, $user) => $this->officerTickets->validateAccomplishment($ticket, $user, $request->all()),
+            'accomplishment_validated',
+            $prefix,
+        );
+    }
+
+    public function returnAccomplishment(Request $request, string $reference): RedirectResponse
+    {
+        $prefix = str_starts_with($request->path(), 'compliance/') ? '/compliance/tickets/' : '/officer/tickets/';
+
+        return $this->mutateOfficer(
+            $request,
+            $reference,
+            fn ($ticket, $user) => $this->officerTickets->returnAccomplishment($ticket, $user, $request->all()),
+            'accomplishment_returned',
+            $prefix,
+        );
+    }
+
+    /**
+     * @param  callable(\App\Models\RiskTicket, \App\Models\User): \App\Models\RiskTicket  $action
+     */
+    private function mutateOfficer(
+        Request $request,
+        string $reference,
+        callable $action,
+        string $flash,
+        string $prefix = '/officer/tickets/',
+    ): RedirectResponse {
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return redirect()->away($prefix === '/compliance/tickets/' ? '/compliance?flash=not_found' : '/officer/tickets?flash=not_found');
+        }
+
+        try {
+            $ticket = $action($ticket, $user);
+        } catch (ValidationException $e) {
+            $msg = collect($e->errors())->flatten()->first() ?: 'Unable to update ticket.';
+
+            return redirect()->away($prefix.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
+        }
+
+        $this->orgMirror->syncTicket($ticket->toExpressArray());
+
+        return redirect()->away($prefix.rawurlencode($reference).'?flash='.$flash);
     }
 }

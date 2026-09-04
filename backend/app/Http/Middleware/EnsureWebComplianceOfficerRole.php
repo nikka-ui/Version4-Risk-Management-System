@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Support\Roles;
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsureWebComplianceOfficerRole
+{
+    /**
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $user = $request->user();
+
+        if (! $user || $user->role !== Roles::COMPLIANCE_OFFICER || ! $user->isActiveAccount()) {
+            return redirect()->away('/login');
+        }
+
+        return $next($request);
+    }
+}

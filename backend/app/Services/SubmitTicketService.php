@@ -2,19 +2,25 @@
 
 namespace App\Services;
 
+use App\Models\Department;
+use App\Models\RiskAttachment;
 use App\Models\RiskTicket;
 use App\Models\User;
+use App\Support\Departments;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Phase 3 slice 4 + Phase 11: submit draft/revision → assigned; AI via AiAnalysisService (persisted).
+ * Submit draft/revision → AI classify; auto-route only when confidence + dept match allow it.
  */
 class SubmitTicketService
 {
     /** @var list<string> */
     private const REVISION_STATUSES = ['returned', 'ownership_rejected'];
 
-    public function __construct(private readonly AiAnalysisService $aiAnalysis) {}
+    public function __construct(
+        private readonly AiAnalysisService $aiAnalysis,
+        private readonly WorkflowNotificationService $workflowNotifications,
+    ) {}
 
     public function submit(RiskTicket $ticket, User $user): RiskTicket
     {
@@ -30,11 +36,13 @@ class SubmitTicketService
             ]);
         }
 
-        if ((int) $ticket->evidence_count < 1) {
+        $evidenceCount = RiskAttachment::query()->where('ticket_ref', $ticket->reference)->count();
+        if ($evidenceCount < 1) {
             throw ValidationException::withMessages([
-                'evidenceCount' => ['At least one evidence file is required before submit.'],
+                'evidenceCount' => ['At least one evidence file must be uploaded before submit.'],
             ]);
         }
+        $ticket->evidence_count = $evidenceCount;
 
         $wasRevision = in_array($status, self::REVISION_STATUSES, true);
         $five = is_array($ticket->five_w1h) ? $ticket->five_w1h : [];
@@ -43,12 +51,22 @@ class SubmitTicketService
             'title' => (string) $ticket->title,
             'location' => (string) $ticket->location,
             'fiveW1H' => $five,
-            'evidenceCount' => (int) $ticket->evidence_count,
+            'evidenceCount' => $evidenceCount,
         ], (string) $ticket->reference);
 
         $now = now();
-        $department = (string) ($ai['responsibleDepartment'] ?? 'Operations');
+        $recommendedRaw = trim((string) ($ai['responsibleDepartment'] ?? ''));
+        $matchedDepartment = $this->resolveActiveDepartment($recommendedRaw);
         $priority = (string) ($ai['priority'] ?? 'medium');
+        $confidence = (float) ($ai['confidence'] ?? 0);
+        $manualReview = ! empty($ai['manualReviewRequired']) || $confidence < (float) config('rms.ai_auto_route_min_confidence', 0.75);
+        $autoRouteAllowed = (bool) config('rms.ai_auto_route', false);
+        $canAutoRoute = $autoRouteAllowed && ! $manualReview && $matchedDepartment !== null;
+
+        $ai['recommendedDepartment'] = $recommendedRaw !== '' ? $recommendedRaw : null;
+        $ai['matchedDepartment'] = $matchedDepartment;
+        $ai['manualReviewRequired'] = $manualReview || $matchedDepartment === null;
+        $ai['routingStatus'] = $canAutoRoute ? 'auto_assigned' : 'pending_review';
 
         $audit = is_array($ticket->audit_trail) ? $ticket->audit_trail : [];
         $audit[] = $this->auditEvent(
@@ -66,17 +84,9 @@ class SubmitTicketService
             sprintf(
                 '%s · %s · %d%% confidence',
                 $ai['riskCategory'] ?? 'operational',
-                $ai['riskLevel']['label'] ?? 'Risk',
-                (int) round(((float) ($ai['confidence'] ?? 0.7)) * 100),
+                is_array($ai['riskLevel'] ?? null) ? ($ai['riskLevel']['label'] ?? 'Risk') : 'Risk',
+                (int) round($confidence * 100),
             ),
-            'system',
-            'AI Routing Engine',
-            'system',
-            $now,
-        );
-        $audit[] = $this->auditEvent(
-            "Assigned to {$department}",
-            sprintf('%s priority. Awaiting Department Head acceptance.', ucfirst($priority)),
             'system',
             'AI Routing Engine',
             'system',
@@ -89,36 +99,121 @@ class SubmitTicketService
             $payload['returnedAt'] = null;
             $payload['officerNotes'] = null;
         }
+        $payload['aiRecommendation'] = [
+            'department' => $matchedDepartment ?? $recommendedRaw,
+            'priority' => $priority,
+            'confidence' => $confidence,
+            'at' => $now->toIso8601String(),
+        ];
+
+        if ($canAutoRoute) {
+            $department = $matchedDepartment;
+            $audit[] = $this->auditEvent(
+                "Assigned to {$department}",
+                sprintf('%s priority. Awaiting Department Head acceptance.', ucfirst($priority)),
+                'system',
+                'AI Routing Engine',
+                'system',
+                $now,
+            );
+
+            $ticket->fill([
+                'status' => 'assigned',
+                'category' => $ai['riskCategory'] ?? $ticket->category,
+                'likelihood' => $ai['likelihood'] ?? $ticket->likelihood,
+                'impact' => $ai['impact'] ?? $ticket->impact,
+                'risk_score' => ((int) ($ai['likelihood'] ?? 1)) * ((int) ($ai['impact'] ?? 1)),
+                'priority' => $priority,
+                'department' => $department,
+                'evidence_count' => $evidenceCount,
+                'ai' => $ai,
+                'ownership' => [
+                    'state' => 'pending',
+                    'ownerUsername' => null,
+                    'ownerName' => null,
+                    'ownerDepartment' => $department,
+                    'assignedAt' => $now->toIso8601String(),
+                    'acceptedAt' => null,
+                    'rejectedAt' => null,
+                    'rejectionReason' => null,
+                ],
+                'audit_trail' => $audit,
+                'submitted_at' => $now,
+                'routed_at' => $now,
+                'response_due_at' => $now->copy()->addHours((int) config('rms.response_sla_hours', 24)),
+                'source_updated_at' => $now,
+                'mitigation_due_at' => $wasRevision ? null : $ticket->mitigation_due_at,
+                'payload' => $payload,
+            ]);
+            $ticket->save();
+            $fresh = $ticket->fresh();
+            $this->workflowNotifications->ticketAssigned($fresh, $user);
+
+            return $fresh;
+        }
+
+        $reason = $matchedDepartment === null
+            ? 'AI department recommendation did not match an active department.'
+            : 'AI confidence below threshold or manual review required.';
+        $audit[] = $this->auditEvent(
+            'Pending AI routing review',
+            $reason.' Awaiting Risk Management Officer approval before department ownership opens.',
+            'system',
+            'AI Routing Engine',
+            'system',
+            $now,
+        );
 
         $ticket->fill([
-            'status' => 'assigned',
+            'status' => 'pending_ai_review',
             'category' => $ai['riskCategory'] ?? $ticket->category,
             'likelihood' => $ai['likelihood'] ?? $ticket->likelihood,
             'impact' => $ai['impact'] ?? $ticket->impact,
             'risk_score' => ((int) ($ai['likelihood'] ?? 1)) * ((int) ($ai['impact'] ?? 1)),
             'priority' => $priority,
-            'department' => $department,
+            'department' => null,
+            'evidence_count' => $evidenceCount,
             'ai' => $ai,
             'ownership' => [
-                'state' => 'pending',
+                'state' => 'pending_ai_review',
                 'ownerUsername' => null,
                 'ownerName' => null,
-                'ownerDepartment' => $department,
-                'assignedAt' => $now->toIso8601String(),
+                'ownerDepartment' => $matchedDepartment,
+                'recommendedDepartment' => $matchedDepartment ?? $recommendedRaw,
+                'assignedAt' => null,
                 'acceptedAt' => null,
                 'rejectedAt' => null,
                 'rejectionReason' => null,
             ],
             'audit_trail' => $audit,
             'submitted_at' => $now,
-            'routed_at' => $now,
+            'routed_at' => null,
             'source_updated_at' => $now,
             'mitigation_due_at' => $wasRevision ? null : $ticket->mitigation_due_at,
-            'payload' => $payload === [] ? null : $payload,
+            'payload' => $payload,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->pendingAiReview($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
+    }
+
+    private function resolveActiveDepartment(string $raw): ?string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        $departments = Department::query()->where('active', true)->get();
+        foreach ($departments as $department) {
+            if (Departments::match($department->name, $raw) || strcasecmp($department->name, $raw) === 0) {
+                return $department->name;
+            }
+        }
+
+        return null;
     }
 
     /**

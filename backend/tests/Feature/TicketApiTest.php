@@ -113,6 +113,7 @@ class TicketApiTest extends TestCase
             'reference' => 'RISK-2026-00002',
             'title' => 'Access control',
             'status' => 'pending_audit',
+            'submitted_by' => 'reporter',
             'accomplishment_external_id' => 'acc-1',
             'deleted' => false,
             'source_updated_at' => now(),

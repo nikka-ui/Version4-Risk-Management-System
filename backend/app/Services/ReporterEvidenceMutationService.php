@@ -6,25 +6,26 @@ use App\Models\Accomplishment;
 use App\Models\RiskAttachment;
 use App\Models\RiskTicket;
 use App\Models\User;
-use App\Support\Roles;
+use App\Support\Departments;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Phase 8 slice 2: Ticket Reporter add-evidence + accomplishment multipart (MinIO + Postgres + Express mirror).
+ * Phase 8 slice 2: Ticket Reporter add-evidence + accomplishment multipart (MinIO + Postgres).
+ * High/Critical accomplishments route to under_audit for RMU/Compliance before President final.
  */
 class ReporterEvidenceMutationService
 {
     /** @var list<string> */
-    private const ACCOMPLISHMENT_STATUSES = ['in_mitigation', 'in_progress', 'reopened'];
+    private const ACCOMPLISHMENT_STATUSES = ['in_mitigation'];
 
     /** @var list<string> */
-    private const REVISION_UPLOAD_STATUSES = ['returned', 'ownership_rejected', 'reopened'];
+    private const REVISION_UPLOAD_STATUSES = ['returned', 'ownership_rejected', 'reopened', 'audit_returned'];
 
     public function __construct(
         private readonly AttachmentService $attachments,
-        private readonly NotificationService $notifications,
+        private readonly WorkflowNotificationService $workflowNotifications,
     ) {}
 
     /**
@@ -115,11 +116,19 @@ class ReporterEvidenceMutationService
         ]);
 
         $audit = is_array($ticket->audit_trail) ? $ticket->audit_trail : [];
+        $isHighCritical = Departments::requiresPresidentApproval(
+            is_array($ticket->ai) ? $ticket->ai : null,
+            $ticket->likelihood,
+            $ticket->impact,
+        );
+        $nextStatus = $isHighCritical ? 'under_audit' : 'pending_audit';
         $audit[] = [
             'id' => 'aud-'.(int) round(microtime(true) * 1000).'-'.bin2hex(random_bytes(3)),
             'at' => $now->toIso8601String(),
             'action' => 'Accomplishment report submitted',
-            'detail' => 'Reporter submitted the accomplishment report. Awaiting department head review and closure.',
+            'detail' => $isHighCritical
+                ? 'Reporter submitted the accomplishment report. Awaiting RMU/Compliance validation before presidential final review.'
+                : 'Reporter submitted the accomplishment report. Awaiting department head review and closure.',
             'actorUsername' => $user->username,
             'actorName' => $user->name ?: $user->username,
             'actorRole' => 'supervisor',
@@ -127,32 +136,17 @@ class ReporterEvidenceMutationService
 
         $ticket->fill([
             'accomplishment_external_id' => $accId,
-            'status' => 'pending_audit',
+            'status' => $nextStatus,
             'audit_trail' => $audit,
             'evidence_count' => $this->attachments->syncEvidenceCount($ticket->reference),
             'source_updated_at' => $now,
         ]);
         $ticket->save();
 
-        $actor = $user->name ?: $user->username;
-        foreach ([Roles::DEPT_HEAD, Roles::RM_OFFICER] as $role) {
-            try {
-                $this->notifications->create([
-                    'recipientRole' => $role,
-                    'type' => 'accomplishment_submitted',
-                    'title' => 'Accomplishment report submitted',
-                    'message' => "{$actor} submitted an accomplishment report for {$ticket->reference}. Review and close the ticket when complete.",
-                    'ticketRef' => $ticket->reference,
-                    'fromUsername' => $user->username,
-                    'fromName' => $actor,
-                    'fromRole' => 'supervisor',
-                ]);
-            } catch (\Throwable) {
-                // Notifications are best-effort; ticket write already succeeded.
-            }
-        }
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->accomplishmentSubmitted($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function canUploadEvidence(RiskTicket $ticket): bool

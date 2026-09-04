@@ -14,12 +14,13 @@ use Illuminate\Validation\ValidationException;
 /**
  * Phase 3 slice 6: dept return/reassign/close + slice 5 ownership/action plan.
  * Phase 8 slice 3: multipart document uploads (MinIO + Postgres).
- * Notifications remain Express-owned until a later slice.
+ * High/Critical closure is presidential — dept heads cannot close those.
  */
 class DeptTicketService
 {
     public function __construct(
         private readonly AttachmentService $attachments,
+        private readonly WorkflowNotificationService $workflowNotifications,
     ) {}
 
     /** @var list<string> */
@@ -85,11 +86,14 @@ class DeptTicketService
             'ownership' => $ownership,
             'status' => 'in_progress',
             'audit_trail' => $audit,
+            'response_due_at' => null,
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->ownershipAccepted($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function reject(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -128,8 +132,10 @@ class DeptTicketService
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->ticketReturned($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function saveActionPlan(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -250,8 +256,10 @@ class DeptTicketService
             'payload' => $payload === [] ? $ticket->payload : $payload,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->actionPlanSaved($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function returnForRevision(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -289,14 +297,18 @@ class DeptTicketService
 
         $ticket->fill([
             'ownership' => $ownership,
-            'status' => 'ownership_rejected',
+            'status' => 'returned',
             'audit_trail' => $audit,
             'payload' => $payload,
+            'mitigation_due_at' => null,
+            'response_due_at' => null,
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->ticketReturned($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function reassign(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -314,6 +326,11 @@ class DeptTicketService
         if ($reason === '') {
             throw ValidationException::withMessages([
                 'reason' => ['A reason is required to request reassignment.'],
+            ]);
+        }
+        if ($comment === '') {
+            throw ValidationException::withMessages([
+                'comment' => ['A non-empty comment is required when reassigning a ticket.'],
             ]);
         }
         if ($targetRaw === '') {
@@ -377,11 +394,14 @@ class DeptTicketService
             'reassignments' => $reassignments,
             'status' => 'assigned',
             'audit_trail' => $audit,
+            'mitigation_due_at' => null,
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->ticketReassigned($fresh, $fromDepartment, $target, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function close(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -390,6 +410,16 @@ class DeptTicketService
         if (! in_array($ticket->status, self::CLOSURE_STATUSES, true) || ! $ticket->accomplishment_external_id) {
             throw ValidationException::withMessages([
                 'status' => ['This ticket is not awaiting department closure after an accomplishment report.'],
+            ]);
+        }
+
+        if (Departments::requiresPresidentApproval(
+            is_array($ticket->ai) ? $ticket->ai : null,
+            $ticket->likelihood,
+            $ticket->impact,
+        )) {
+            throw ValidationException::withMessages([
+                'status' => ['High/Critical tickets require RMU/Compliance validation and presidential final closure. Department heads cannot close them.'],
             ]);
         }
 
@@ -422,8 +452,10 @@ class DeptTicketService
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->ticketClosed($fresh, $user);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function assignPersonnel(RiskTicket $ticket, User $user, array $input = []): RiskTicket

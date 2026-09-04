@@ -52,4 +52,34 @@ return [
     */
     'ai_service_timeout' => (int) env('AI_SERVICE_TIMEOUT', 3),
 
+    /*
+    | When true, high-confidence matched AI routing may auto-assign to a department.
+    | Low confidence / unmatched departments always require RMO approval (pending_ai_review).
+    | Default false in production; local/dev may set RMS_AI_AUTO_ROUTE=true.
+    */
+    'ai_auto_route' => filter_var(
+        env('RMS_AI_AUTO_ROUTE', env('APP_ENV', 'production') === 'local' || env('APP_ENV') === 'testing' ? 'true' : 'false'),
+        FILTER_VALIDATE_BOOLEAN
+    ),
+
+    /*
+    | Minimum AI confidence required for auto-route when ai_auto_route is enabled.
+    */
+    'ai_auto_route_min_confidence' => (float) env('RMS_AI_AUTO_ROUTE_MIN_CONFIDENCE', 0.75),
+
+    /*
+    | Sanctum personal access token lifetime (minutes). Default 12 hours.
+    */
+    'sanctum_expiration_minutes' => (int) env('SANCTUM_EXPIRATION_MINUTES', 720),
+
+    /*
+    | Hours after assignment/routing for first department response (accept/reject).
+    */
+    'response_sla_hours' => (int) env('RMS_RESPONSE_SLA_HOURS', 24),
+
+    /*
+    | Hours before due date to emit "approaching" notifications.
+    */
+    'sla_approaching_hours' => (int) env('RMS_SLA_APPROACHING_HOURS', 8),
+
 ];

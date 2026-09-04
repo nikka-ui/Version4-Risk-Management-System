@@ -195,10 +195,30 @@ class AttachmentService
 
     public function storeUploadedFile(string $reference, UploadedFile $file, ?string $uploadedBy = null): RiskAttachment
     {
+        $existing = RiskAttachment::query()->where('ticket_ref', $reference)->count();
+        if ($existing >= self::MAX_FILES_PER_TICKET) {
+            throw ValidationException::withMessages([
+                'file' => ['This ticket already has the maximum of '.self::MAX_FILES_PER_TICKET.' attachments.'],
+            ]);
+        }
+
+        $path = $file->getRealPath();
+        $detected = 'application/octet-stream';
+        if (is_string($path) && $path !== '' && function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo !== false) {
+                $mime = finfo_file($finfo, $path);
+                finfo_close($finfo);
+                if (is_string($mime) && $mime !== '') {
+                    $detected = $mime;
+                }
+            }
+        }
+
         return $this->storeRawFile(
             $reference,
             (string) $file->getClientOriginalName(),
-            (string) ($file->getClientMimeType() ?: $file->getMimeType() ?: 'application/octet-stream'),
+            $detected,
             (string) file_get_contents($file->getRealPath()),
             $uploadedBy,
         );
@@ -210,8 +230,16 @@ class AttachmentService
      */
     public function storeUploadedFiles(string $reference, array $files, ?string $uploadedBy = null): array
     {
+        $existing = RiskAttachment::query()->where('ticket_ref', $reference)->count();
+        $remaining = max(0, self::MAX_FILES_PER_TICKET - $existing);
+        if ($remaining < 1) {
+            throw ValidationException::withMessages([
+                'file' => ['This ticket already has the maximum of '.self::MAX_FILES_PER_TICKET.' attachments.'],
+            ]);
+        }
+
         $saved = [];
-        foreach (array_slice($files, 0, self::MAX_FILES_PER_TICKET) as $file) {
+        foreach (array_slice($files, 0, $remaining) as $file) {
             if (! $file instanceof UploadedFile) {
                 continue;
             }

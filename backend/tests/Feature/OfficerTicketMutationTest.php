@@ -64,7 +64,7 @@ class OfficerTicketMutationTest extends TestCase
             ->assertRedirect();
 
         $ticket->refresh();
-        $this->assertSame('assigned', $ticket->status);
+        $this->assertSame('reopened', $ticket->status);
         $this->assertSame('Finance', $ticket->department);
         $this->assertSame('pending', $ticket->ownership['state'] ?? null);
         $this->assertNull($ticket->closure);

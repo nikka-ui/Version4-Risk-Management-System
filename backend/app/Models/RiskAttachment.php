@@ -67,4 +67,17 @@ class RiskAttachment extends Model
             'legacy' => (bool) $this->legacy,
         ];
     }
+
+    /**
+     * Public API DTO — omits storageKey.
+     *
+     * @return array<string, mixed>
+     */
+    public function toPublicArray(): array
+    {
+        $data = $this->toExpressArray();
+        unset($data['storageKey']);
+
+        return $data;
+    }
 }

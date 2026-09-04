@@ -25,7 +25,7 @@ class AttachmentApiTest extends TestCase
             ->assertJsonPath('slice', 3);
     }
 
-    public function test_register_list_get_and_sync_attachments(): void
+    public function test_list_get_sync_and_delete_attachments(): void
     {
         User::factory()->create([
             'username' => 'reporter',
@@ -33,8 +33,14 @@ class AttachmentApiTest extends TestCase
             'role' => Roles::SUPERVISOR,
             'department' => 'Information Technology',
         ]);
+        User::factory()->create([
+            'username' => 'sys-admin',
+            'password' => 'a3c2026',
+            'role' => Roles::ADMIN,
+        ]);
 
         $token = $this->token('reporter', 'a3c2026');
+        $adminToken = $this->token('sys-admin', 'a3c2026');
 
         $reference = $this->withToken($token)
             ->postJson('/v1/tickets', [
@@ -50,7 +56,7 @@ class AttachmentApiTest extends TestCase
             ->assertCreated()
             ->json('ticket.reference');
 
-        $this->withToken($token)
+        $this->withToken($adminToken)
             ->postJson("/v1/tickets/{$reference}/attachments", [
                 'id' => 'att-slice8-1',
                 'originalName' => 'evidence.pdf',
@@ -60,7 +66,8 @@ class AttachmentApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('attachment.id', 'att-slice8-1')
-            ->assertJsonPath('evidenceCount', 1);
+            ->assertJsonPath('evidenceCount', 1)
+            ->assertJsonMissing(['storageKey' => "{$reference}/att-slice8-1-evidence.pdf"]);
 
         $this->withToken($token)
             ->getJson("/v1/tickets/{$reference}/attachments")
@@ -71,7 +78,7 @@ class AttachmentApiTest extends TestCase
         $this->withToken($token)
             ->getJson('/v1/attachments/att-slice8-1')
             ->assertOk()
-            ->assertJsonPath('attachment.storageKey', "{$reference}/att-slice8-1-evidence.pdf");
+            ->assertJsonMissingPath('attachment.storageKey');
 
         RiskAttachment::query()->create([
             'id' => 'att-slice8-2',
@@ -101,7 +108,7 @@ class AttachmentApiTest extends TestCase
             ->assertJsonPath('evidenceCount', 1);
     }
 
-    public function test_register_requires_original_name(): void
+    public function test_metadata_register_forbidden_for_non_admin(): void
     {
         User::factory()->create([
             'username' => 'reporter',
@@ -127,6 +134,6 @@ class AttachmentApiTest extends TestCase
             ->postJson("/v1/tickets/{$reference}/attachments", [
                 'storageKey' => 'x/y',
             ])
-            ->assertStatus(422);
+            ->assertForbidden();
     }
 }

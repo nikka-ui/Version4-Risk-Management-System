@@ -13,10 +13,11 @@ use Illuminate\Support\Collection;
 class OfficerDashboardService
 {
     /** @var list<string> */
-    private const AI_REVIEW_STATUSES = ['submitted', 'assigned', 'in_progress', 'ownership_rejected'];
+    private const AI_REVIEW_STATUSES = ['pending_ai_review', 'submitted'];
 
     /** @var list<string> */
     private const MONITORING_STATUSES = [
+        'pending_ai_review',
         'assigned',
         'in_progress',
         'ownership_rejected',

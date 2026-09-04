@@ -140,11 +140,12 @@ class AiAnalysisService
     }
 
     /**
-     * Phase 11 slice 6: re-run classify, persist history, refresh live ticket.ai (workflow unchanged).
+     * Re-run classify and refresh ticket.ai. Assignment fields (department/ownership)
+     * only update when $applyAssignment is true (requires explicit admin confirm).
      *
      * @return array<string, mixed>
      */
-    public function reclassifyTicket(RiskTicket $ticket, User $actor): array
+    public function reclassifyTicket(RiskTicket $ticket, User $actor, bool $applyAssignment = false): array
     {
         if ($ticket->deleted) {
             abort(404, 'Ticket not found.');
@@ -163,12 +164,13 @@ class AiAnalysisService
         $audit[] = [
             'id' => 'aud-'.(int) round(microtime(true) * 1000).'-'.bin2hex(random_bytes(3)),
             'at' => $now->toIso8601String(),
-            'action' => 'AI reclassified ticket',
+            'action' => $applyAssignment ? 'AI reclassified ticket (assignment applied)' : 'AI reclassified ticket (staging)',
             'detail' => sprintf(
-                '%s · %s · %d%% confidence',
+                '%s · %s · %d%% confidence%s',
                 $ai['riskCategory'] ?? 'operational',
                 is_array($ai['riskLevel'] ?? null) ? ($ai['riskLevel']['label'] ?? 'Risk') : 'Risk',
                 (int) round(((float) ($ai['confidence'] ?? 0.7)) * 100),
+                $applyAssignment ? '' : ' — assignment fields unchanged',
             ),
             'actorUsername' => $actor->username,
             'actorName' => $actor->name ?: $actor->username,
@@ -177,15 +179,33 @@ class AiAnalysisService
 
         $likelihood = (int) ($ai['likelihood'] ?? $ticket->likelihood ?? 0);
         $impact = (int) ($ai['impact'] ?? $ticket->impact ?? 0);
-        $ticket->fill([
+        $payload = is_array($ticket->payload) ? $ticket->payload : [];
+        $payload['aiReclassifyStaging'] = [
+            'at' => $now->toIso8601String(),
+            'ai' => $ai,
+            'appliedAssignment' => $applyAssignment,
+        ];
+
+        $fill = [
             'category' => (string) ($ai['riskCategory'] ?? $ticket->category),
             'likelihood' => $likelihood,
             'impact' => $impact,
             'risk_score' => $likelihood * $impact,
             'ai' => $ai,
             'audit_trail' => $audit,
+            'payload' => $payload,
             'source_updated_at' => $now,
-        ]);
+        ];
+
+        if ($applyAssignment && ! empty($ai['responsibleDepartment'])) {
+            $fill['priority'] = (string) ($ai['priority'] ?? $ticket->priority);
+            // Do not silently change department ownership — stage recommendation only unless already unassigned.
+            if (in_array((string) $ticket->status, ['pending_ai_review', 'draft'], true)) {
+                $fill['department'] = null;
+            }
+        }
+
+        $ticket->fill($fill);
         $ticket->save();
 
         return $ai;

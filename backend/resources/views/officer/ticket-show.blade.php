@@ -1,4 +1,4 @@
-@extends('layouts.officer')
+@extends($layoutName ?? 'layouts.officer')
 
 @section('content')
   @php
@@ -9,6 +9,9 @@
     $acc = $accomplishment ?? null;
     $clos = $closure ?? null;
     $ref = $t['reference'] ?? '';
+    $prefix = $consolePrefix ?? '/officer';
+    $ticketBase = $prefix.'/tickets/'.rawurlencode($ref);
+    $attachBase = $prefix.'/attachments/';
     $comments = $threadComments ?? [];
     $tops = array_values(array_filter($comments, fn ($c) => empty($c['parentId'])));
     $childrenOf = function (string $parentId) use ($comments) {
@@ -17,6 +20,10 @@
     $flashLabels = [
       'rmu_thread_comment' => 'Governance comment posted.',
       'ticket_reopened' => 'Ticket reopened and assigned to the selected department.',
+      'ai_route_approved' => 'AI routing approved and department ownership opened.',
+      'review_recorded' => 'Review decision recorded.',
+      'accomplishment_validated' => 'Accomplishment validated and sent to the President.',
+      'accomplishment_returned' => 'Accomplishment returned for additional mitigation work.',
     ];
     $flashKey = is_string($flash ?? null) ? $flash : '';
     $flashMsg = $flashLabels[$flashKey] ?? null;
@@ -38,7 +45,7 @@
         <span class="pill pill--{{ !empty($t['isOverdue']) ? 'bad' : 'info' }}">{{ $t['statusLabel'] ?? '' }}</span>
       </p>
     </div>
-    <a href="/officer/tickets" class="btn-outline">Back to risk register</a>
+    <a href="{{ $prefix === '/compliance' ? '/compliance' : '/officer/tickets' }}" class="btn-outline">Back</a>
   </div>
 
   <div class="sup-detail-stack">
@@ -105,7 +112,7 @@
         <ul class="attachment-list">
           @foreach ($attachments as $a)
             <li>
-              <a href="/officer/attachments/{{ urlencode($a['id']) }}" target="_blank" rel="noopener">{{ $a['name'] }}</a>
+              <a href="{{ $attachBase }}{{ urlencode($a['id']) }}" target="_blank" rel="noopener">{{ $a['name'] }}</a>
             </li>
           @endforeach
         </ul>
@@ -207,12 +214,82 @@
       </section>
     @endif
 
+    @if (!empty($caps['canApproveAiRoute']))
+      <section class="sup-card sup-card--accent">
+        <div class="sup-card__head"><h2>Approve AI routing</h2></div>
+        <div class="sup-card__body">
+          <p class="sup-muted-block">Validate or override the AI department recommendation before ownership opens.</p>
+          <form method="post" action="{{ $ticketBase }}/ai-route/approve" class="stack-form stack-form--console">
+            @csrf
+            <div class="field field--console">
+              <label for="aiDepartment">Assign to department</label>
+              <select id="aiDepartment" name="department" required>
+                @foreach ($departments ?? [] as $dept)
+                  <option value="{{ $dept }}" @selected(($t['department'] ?? '') === $dept)>{{ $dept }}</option>
+                @endforeach
+              </select>
+            </div>
+            <button type="submit" class="btn-primary btn-primary--auto">Approve routing</button>
+          </form>
+        </div>
+      </section>
+    @endif
+
+    @if (!empty($caps['canValidateAccomplishment']))
+      <section class="sup-card sup-card--accent">
+        <div class="sup-card__head"><h2>Validate accomplishment</h2></div>
+        <div class="sup-card__body">
+          <p class="sup-muted-block">High/Critical accomplishments require RMU/Compliance validation before presidential final decision.</p>
+          <form method="post" action="{{ $ticketBase }}/accomplishment/validate" class="stack-form stack-form--console">
+            @csrf
+            <div class="field field--console">
+              <label for="validateNote">Validation note</label>
+              <textarea id="validateNote" name="note" rows="3" placeholder="Optional validation comments…"></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-primary--auto">Validate and send to President</button>
+          </form>
+          <form method="post" action="{{ $ticketBase }}/accomplishment/return" class="stack-form stack-form--console" style="margin-top:1rem">
+            @csrf
+            <div class="field field--console">
+              <label for="returnNote">Return for revision <span class="text-muted">(required)</span></label>
+              <textarea id="returnNote" name="note" rows="3" required placeholder="Explain what must be corrected…"></textarea>
+            </div>
+            <button type="submit" class="btn-outline btn-primary--auto">Return to mitigation</button>
+          </form>
+        </div>
+      </section>
+    @endif
+
+    @if (!empty($caps['canReviewDecision']) && ($prefix ?? '/officer') === '/officer')
+      <section class="sup-card">
+        <div class="sup-card__head"><h2>RMU review decision</h2></div>
+        <div class="sup-card__body">
+          <p class="sup-muted-block">Record a formal recommendation or escalate to the President. RMO cannot close tickets.</p>
+          <form method="post" action="{{ $ticketBase }}/review-decision" class="stack-form stack-form--console">
+            @csrf
+            <div class="field field--console">
+              <label for="reviewDecision">Decision</label>
+              <select id="reviewDecision" name="decision" required>
+                <option value="recommend">Recommend</option>
+                <option value="escalate">Escalate to President</option>
+              </select>
+            </div>
+            <div class="field field--console">
+              <label for="reviewNote">Note <span class="text-muted">(required)</span></label>
+              <textarea id="reviewNote" name="note" rows="3" required placeholder="Document the recommendation or escalation reason…"></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-primary--auto">Record decision</button>
+          </form>
+        </div>
+      </section>
+    @endif
+
     @if (!empty($caps['canReopen']))
       <section class="sup-card sup-card--accent officer-reopen-card">
         <div class="sup-card__head"><h2>Reopen ticket</h2></div>
         <div class="sup-card__body">
-          <p class="sup-muted-block">Reopen this closed ticket and assign it back to a department for a new ownership cycle. Only Risk Management Officer users can perform this action.</p>
-          <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/reopen" class="stack-form stack-form--console">
+          <p class="sup-muted-block">Reopen this closed ticket and assign it back to a department for a new ownership cycle.</p>
+          <form method="post" action="{{ $ticketBase }}/reopen" class="stack-form stack-form--console">
             @csrf
             <div class="field field--console">
               <label for="reopenReason">Reason <span class="text-muted">(required)</span></label>
@@ -257,7 +334,7 @@
                 @if (!empty($caps['canPostComment']))
                   <details class="reddit-reply-box">
                     <summary class="reddit-action-btn">Reply</summary>
-                    <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/thread-comment" class="stack-form reddit-reply-form">
+                    <form method="post" action="{{ $ticketBase }}/thread-comment" class="stack-form reddit-reply-form">
                       @csrf
                       <input type="hidden" name="parentId" value="{{ $c['id'] }}">
                       <div class="field">
@@ -292,7 +369,7 @@
       @endif
 
       @if (!empty($caps['canPostComment']))
-        <form method="post" action="/officer/tickets/{{ urlencode($ref) }}/thread-comment" class="stack-form reddit-compose">
+        <form method="post" action="{{ $ticketBase }}/thread-comment" class="stack-form reddit-compose">
           @csrf
           <div class="field">
             <label for="thread-comment-{{ $ref }}">Add comment</label>

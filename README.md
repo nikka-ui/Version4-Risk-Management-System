@@ -49,7 +49,7 @@ curl http://localhost:8080/health
 
 - Application URL: http://localhost:8080
 - **Login:** http://localhost:8080/login — [docs/LOGIN.md](docs/LOGIN.md)
-- **Examples:** `admin` / `a3c1993` · `reporter` / `a3c2026` · `it-head` / `dept2026` · `rm-officer` / `a3c2026` · `president` / `a3c2026`
+- **Examples (dev seeds only — rotate before deploy):** see `docs/LOGIN.md`. Do not ship seed passwords as production secrets.
 - API (Laravel Phase 0): http://localhost:8080/api/ and http://localhost:8080/api/v1
 - PostgreSQL (dev, localhost only): `127.0.0.1:5433`
 

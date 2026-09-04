@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\RiskAttachment;
 use App\Models\RiskTicket;
 use App\Models\User;
 use App\Support\Roles;
@@ -18,6 +19,21 @@ class Slice7WorkflowApiTest extends TestCase
         return $this->postJson('/v1/auth/token', compact('username', 'password'))->json('token');
     }
 
+    private function attachEvidence(string $reference, string $uploader): void
+    {
+        RiskAttachment::query()->create([
+            'id' => 'att-'.bin2hex(random_bytes(4)),
+            'ticket_ref' => $reference,
+            'original_name' => 'evidence.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 100,
+            'storage_key' => "{$reference}/evidence.pdf",
+            'uploaded_by' => $uploader,
+            'legacy' => false,
+            'uploaded_at' => now(),
+        ]);
+    }
+
     public function test_health_slice_seven(): void
     {
         $this->getJson('/v1/health')
@@ -28,6 +44,8 @@ class Slice7WorkflowApiTest extends TestCase
 
     public function test_personnel_documents_comment_and_reopen(): void
     {
+        config(['rms.ai_auto_route' => true]);
+
         Department::query()->create([
             'external_id' => 'dept-it',
             'name' => 'Information Technology',
@@ -73,6 +91,7 @@ class Slice7WorkflowApiTest extends TestCase
             ])
             ->json('ticket.reference');
 
+        $this->attachEvidence($reference, 'reporter');
         $this->withToken($reporterToken)->postJson("/v1/tickets/{$reference}/submit")->assertOk();
         $this->withToken($deptToken)->postJson("/v1/tickets/{$reference}/accept")->assertOk();
 
@@ -115,12 +134,22 @@ class Slice7WorkflowApiTest extends TestCase
                 'department' => 'Information Technology',
             ])
             ->assertOk()
-            ->assertJsonPath('ticket.status', 'assigned')
+            ->assertJsonPath('ticket.status', 'reopened')
             ->assertJsonPath('ticket.department', 'Information Technology');
     }
 
     public function test_personnel_requires_name(): void
     {
+        config(['rms.ai_auto_route' => true]);
+
+        Department::query()->create([
+            'external_id' => 'dept-fin',
+            'name' => 'Finance',
+            'code' => 'FIN',
+            'active' => true,
+            'status' => 'active',
+        ]);
+
         User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
@@ -150,6 +179,7 @@ class Slice7WorkflowApiTest extends TestCase
             ])
             ->json('ticket.reference');
 
+        $this->attachEvidence($reference, 'reporter');
         $this->withToken($reporterToken)->postJson("/v1/tickets/{$reference}/submit")->assertOk();
         $this->withToken($deptToken)->postJson("/v1/tickets/{$reference}/accept")->assertOk();
 

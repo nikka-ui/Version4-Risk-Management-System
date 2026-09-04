@@ -11,11 +11,13 @@ use App\Services\OfficerTicketService;
 use App\Services\PresidentTicketService;
 use App\Services\SubmitTicketService;
 use App\Services\ThreadCommentService;
+use App\Services\TicketAccessService;
+use App\Support\Roles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Phase 3: ticket read/write APIs (Postgres). Express UI remains SoT until flag-on cutover.
+ * Ticket read/write APIs (Postgres) with role-scoped visibility.
  */
 class TicketController extends Controller
 {
@@ -26,13 +28,18 @@ class TicketController extends Controller
         private readonly PresidentTicketService $presidentTickets,
         private readonly OfficerTicketService $officerTickets,
         private readonly ThreadCommentService $threadComments,
+        private readonly TicketAccessService $ticketAccess,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $query = RiskTicket::query()->orderByDesc('source_updated_at')->orderByDesc('id');
+        /** @var User $user */
+        $user = $request->user();
 
-        if (! $request->boolean('include_deleted')) {
+        $query = RiskTicket::query()->orderByDesc('source_updated_at')->orderByDesc('id');
+        $query = $this->ticketAccess->scopeForUser($query, $user);
+
+        if (! $request->boolean('include_deleted') || $user->role !== 'admin') {
             $query->where('deleted', false);
         }
 
@@ -49,8 +56,6 @@ class TicketController extends Controller
         }
 
         if ($request->filled('mine') && $request->boolean('mine')) {
-            /** @var User $user */
-            $user = $request->user();
             $query->where('submitted_by', $user->username);
         }
 
@@ -64,21 +69,26 @@ class TicketController extends Controller
         }
 
         $limit = min(max((int) $request->query('limit', 100), 1), 500);
-        $tickets = $query->limit($limit)->get()->map(fn (RiskTicket $t) => $t->toListArray())->values();
+        $fetched = $query->limit($limit * 3)->get();
+        $visible = collect($this->ticketAccess->filterCollection($fetched, $user))
+            ->take($limit)
+            ->map(fn (RiskTicket $t) => $t->toListArray())
+            ->values();
 
         return response()->json([
-            'tickets' => $tickets,
-            'count' => $tickets->count(),
+            'tickets' => $visible,
+            'count' => $visible->count(),
         ]);
     }
 
-    public function show(string $reference): JsonResponse
+    public function show(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->first();
+        /** @var User $user */
+        $user = $request->user();
+        $includeDeleted = $request->boolean('include_deleted') && $user->role === 'admin';
+        $ticket = $this->ticketAccess->findAccessible($reference, $user, $includeDeleted);
 
-        if (! $ticket || ($ticket->deleted && ! request()->boolean('include_deleted'))) {
+        if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
@@ -294,18 +304,76 @@ class TicketController extends Controller
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        $ticket = $this->officerTickets->reopen($ticket, $user, $request->all());
+        if ($user->role === Roles::PRESIDENT) {
+            $ticket = $this->presidentTickets->reopen($ticket, $user, $request->all());
+        } else {
+            $ticket = $this->officerTickets->reopen($ticket, $user, $request->all());
+        }
 
         return response()->json(['ticket' => $ticket->toExpressArray()]);
     }
 
-    public function accomplishment(string $reference): JsonResponse
+    public function approveAiRoute(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->where('deleted', false)
-            ->first();
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
 
+        $ticket = $this->officerTickets->approveAiRoute($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function reviewDecision(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->officerTickets->recordReviewDecision($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function validateAccomplishment(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->officerTickets->validateAccomplishment($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function returnAccomplishment(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->officerTickets->findForOfficer($reference);
+        if (! $ticket) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
+        }
+
+        $ticket = $this->officerTickets->returnAccomplishment($ticket, $user, $request->all());
+
+        return response()->json(['ticket' => $ticket->toExpressArray()]);
+    }
+
+    public function accomplishment(Request $request, string $reference): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $ticket = $this->ticketAccess->findAccessible($reference, $user);
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }

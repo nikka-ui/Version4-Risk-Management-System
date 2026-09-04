@@ -13,6 +13,8 @@ final class Roles
 
     public const RM_OFFICER = 'rm_officer';
 
+    public const COMPLIANCE_OFFICER = 'compliance_officer';
+
     public const EXECUTIVE = 'executive';
 
     public const PRESIDENT = 'president';
@@ -39,6 +41,12 @@ final class Roles
             'id' => self::RM_OFFICER,
             'label' => 'Risk Management Officer (RMO)',
             'path' => '/officer',
+            'assignable' => true,
+        ],
+        self::COMPLIANCE_OFFICER => [
+            'id' => self::COMPLIANCE_OFFICER,
+            'label' => 'Compliance Officer',
+            'path' => '/compliance',
             'assignable' => true,
         ],
         self::EXECUTIVE => [

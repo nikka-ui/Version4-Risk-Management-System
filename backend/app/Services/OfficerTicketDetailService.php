@@ -175,6 +175,9 @@ class OfficerTicketDetailService
             'capabilities' => [
                 'canReopen' => in_array($status, ['closed', 'resolved'], true),
                 'canPostComment' => true,
+                'canApproveAiRoute' => $status === 'pending_ai_review',
+                'canReviewDecision' => ! in_array($status, ['draft', 'closed', 'resolved'], true),
+                'canValidateAccomplishment' => $status === 'under_audit' && (bool) $ticket->accomplishment_external_id,
             ],
             'stats' => $stats,
             'activeNav' => 'register',
@@ -243,6 +246,7 @@ class OfficerTicketDetailService
             'in_mitigation' => 'In mitigation',
             'reopened' => 'Reopened',
             'pending_audit' => 'Pending audit',
+            'pending_ai_review' => 'Pending AI routing review',
             'resolved' => 'Resolved',
             'closed' => 'Closed',
             'draft' => 'Draft',

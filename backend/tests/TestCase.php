@@ -51,6 +51,13 @@ abstract class TestCase extends BaseTestCase
 
     public function createApplication()
     {
+        // Docker API image removes `.env` (secrets come from the environment).
+        // Dotenv still probes the path; an empty file avoids PHPUnit warnings.
+        $envPath = dirname(__DIR__).DIRECTORY_SEPARATOR.'.env';
+        if (! is_file($envPath)) {
+            file_put_contents($envPath, '');
+        }
+
         $app = require __DIR__.'/../bootstrap/app.php';
 
         $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();

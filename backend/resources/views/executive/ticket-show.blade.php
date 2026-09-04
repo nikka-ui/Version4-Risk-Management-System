@@ -4,7 +4,6 @@
   @php
     $t = $ticket ?? [];
     $w = $fiveW1H ?? [];
-    $caps = $capabilities ?? [];
     $ref = $t['reference'] ?? '';
     $level = $t['riskLevel'] ?? 'low';
     $comments = $threadComments ?? [];
@@ -12,13 +11,7 @@
     $childrenOf = function (string $parentId) use ($comments) {
       return array_values(array_filter($comments, fn ($c) => ($c['parentId'] ?? null) === $parentId));
     };
-    $flashLabels = [
-      'executive_comment_added' => 'Executive Committee comment posted.',
-      'executive_reply_added' => 'Reply posted.',
-      'not_found' => 'Ticket not found.',
-    ];
-    $flashKey = is_string($flash ?? null) ? $flash : '';
-    $flashMsg = $flashLabels[$flashKey] ?? (is_string($flash ?? null) && $flash !== '' ? $flash : null);
+    $flashMsg = is_string($flash ?? null) && $flash !== '' ? $flash : null;
     $errorMsg = is_string($error ?? null) && $error !== '' ? urldecode($error) : null;
     $isOverdue = (bool) ($t['isOverdue'] ?? false);
     $tone = $isOverdue ? 'bad' : 'ok';
@@ -128,10 +121,10 @@
 
     <section class="sup-card">
       <h2>Discussion thread</h2>
-      <p class="sup-muted-block">Share oversight guidance. Visible to the Department Head and Risk Management Officer (RMO). Not visible to the ticket reporter.</p>
+      <p class="sup-muted-block">Executive Committee is <strong>view only</strong>. Comments and workflow changes are not permitted.</p>
       @if (count($tops) === 0)
         <div class="reddit-thread reddit-thread--empty">
-          <p class="reddit-empty">No comments yet. Start the discussion below.</p>
+          <p class="reddit-empty">No comments yet.</p>
         </div>
       @else
         <div class="reddit-thread">
@@ -149,20 +142,6 @@
                   @endif
                 </header>
                 <div class="reddit-body">{{ $c['body'] }}</div>
-                @if (!empty($caps['canPostComment']))
-                  <details class="reddit-reply-box">
-                    <summary class="reddit-action-btn">Reply</summary>
-                    <form method="post" action="/executive/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-reply-form">
-                      @csrf
-                      <input type="hidden" name="parentId" value="{{ $c['id'] }}">
-                      <div class="field">
-                        <label class="visually-hidden" for="reply-{{ $c['id'] }}">Reply</label>
-                        <textarea id="reply-{{ $c['id'] }}" name="comment" rows="3" required placeholder="Write a reply…"></textarea>
-                      </div>
-                      <button type="submit" class="btn-outline btn-primary--auto">Reply</button>
-                    </form>
-                  </details>
-                @endif
                 @foreach ($childrenOf($c['id']) as $reply)
                   <div class="reddit-comment reddit-comment--reply" id="comment-{{ $reply['id'] }}">
                     <div class="reddit-comment__main">
@@ -185,19 +164,8 @@
           @endforeach
         </div>
       @endif
-
-      @if (!empty($caps['canPostComment']))
-        <form method="post" action="/executive/tickets/{{ urlencode($ref) }}/comment" class="stack-form reddit-compose">
-          @csrf
-          <div class="field">
-            <label for="exec-comment-{{ $ref }}">Add comment</label>
-            <textarea id="exec-comment-{{ $ref }}" name="comment" rows="3" required placeholder="Share oversight guidance on this risk report…"></textarea>
-          </div>
-          <button type="submit" class="btn-primary btn-primary--auto">Post comment</button>
-        </form>
-      @endif
     </section>
 
-    <p class="sup-muted-block exec-view-only-hint">View only for decisions — approve, reject, transfer, and close actions are not available for this role.</p>
+    <p class="sup-muted-block exec-view-only-hint">View only — approve, reject, transfer, comment, and close actions are not available for this role.</p>
   </div>
 @endsection

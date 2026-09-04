@@ -3,34 +3,33 @@
 namespace App\Http\Controllers;
 
 use App\Models\RiskTicket;
+use App\Models\User;
 use App\Services\AttachmentService;
+use App\Services\TicketAccessService;
+use App\Support\Roles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Phase 3 slice 8: attachment metadata APIs (shared risk_attachments table).
- * Phase 3 slice 10: file-byte upload/download over shared MinIO bucket.
+ * Attachment APIs with ticket visibility checks (deny by default).
  */
 class AttachmentController extends Controller
 {
     public function __construct(
         private readonly AttachmentService $attachments,
+        private readonly TicketAccessService $ticketAccess,
     ) {}
 
-    public function index(string $reference): JsonResponse
+    public function index(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->where('deleted', false)
-            ->first();
-
+        $ticket = $this->accessibleTicket($request, $reference);
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
         $items = collect($this->attachments->listForTicket($reference))
-            ->map(fn ($a) => $a->toExpressArray())
+            ->map(fn ($a) => $a->toPublicArray())
             ->values();
 
         return response()->json([
@@ -40,23 +39,33 @@ class AttachmentController extends Controller
         ]);
     }
 
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
         $attachment = $this->attachments->findById($id);
-        if (! $attachment) {
+        if (! $attachment || ! $this->ticketAccess->canAccess($request->user(), $attachment->ticket_ref)) {
             return response()->json(['message' => 'Attachment not found.'], 404);
         }
 
-        return response()->json(['attachment' => $attachment->toExpressArray()]);
+        $ticket = RiskTicket::query()->where('reference', $attachment->ticket_ref)->first();
+        if ($ticket && $ticket->deleted) {
+            return response()->json(['message' => 'Attachment not found.'], 404);
+        }
+
+        return response()->json(['attachment' => $attachment->toPublicArray()]);
     }
 
     public function store(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->where('deleted', false)
-            ->first();
+        // Metadata-only register is restricted to admin / internal service callers.
+        /** @var User $user */
+        $user = $request->user();
+        if ($user->role !== Roles::ADMIN) {
+            return response()->json([
+                'message' => 'Metadata-only attachment registration is restricted. Use the upload endpoint with file bytes.',
+            ], 403);
+        }
 
+        $ticket = $this->accessibleTicket($request, $reference);
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
@@ -67,7 +76,7 @@ class AttachmentController extends Controller
             $ticket = $ticket->fresh();
 
             return response()->json([
-                'attachments' => collect($items)->map(fn ($a) => $a->toExpressArray())->values(),
+                'attachments' => collect($items)->map(fn ($a) => $a->toPublicArray())->values(),
                 'count' => count($items),
                 'evidenceCount' => (int) $ticket->evidence_count,
             ], 201);
@@ -82,18 +91,14 @@ class AttachmentController extends Controller
         $ticket = $ticket->fresh();
 
         return response()->json([
-            'attachment' => $attachment->toExpressArray(),
+            'attachment' => $attachment->toPublicArray(),
             'evidenceCount' => (int) $ticket->evidence_count,
         ], 201);
     }
 
-    public function sync(string $reference): JsonResponse
+    public function sync(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->where('deleted', false)
-            ->first();
-
+        $ticket = $this->accessibleTicket($request, $reference);
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
@@ -106,26 +111,28 @@ class AttachmentController extends Controller
         ]);
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
-        if (! $this->attachments->deleteMetadata($id)) {
+        $attachment = $this->attachments->findById($id);
+        if (! $attachment || ! $this->ticketAccess->canAccess($request->user(), $attachment->ticket_ref)) {
+            return response()->json(['message' => 'Attachment not found.'], 404);
+        }
+
+        $ticket = RiskTicket::query()->where('reference', $attachment->ticket_ref)->first();
+        if ($ticket && $ticket->deleted) {
+            return response()->json(['message' => 'Attachment not found.'], 404);
+        }
+
+        if (! $this->attachments->deleteWithStorage($id)) {
             return response()->json(['message' => 'Attachment not found.'], 404);
         }
 
         return response()->json(['id' => $id]);
     }
 
-    /**
-     * Slice 10: store real file bytes to MinIO + register metadata.
-     * Accepts multipart field `attachments[]` (or a single `file`).
-     */
     public function upload(Request $request, string $reference): JsonResponse
     {
-        $ticket = RiskTicket::query()
-            ->where('reference', $reference)
-            ->where('deleted', false)
-            ->first();
-
+        $ticket = $this->accessibleTicket($request, $reference);
         if (! $ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
@@ -146,17 +153,21 @@ class AttachmentController extends Controller
         $ticket = $ticket->fresh();
 
         return response()->json([
-            'attachments' => collect($saved)->map(fn ($a) => $a->toExpressArray())->values(),
+            'attachments' => collect($saved)->map(fn ($a) => $a->toPublicArray())->values(),
             'count' => count($saved),
             'evidenceCount' => (int) $ticket->evidence_count,
         ], 201);
     }
 
-    /** Slice 10: stream the stored file bytes back to the caller. */
-    public function download(string $id): StreamedResponse|JsonResponse
+    public function download(Request $request, string $id): StreamedResponse|JsonResponse
     {
         $attachment = $this->attachments->findById($id);
-        if (! $attachment) {
+        if (! $attachment || ! $this->ticketAccess->canAccess($request->user(), $attachment->ticket_ref)) {
+            return response()->json(['message' => 'Attachment not found.'], 404);
+        }
+
+        $ticket = RiskTicket::query()->where('reference', $attachment->ticket_ref)->first();
+        if (! $ticket || $ticket->deleted) {
             return response()->json(['message' => 'Attachment not found.'], 404);
         }
 
@@ -176,5 +187,13 @@ class AttachmentController extends Controller
             'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
             'Content-Disposition' => 'inline; filename="'.rawurlencode($filename).'"',
         ]);
+    }
+
+    private function accessibleTicket(Request $request, string $reference): ?RiskTicket
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return $this->ticketAccess->findAccessible($reference, $user);
     }
 }

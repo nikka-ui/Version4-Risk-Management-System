@@ -17,6 +17,7 @@ class AdminTicketService
     private const STATUS_OPTIONS = [
         'draft' => 'Draft',
         'submitted' => 'Submitted',
+        'pending_ai_review' => 'Pending AI Routing Review',
         'assigned' => 'Assigned to Department',
         'ownership_rejected' => 'Returned by Department',
         'in_progress' => 'In Progress (Department)',
@@ -24,8 +25,8 @@ class AdminTicketService
         'pending_president_final' => 'Awaiting President Final Decision',
         'under_review' => 'Under RMO Review',
         'returned' => 'Returned for Revision',
-        'under_audit' => 'Legacy — Under Review',
-        'audit_returned' => 'Legacy — Returned for Revision',
+        'under_audit' => 'Under RMU/Compliance Validation',
+        'audit_returned' => 'Accomplishment Returned',
         'in_mitigation' => 'Implementation Required',
         'pending_audit' => 'Accomplishment Submitted',
         'resolved' => 'Resolved',

@@ -17,6 +17,7 @@ class DeptTicketDetailService
 {
     /** @var list<string> */
     private const VISIBLE_STATUSES = [
+        'pending_ai_review',
         'assigned',
         'in_progress',
         'ownership_rejected',
@@ -77,7 +78,13 @@ class DeptTicketDetailService
             ->orderByDesc('submitted_at')
             ->first();
 
-        $canClose = $status === 'pending_audit' && $accomplishment !== null;
+        $canClose = $status === 'pending_audit'
+            && $accomplishment !== null
+            && ! Departments::requiresPresidentApproval(
+                is_array($ticket->ai) ? $ticket->ai : null,
+                $ticket->likelihood,
+                $ticket->impact,
+            );
         $planPublished = $plan && (! empty($plan['publishedToReporterAt']) || ! empty($plan['submittedForReviewAt']));
         $isDraftPlan = $plan && ! empty(trim((string) ($plan['summary'] ?? ''))) && ! $planPublished;
 

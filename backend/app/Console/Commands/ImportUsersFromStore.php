@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Support\Roles;
+use App\Support\UserSeed;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 /**
  * Idempotent import of Express store.json users into Postgres.
  * Does not modify store.json; Express remains source of truth for live auth.
+ * Missing built-in roles (e.g. compliance_officer) are filled from UserSeed.
  */
 class ImportUsersFromStore extends Command
 {
@@ -48,12 +50,14 @@ class ImportUsersFromStore extends Command
             return self::FAILURE;
         }
 
+        $rows = $this->mergeBuiltInSeedUsers($data['users']);
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
         $dryRun = (bool) $this->option('dry-run');
 
-        foreach ($data['users'] as $row) {
+        foreach ($rows as $row) {
             if (! is_array($row)) {
                 $skipped++;
                 continue;
@@ -156,6 +160,84 @@ class ImportUsersFromStore extends Command
         $this->line('Express store.json was not modified. Browser auth remains on Express.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Ensure built-in demo accounts (UserSeed) exist when store.json omits them.
+     * Password preference: RMS_SEED_PASSWORD → reference store user (rmo/reporter/first).
+     *
+     * @param  list<mixed>  $storeUsers
+     * @return list<array<string, mixed>>
+     */
+    private function mergeBuiltInSeedUsers(array $storeUsers): array
+    {
+        $rows = [];
+        $usernames = [];
+
+        foreach ($storeUsers as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $rows[] = $row;
+            $username = strtolower(trim((string) ($row['username'] ?? '')));
+            if ($username !== '') {
+                $usernames[$username] = true;
+            }
+        }
+
+        $password = trim((string) env('RMS_SEED_PASSWORD', ''));
+        if ($password === '') {
+            foreach (['rmo', 'reporter', 'sys-admin', 'admin'] as $ref) {
+                foreach ($rows as $row) {
+                    if (strtolower(trim((string) ($row['username'] ?? ''))) !== $ref) {
+                        continue;
+                    }
+                    $candidate = (string) ($row['password'] ?? '');
+                    if ($candidate !== '') {
+                        $password = $candidate;
+                        break 2;
+                    }
+                }
+            }
+        }
+        if ($password === '') {
+            foreach ($rows as $row) {
+                $candidate = (string) ($row['password'] ?? '');
+                if ($candidate !== '') {
+                    $password = $candidate;
+                    break;
+                }
+            }
+        }
+
+        if ($password === '') {
+            if ($rows === []) {
+                $this->warn('No users in store.json and RMS_SEED_PASSWORD is empty; cannot apply UserSeed defaults.');
+            }
+
+            return $rows;
+        }
+
+        $seedRows = UserSeed::users(now()->toIso8601String(), $password);
+        $added = 0;
+        foreach ($seedRows as $seed) {
+            $username = strtolower((string) $seed['username']);
+            if (isset($usernames[$username])) {
+                continue;
+            }
+            $rows[] = $seed;
+            $usernames[$username] = true;
+            $added++;
+            $this->line("Adding built-in seed user missing from store.json: {$username} ({$seed['role']})");
+        }
+
+        if ($rows === [] && $seedRows !== []) {
+            $this->warn('No users in store.json; using UserSeed defaults.');
+        } elseif ($added > 0) {
+            $this->info("Merged {$added} built-in UserSeed account(s) missing from store.json.");
+        }
+
+        return $rows;
     }
 
     private function parseTimestamp(mixed $value): ?Carbon

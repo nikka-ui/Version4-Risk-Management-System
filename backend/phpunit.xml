@@ -32,5 +32,6 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="AI_SERVICE_URL" value=""/>
         <env name="RMS_INTERNAL_SERVICE_TOKEN" value="test-internal-token"/>
+        <env name="RMS_AI_AUTO_ROUTE" value="true"/>
     </php>
 </phpunit>

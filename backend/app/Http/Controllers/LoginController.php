@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\LoginBridgeService;
+use App\Services\AuditLogService;
 use App\Support\Roles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -19,6 +21,7 @@ class LoginController extends Controller
 {
     public function __construct(
         private readonly LoginBridgeService $bridge,
+        private readonly AuditLogService $auditLogs,
     ) {}
 
     public function show(Request $request): View
@@ -53,17 +56,32 @@ class LoginController extends Controller
             'next' => ['nullable', 'string'],
         ]);
 
+        $username = strtolower(trim((string) $credentials['username']));
+        $key = 'web-login:'.sha1($request->ip().'|'.$username);
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            $this->auditLogin($request, $username, null, 'login_failed', 'Rate limited web login');
+
+            return redirect()->away('/login')
+                ->withInput($request->only('username', 'next'))
+                ->with('error', "Too many login attempts. Try again in {$seconds} seconds.");
+        }
+
         try {
             $user = $this->bridge->authenticate($credentials['username'], $credentials['password']);
         } catch (ValidationException $e) {
+            RateLimiter::hit($key, 60);
+            $this->auditLogin($request, $username, null, 'login_failed', 'Invalid web login credentials');
+
             return redirect()->away('/login')
                 ->withInput($request->only('username', 'next'))
                 ->with('error', collect($e->errors())->flatten()->first() ?: 'Invalid credentials.');
         }
 
-        // Phase 5 slice 5: Laravel web session for Blade pages (Express still owns rms_session).
+        RateLimiter::clear($key);
         Auth::login($user);
         $request->session()->regenerate();
+        $this->auditLogin($request, $user->username, $user->role, 'login_success', 'Web session login');
 
         $code = $this->bridge->issueCode($user);
         $next = (string) ($credentials['next'] ?? '');
@@ -76,7 +94,6 @@ class LoginController extends Controller
             $target .= '&next='.urlencode($next);
         }
 
-        // Relative Location so the browser stays on the edge host:port (Laravel owns /auth/bridge).
         return redirect()->away($target);
     }
 
@@ -126,6 +143,12 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        /** @var User|null $user */
+        $user = $request->user();
+        if ($user) {
+            $this->auditLogin($request, $user->username, $user->role, 'logout', 'Web session logout');
+        }
+
         Auth::logout();
         if ($request->hasSession()) {
             $request->session()->invalidate();
@@ -155,5 +178,28 @@ class LoginController extends Controller
             'status' => 'ok',
             'user' => $payload['user'],
         ]);
+    }
+
+    private function auditLogin(
+        Request $request,
+        string $username,
+        ?string $role,
+        string $action,
+        string $description,
+    ): void {
+        try {
+            $this->auditLogs->record([
+                'username' => $username,
+                'role' => $role,
+                'roleLabel' => $role ? Roles::label($role) : null,
+                'action' => $action,
+                'module' => 'auth',
+                'description' => $description,
+                'ip' => $request->ip(),
+                'device' => substr((string) $request->userAgent(), 0, 250),
+            ]);
+        } catch (\Throwable) {
+            // best-effort
+        }
     }
 }

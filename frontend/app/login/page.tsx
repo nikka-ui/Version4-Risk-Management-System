@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { setAuthToken } from "@/lib/auth-token";
+import { bladeConsoleUrl } from "@/lib/roles";
 
 type TokenResponse = {
   token: string;
@@ -40,6 +41,12 @@ export default function LoginPage() {
       });
 
       setAuthToken(data.token);
+      const role = data.user?.role ?? "";
+      // Prefer Blade role consoles for production workflows; fall back to Next dashboard.
+      if (typeof window !== "undefined" && role && role !== "employee") {
+        window.location.href = bladeConsoleUrl(role);
+        return;
+      }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {

@@ -78,7 +78,7 @@ class AiAnalysisReclassifyTest extends TestCase
         ]);
 
         $this->withToken($token)
-            ->postJson('/v1/tickets/RISK-2026-RECL-1/ai/reclassify')
+            ->postJson('/v1/tickets/RISK-2026-RECL-1/ai/reclassify', ['confirm' => true])
             ->assertOk()
             ->assertJsonPath('ticketReference', 'RISK-2026-RECL-1')
             ->assertJsonPath('ai.riskCategory', 'financial');

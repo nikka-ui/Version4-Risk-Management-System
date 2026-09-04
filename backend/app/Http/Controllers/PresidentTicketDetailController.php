@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RiskTicket;
 use App\Services\ExpressOrgMirrorService;
 use App\Services\PresidentTicketDetailService;
 use App\Services\PresidentTicketService;
@@ -76,6 +77,28 @@ class PresidentTicketDetailController extends Controller
             : 'president_approve';
 
         return redirect()->away('/president/tickets/'.rawurlencode($reference).'?flash='.$flash);
+    }
+
+    public function reopen(Request $request, string $reference): RedirectResponse
+    {
+        $user = $request->user();
+        $ticket = $this->presidentTickets->findForPresident($reference)
+            ?? RiskTicket::query()->where('reference', $reference)->where('deleted', false)->first();
+        if (! $ticket) {
+            return redirect()->away('/president/pending?flash=not_found');
+        }
+
+        try {
+            $ticket = $this->presidentTickets->reopen($ticket, $user, $request->all());
+        } catch (ValidationException $e) {
+            $msg = collect($e->errors())->flatten()->first() ?: 'Unable to reopen ticket.';
+
+            return redirect()->away('/president/tickets/'.rawurlencode($reference).'?error='.rawurlencode((string) $msg));
+        }
+
+        $this->orgMirror->syncTicket($ticket->toExpressArray());
+
+        return redirect()->away('/president/tickets/'.rawurlencode($reference).'?flash=ticket_reopened');
     }
 
     public function comment(Request $request, string $reference): RedirectResponse

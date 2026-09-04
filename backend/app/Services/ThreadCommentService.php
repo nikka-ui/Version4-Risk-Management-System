@@ -18,6 +18,13 @@ class ThreadCommentService
 
     public function add(RiskTicket $ticket, User $user, array $input = [], ?string $kind = null): RiskTicket
     {
+        // Executive Committee is view-only on workflow threads.
+        if ($user->role === Roles::EXECUTIVE) {
+            throw ValidationException::withMessages([
+                'comment' => ['Executive Committee members have view-only access and cannot post workflow comments.'],
+            ]);
+        }
+
         $text = trim((string) ($input['comment'] ?? $input['body'] ?? ''));
         if ($text === '') {
             throw ValidationException::withMessages([
@@ -105,8 +112,10 @@ class ThreadCommentService
             'source_updated_at' => $now,
         ]);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        app(WorkflowNotificationService::class)->commentAdded($fresh, $user, $text);
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     public function edit(RiskTicket $ticket, User $user, array $input = []): RiskTicket
@@ -235,7 +244,7 @@ class ThreadCommentService
         return match ($user->role) {
             Roles::SUPERVISOR => $ticket->submitted_by === $user->username ? $ticket : null,
             Roles::DEPT_HEAD => app(DeptTicketService::class)->findForDeptHead($reference, $user),
-            Roles::RM_OFFICER => $ticket,
+            Roles::RM_OFFICER, Roles::COMPLIANCE_OFFICER => $ticket,
             Roles::PRESIDENT => app(PresidentTicketService::class)->findForPresident($reference),
             Roles::EXECUTIVE, Roles::ADMIN => $ticket,
             default => null,

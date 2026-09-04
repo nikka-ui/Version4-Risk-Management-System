@@ -62,17 +62,19 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       CACHE_STORE: redis
-      QUEUE_CONNECTION: redis
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
       SESSION_DRIVER: file
       SESSION_COOKIE: rms_session
       SESSION_SECURE_COOKIE: "false"
       SESSION_SAME_SITE: lax
       SESSION_DOMAIN: ""
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080,127.0.0.1:8080}
+      SANCTUM_EXPIRATION_MINUTES: ${SANCTUM_EXPIRATION_MINUTES:-720}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:5000}
       # Path for import (+ optional dual-write if flags re-enabled).
       STORE_JSON_PATH: ${STORE_JSON_PATH:-/import/store.json}
-      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
+      RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-}
+      RMS_AI_AUTO_ROUTE: ${RMS_AI_AUTO_ROUTE:-false}
       # Phase 6 slice 1: Laravel `/` redirects to Blade login / role console when true.
       USE_LARAVEL_EDGE_ROOT: ${USE_LARAVEL_EDGE_ROOT:-true}
       # Phase 6 slice 2: unprefixed Blade URLs (/login, /admin, …) when true.

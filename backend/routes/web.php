@@ -13,6 +13,7 @@ use App\Http\Controllers\DeptDashboardController;
 use App\Http\Controllers\DeptQueueController;
 use App\Http\Controllers\DeptTicketDetailController;
 use App\Http\Controllers\ExecutiveDashboardController;
+use App\Http\Controllers\ComplianceDashboardController;
 use App\Http\Controllers\ExecutiveTicketDetailController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
@@ -245,11 +246,45 @@ Route::middleware(['auth', 'rms.web_officer'])->group(function () {
     Route::post('/officer/tickets/{reference}/thread-comment', [OfficerTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('officer.tickets.thread-comment');
+    Route::post('/officer/tickets/{reference}/ai-route/approve', [OfficerTicketDetailController::class, 'approveAiRoute'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('officer.tickets.ai-route.approve');
+    Route::post('/officer/tickets/{reference}/review-decision', [OfficerTicketDetailController::class, 'reviewDecision'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('officer.tickets.review-decision');
+    Route::post('/officer/tickets/{reference}/accomplishment/validate', [OfficerTicketDetailController::class, 'validateAccomplishment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('officer.tickets.accomplishment.validate');
+    Route::post('/officer/tickets/{reference}/accomplishment/return', [OfficerTicketDetailController::class, 'returnAccomplishment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('officer.tickets.accomplishment.return');
     Route::post('/officer/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
         ->name('officer.notifications.read-all');
     Route::get('/officer/notifications/open/{id}', [RoleNotificationController::class, 'open'])
         ->where('id', '[A-Za-z0-9._-]+')
         ->name('officer.notifications.open');
+});
+
+/*
+| Compliance Officer — validate/return accomplishments (not approve/close). Shares officer ticket UI.
+*/
+Route::middleware(['auth', 'rms.web_compliance'])->group(function () {
+    Route::get('/compliance', [ComplianceDashboardController::class, 'index'])->name('compliance.dashboard');
+    Route::get('/compliance/tickets/{reference}', [OfficerTicketDetailController::class, 'show'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('compliance.tickets.show');
+    Route::post('/compliance/tickets/{reference}/thread-comment', [OfficerTicketDetailController::class, 'comment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('compliance.tickets.thread-comment');
+    Route::post('/compliance/tickets/{reference}/accomplishment/validate', [OfficerTicketDetailController::class, 'validateAccomplishment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('compliance.tickets.accomplishment.validate');
+    Route::post('/compliance/tickets/{reference}/accomplishment/return', [OfficerTicketDetailController::class, 'returnAccomplishment'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('compliance.tickets.accomplishment.return');
+    Route::get('/compliance/attachments/{id}', [RoleAttachmentController::class, 'download'])
+        ->where('id', '[A-Za-z0-9._-]+')
+        ->name('compliance.attachments.download');
 });
 
 /*
@@ -271,9 +306,7 @@ Route::middleware(['auth', 'rms.web_executive'])->group(function () {
     Route::get('/executive/attachments/{id}', [RoleAttachmentController::class, 'download'])
         ->where('id', '[A-Za-z0-9._-]+')
         ->name('executive.attachments.download');
-    Route::post('/executive/tickets/{reference}/comment', [ExecutiveTicketDetailController::class, 'comment'])
-        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
-        ->name('executive.tickets.comment');
+    // Executive Committee is VIEW ONLY — comment mutations removed.
     Route::post('/executive/notifications/read-all', [RoleNotificationController::class, 'markAllRead'])
         ->name('executive.notifications.read-all');
     Route::get('/executive/notifications/open/{id}', [RoleNotificationController::class, 'open'])
@@ -299,6 +332,9 @@ Route::middleware(['auth', 'rms.web_president'])->group(function () {
     Route::post('/president/tickets/{reference}/decision', [PresidentTicketDetailController::class, 'decide'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('president.tickets.decision');
+    Route::post('/president/tickets/{reference}/reopen', [PresidentTicketDetailController::class, 'reopen'])
+        ->where('reference', 'RISK-[A-Za-z0-9\-]+')
+        ->name('president.tickets.reopen');
     Route::post('/president/tickets/{reference}/comment', [PresidentTicketDetailController::class, 'comment'])
         ->where('reference', 'RISK-[A-Za-z0-9\-]+')
         ->name('president.tickets.comment');

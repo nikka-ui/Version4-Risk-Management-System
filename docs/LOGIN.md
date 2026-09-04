@@ -18,6 +18,7 @@ Source of truth: [`backend/app/Support/Roles.php`](../backend/app/Support/Roles.
 | `supervisor` | Ticket Reporter | `/supervisor` | Yes |
 | `dept_head` | Department Head / Vice President | `/dept` | Yes |
 | `rm_officer` | Risk Management Officer (RMO) | `/officer` | Yes |
+| `compliance_officer` | Compliance Officer | `/compliance` | Yes |
 | `executive` | Executive Committee | `/executive` | Yes |
 | `president` | President | `/president` | Yes |
 | `admin` | System Administrator | `/admin` | Yes |
@@ -25,33 +26,38 @@ Source of truth: [`backend/app/Support/Roles.php`](../backend/app/Support/Roles.
 
 There is **no Audit Officer** console. RMO is **governance oversight only** — departments own tickets; the President approves High/Critical plans and finals.
 
-## Built-in credentials (seed accounts)
+## Built-in credentials (seed accounts — DEVELOPMENT ONLY)
 
-Defined in Laravel seed users / `store.json` import. Usernames are case-insensitive at login.
+Defined in Laravel `UserSeed` / `DemoUserSeeder` and merged by `php artisan rms:import-users` when missing from `store.json`. Usernames are case-insensitive at login.
 
-| Username | Password | Role |
-|----------|----------|------|
-| `sys-admin` | `a3c2026` | System Administrator |
-| `admin` | `a3c1993` | System Administrator |
-| `reporter` | `a3c1993` | Ticket Reporter |
-| `dephead` | `a3c1993` | Department Head (Information Technology) |
-| `mmcd` | `a3c1993` | Department Head (MMCD) |
-| `finance` | `a3c1993` | Department Head (Finance) |
-| `operations` | `a3c1993` | Department Head (Operations) |
-| `adminsupport` | `a3c1993` | Department Head (Administration) |
-| `hrms` | `a3c1993` | Department Head (HRMS) |
-| `nbo` | `a3c1993` | Department Head (New Business Operations) |
-| `rmo` | `a3c1993` | Risk Management Officer |
-| `pceo` | `a3c1993` | President / CEO |
-| `executive` | `a3c1993` | Executive Committee |
+**WARNING: These are development seed passwords. Change all of them before any production deploy. Never treat seed credentials as production secrets.**
 
-Legacy usernames still work: `it-head` / `fin-head` / `ops-head` / `admin-head` (`dept2026`), `rm-officer` / `president` (`a3c2026`).
+| Username | Password (dev seed — rotate) | Role |
+|----------|------------------------------|------|
+| `sys-admin` | `<change-me-before-deploy>` | System Administrator |
+| `admin` | `<change-me-before-deploy>` | System Administrator |
+| `reporter` | `<change-me-before-deploy>` | Ticket Reporter |
+| `dephead` | `<change-me-before-deploy>` | Department Head (Information Technology) |
+| `mmcd` | `<change-me-before-deploy>` | Department Head (MMCD) |
+| `finance` | `<change-me-before-deploy>` | Department Head (Finance) |
+| `operations` | `<change-me-before-deploy>` | Department Head (Operations) |
+| `adminsupport` | `<change-me-before-deploy>` | Department Head (Administration) |
+| `hrms` | `<change-me-before-deploy>` | Department Head (HRMS) |
+| `nbo` | `<change-me-before-deploy>` | Department Head (New Business Operations) |
+| `rmo` | `<change-me-before-deploy>` | Risk Management Officer |
+| `compliance` | `<change-me-before-deploy>` | Compliance Officer |
+| `pceo` | `<change-me-before-deploy>` | President / CEO |
+| `executive` | `<change-me-before-deploy>` | Executive Committee |
 
-**Do not use these passwords in production.**
+Local seed values historically used weak shared passwords in the seeder — **rotate immediately** after first login in any shared environment. See `backend/database/seeders` for current hashes.
+
+Legacy usernames may still exist in older imports (`it-head`, `fin-head`, `rm-officer`, `president`).
+
+**Do not use seed passwords in production.**
 
 ## Ticket Reporter (`supervisor`)
 
-Sign in as `reporter` / `a3c1993` → http://localhost:8080/supervisor
+Sign in as `reporter` (dev seed password — rotate; see table above) → http://localhost:8080/supervisor
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
@@ -70,7 +76,7 @@ Sign in as `reporter` / `a3c1993` → http://localhost:8080/supervisor
 
 ## Department Head / Vice President (`dept_head`)
 
-Sign in as `dephead` (or other department accounts) / `a3c1993` → http://localhost:8080/dept
+Sign in as `dephead` (or other department accounts; rotate seed password) → http://localhost:8080/dept
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
@@ -88,9 +94,15 @@ Sign in as `dephead` (or other department accounts) / `a3c1993` → http://local
 
 **Return to reporter** for report revision is allowed only **after ownership is accepted**. Closing after accomplishment uses department closure for Low/Moderate; High/Critical final decisions go through the President.
 
+## Compliance Officer (`compliance_officer`)
+
+Sign in as `compliance` (dev seed password — rotate; see table above) → http://localhost:8080/compliance
+
+Validates High/Critical accomplishments before presidential final. Same seed-password rules as other demo roles.
+
 ## Risk Management Officer — RMO (`rm_officer`)
 
-Sign in as `rmo` / `a3c1993` → http://localhost:8080/officer  
+Sign in as `rmo` (dev seed password — rotate) → http://localhost:8080/officer  
 (With Blade flags on: overview `/laravel/officer`, queues `/laravel/officer/{tickets,overdue,monitoring,action-plans}`.)
 
 | Screen | URL | Purpose |
@@ -105,7 +117,7 @@ RMO **cannot** accept ownership, edit mitigation plans, or close tickets as owne
 
 ## President (`president`)
 
-Sign in as `pceo` / `a3c1993` → http://localhost:8080/president
+Sign in as `pceo` (dev seed password — rotate) → http://localhost:8080/president
 
 | Screen | URL | Purpose |
 |--------|-----|---------|
@@ -121,13 +133,13 @@ Notifications for this role are filtered to High/Critical.
 
 ## Executive Committee (`executive`)
 
-Sign in as `executive` / `a3c1993` → http://localhost:8080/executive
+Sign in as `executive` (dev seed password — rotate) → http://localhost:8080/executive
 
 View-only oversight: dashboard, heatmap, reports, trends, statistics, department performance, ticket detail and comments. Notifications are High/Critical only. Pill/UI: “View only”.
 
 ## System Administrator (`admin`)
 
-Sign in as `sys-admin` / `a3c2026` (or `admin` / `a3c1993`) → http://localhost:8080/admin
+Sign in as `sys-admin` or `admin` (dev seed password — rotate) → http://localhost:8080/admin
 
 | Screen | URL | Purpose |
 |--------|-----|---------|

@@ -20,19 +20,16 @@ class ExecutiveTicketMutationTest extends TestCase
             ->assertJsonPath('slice', 3);
     }
 
-    public function test_guest_cannot_post_executive_comment(): void
+    public function test_executive_comment_route_removed(): void
     {
         $this->submittedTicket('RISK-TEST-E001');
 
         $this->post('/executive/tickets/RISK-TEST-E001/comment', [
             'comment' => 'Guest note',
-        ])->assertRedirect();
-
-        $ticket = RiskTicket::query()->where('reference', 'RISK-TEST-E001')->first();
-        $this->assertSame([], $ticket?->thread_comments ?? []);
+        ])->assertNotFound();
     }
 
-    public function test_executive_can_post_comment_and_reply(): void
+    public function test_executive_cannot_post_comment(): void
     {
         $executive = User::factory()->create([
             'role' => Roles::EXECUTIVE,
@@ -45,64 +42,10 @@ class ExecutiveTicketMutationTest extends TestCase
             ->post('/executive/tickets/RISK-TEST-E002/comment', [
                 'comment' => 'Oversight guidance',
             ])
-            ->assertRedirect();
-
-        $ticket->refresh();
-        $thread = $ticket->thread_comments ?? [];
-        $feed = $ticket->executive_comments ?? [];
-        $this->assertCount(1, $thread);
-        $this->assertSame('Oversight guidance', $thread[0]['body'] ?? null);
-        $this->assertSame(Roles::EXECUTIVE, $thread[0]['authorRole'] ?? null);
-        $this->assertSame('Oversight guidance', $feed[0]['body'] ?? null);
-
-        $this->actingAs($executive)
-            ->post('/executive/tickets/RISK-TEST-E002/comment', [
-                'comment' => 'Follow-up',
-                'parentId' => $thread[0]['id'],
-            ])
-            ->assertRedirect();
-
-        $ticket->refresh();
-        $thread = $ticket->thread_comments ?? [];
-        $this->assertCount(2, $thread);
-        $this->assertSame($thread[0]['id'], $thread[1]['parentId'] ?? null);
-        $this->assertSame('Follow-up', $thread[1]['body'] ?? null);
-    }
-
-    public function test_executive_empty_comment_is_rejected(): void
-    {
-        $executive = User::factory()->create([
-            'role' => Roles::EXECUTIVE,
-            'role_label' => Roles::label(Roles::EXECUTIVE),
-        ]);
-        $ticket = $this->submittedTicket('RISK-TEST-E003');
-
-        $this->actingAs($executive)
-            ->post('/executive/tickets/RISK-TEST-E003/comment', [
-                'comment' => '   ',
-            ])
-            ->assertRedirect();
+            ->assertNotFound();
 
         $ticket->refresh();
         $this->assertSame([], $ticket->thread_comments ?? []);
-    }
-
-    public function test_non_executive_cannot_post_comment(): void
-    {
-        $officer = User::factory()->create([
-            'role' => Roles::RM_OFFICER,
-            'role_label' => Roles::label(Roles::RM_OFFICER),
-        ]);
-        $this->submittedTicket('RISK-TEST-E004');
-
-        $this->actingAs($officer)
-            ->post('/executive/tickets/RISK-TEST-E004/comment', [
-                'comment' => 'Officer note',
-            ])
-            ->assertRedirect();
-
-        $ticket = RiskTicket::query()->where('reference', 'RISK-TEST-E004')->first();
-        $this->assertSame([], $ticket?->thread_comments ?? []);
     }
 
     private function submittedTicket(string $ref): RiskTicket
@@ -110,14 +53,13 @@ class ExecutiveTicketMutationTest extends TestCase
         return RiskTicket::query()->create([
             'external_id' => 'ext-'.$ref,
             'reference' => $ref,
-            'title' => $ref,
-            'status' => 'submitted',
-            'likelihood' => 3,
-            'impact' => 3,
-            'submitted_by' => 'reporter1',
-            'thread_comments' => [],
-            'executive_comments' => [],
+            'title' => 'Exec ticket',
+            'status' => 'assigned',
+            'submitted_by' => 'reporter',
+            'department' => 'Information Technology',
             'deleted' => false,
+            'thread_comments' => [],
+            'source_updated_at' => now(),
         ]);
     }
 }

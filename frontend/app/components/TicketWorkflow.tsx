@@ -21,6 +21,8 @@ const DEPT_CLOSE_STATUSES = new Set(["pending_audit"]);
 const PRESIDENT_PLAN_STATUSES = new Set(["pending_president"]);
 const PRESIDENT_FINAL_STATUSES = new Set(["pending_president_final"]);
 const OFFICER_REOPEN_STATUSES = new Set(["closed", "resolved"]);
+const OFFICER_AI_REVIEW_STATUSES = new Set(["pending_ai_review"]);
+const GOVERNANCE_VALIDATE_STATUSES = new Set(["under_audit"]);
 
 async function mutateTicket(
   reference: string,
@@ -65,6 +67,7 @@ export function TicketWorkflow({
   const [personRole, setPersonRole] = useState("");
   const [decision, setDecision] = useState("approve");
   const [decisionNote, setDecisionNote] = useState("");
+  const [rmoDecision, setRmoDecision] = useState("recommend");
 
   useEffect(() => {
     apiFetch<{ departments: DepartmentItem[] }>("/departments")
@@ -298,6 +301,7 @@ export function TicketWorkflow({
             void run(() =>
               mutateTicket(ticket.reference, "/reassign", "POST", {
                 reason,
+                comment: reason,
                 targetDepartment,
               }),
             );
@@ -396,6 +400,135 @@ export function TicketWorkflow({
           <label>
             Note
             <textarea
+              value={decisionNote}
+              onChange={(event) => setDecisionNote(event.target.value)}
+            />
+          </label>
+          <div className="actions">
+            <button disabled={busy} type="submit">
+              Record decision
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {isOfficer && OFFICER_AI_REVIEW_STATUSES.has(status) ? (
+        <form
+          className="ticket-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void run(() =>
+              mutateTicket(ticket.reference, "/ai-route/approve", "POST", {
+                department: targetDepartment || ticket.department,
+              }),
+            );
+          }}
+        >
+          <h3>Approve AI routing</h3>
+          <label>
+            Department
+            <select
+              value={targetDepartment}
+              onChange={(event) => setTargetDepartment(event.target.value)}
+            >
+              <option value="">{ticket.department ?? "Recommended department"}</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="actions">
+            <button disabled={busy} type="submit">
+              Approve routing
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {(isOfficer || user.role === "compliance_officer") &&
+      GOVERNANCE_VALIDATE_STATUSES.has(status) ? (
+        <>
+          <form
+            className="ticket-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() =>
+                mutateTicket(ticket.reference, "/accomplishment/validate", "POST", {
+                  note: decisionNote,
+                }),
+              );
+            }}
+          >
+            <h3>Validate accomplishment</h3>
+            <label>
+              Note
+              <textarea
+                value={decisionNote}
+                onChange={(event) => setDecisionNote(event.target.value)}
+              />
+            </label>
+            <div className="actions">
+              <button disabled={busy} type="submit">
+                Validate → President
+              </button>
+            </div>
+          </form>
+          <form
+            className="ticket-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() =>
+                mutateTicket(ticket.reference, "/accomplishment/return", "POST", {
+                  note: reason || comment,
+                }),
+              );
+            }}
+          >
+            <h3>Return accomplishment</h3>
+            <label>
+              Reason
+              <textarea
+                required
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+            <div className="actions">
+              <button disabled={busy} type="submit">
+                Return to mitigation
+              </button>
+            </div>
+          </form>
+        </>
+      ) : null}
+
+      {isOfficer && !OFFICER_REOPEN_STATUSES.has(status) && status !== "draft" ? (
+        <form
+          className="ticket-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void run(() =>
+              mutateTicket(ticket.reference, "/review-decision", "POST", {
+                decision: rmoDecision,
+                note: decisionNote || reason,
+              }),
+            );
+          }}
+        >
+          <h3>RMU review decision</h3>
+          <label>
+            Decision
+            <select value={rmoDecision} onChange={(event) => setRmoDecision(event.target.value)}>
+              <option value="recommend">Recommend</option>
+              <option value="escalate">Escalate</option>
+            </select>
+          </label>
+          <label>
+            Note
+            <textarea
+              required
               value={decisionNote}
               onChange={(event) => setDecisionNote(event.target.value)}
             />

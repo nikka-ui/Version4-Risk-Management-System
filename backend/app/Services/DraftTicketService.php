@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\RiskAttachment;
 use App\Models\RiskTicket;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -9,10 +10,14 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Phase 3 slice 2 + Phase 11: draft CRUD against Postgres; AI via AiAnalysisService (persisted).
+ * Client evidenceCount is ignored — count comes from risk_attachments only.
  */
 class DraftTicketService
 {
-    public function __construct(private readonly AiAnalysisService $aiAnalysis) {}
+    public function __construct(
+        private readonly AiAnalysisService $aiAnalysis,
+        private readonly AttachmentService $attachments,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $input
@@ -20,7 +25,8 @@ class DraftTicketService
     public function create(User $user, array $input): RiskTicket
     {
         $fields = $this->validatedFields($input);
-        $evidenceCount = $this->resolveEvidenceCount($input);
+        // Drafts may start with zero attachments; submit enforces real rows.
+        $evidenceCount = 0;
 
         return DB::transaction(function () use ($user, $fields, $evidenceCount, $input) {
             $reference = trim((string) ($input['reference'] ?? ''));
@@ -103,6 +109,12 @@ class DraftTicketService
     {
         $this->assertOwnerDraft($ticket, $user);
         $reference = $ticket->reference;
+
+        $ids = RiskAttachment::query()->where('ticket_ref', $reference)->pluck('id');
+        foreach ($ids as $id) {
+            $this->attachments->deleteWithStorage((string) $id);
+        }
+
         $ticket->delete();
 
         return $reference;
@@ -190,27 +202,11 @@ class DraftTicketService
     }
 
     /**
-     * @param  array<string, mixed>  $input
+     * Real attachment rows only — never trust client evidenceCount.
      */
-    private function resolveEvidenceCount(array $input, ?int $fallback = null): int
+    private function realEvidenceCount(string $reference): int
     {
-        if (isset($input['evidenceCount'])) {
-            $count = (int) $input['evidenceCount'];
-        } elseif (isset($input['evidence']) && is_array($input['evidence'])) {
-            $count = count($input['evidence']);
-        } elseif ($fallback !== null) {
-            $count = $fallback;
-        } else {
-            $count = 0;
-        }
-
-        if ($count < 1) {
-            throw ValidationException::withMessages([
-                'evidenceCount' => ['At least one evidence file is required.'],
-            ]);
-        }
-
-        return $count;
+        return RiskAttachment::query()->where('ticket_ref', $reference)->count();
     }
 
     /**
@@ -219,7 +215,7 @@ class DraftTicketService
     private function applyFieldUpdate(RiskTicket $ticket, array $input): RiskTicket
     {
         $fields = $this->validatedFields($input);
-        $evidenceCount = $this->resolveEvidenceCount($input, $ticket->evidence_count);
+        $evidenceCount = $this->realEvidenceCount((string) $ticket->reference);
 
         $ai = $this->aiAnalysis->analyze([
             'title' => $fields['title'],

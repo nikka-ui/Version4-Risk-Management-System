@@ -74,7 +74,7 @@ class DraftTicketApiTest extends TestCase
             ]))
             ->assertOk()
             ->assertJsonPath('ticket.title', 'Updated network outage risk')
-            ->assertJsonPath('ticket.evidenceCount', 2);
+            ->assertJsonPath('ticket.evidenceCount', 0);
 
         $this->withToken($token)
             ->deleteJson('/v1/tickets/'.$reference)
@@ -84,7 +84,7 @@ class DraftTicketApiTest extends TestCase
         $this->assertDatabaseMissing('risk_tickets', ['reference' => $reference]);
     }
 
-    public function test_create_requires_evidence_and_five_w1h(): void
+    public function test_create_ignores_client_evidence_count_and_requires_five_w1h(): void
     {
         User::factory()->create([
             'username' => 'reporter',
@@ -96,7 +96,8 @@ class DraftTicketApiTest extends TestCase
 
         $this->withToken($token)
             ->postJson('/v1/tickets', $this->draftPayload(['evidenceCount' => 0]))
-            ->assertStatus(422);
+            ->assertCreated()
+            ->assertJsonPath('ticket.evidenceCount', 0);
 
         $this->withToken($token)
             ->postJson('/v1/tickets', $this->draftPayload(['what' => '']))

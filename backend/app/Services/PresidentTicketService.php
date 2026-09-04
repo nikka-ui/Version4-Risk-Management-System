@@ -10,9 +10,15 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Phase 3 slice 6: presidential action-plan and final decisions (Postgres only).
+ * Decisions only when status is pending_president / pending_president_final.
  */
 class PresidentTicketService
 {
+    public function __construct(
+        private readonly WorkflowNotificationService $workflowNotifications,
+        private readonly OfficerTicketService $officerTickets,
+    ) {}
+
     public function findForPresident(string $reference): ?RiskTicket
     {
         $ticket = RiskTicket::query()
@@ -28,6 +34,31 @@ class PresidentTicketService
         return $ticket;
     }
 
+    /**
+     * President may reopen significant (High/Critical) closed tickets.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function reopen(RiskTicket $ticket, User $user, array $input = []): RiskTicket
+    {
+        if ($user->role !== 'president') {
+            abort(403, 'Forbidden.');
+        }
+
+        if (! Departments::requiresPresidentApproval(
+            is_array($ticket->ai) ? $ticket->ai : null,
+            $ticket->likelihood,
+            $ticket->impact,
+        )) {
+            throw ValidationException::withMessages([
+                'status' => ['President reopen is limited to High/Critical risks.'],
+            ]);
+        }
+
+        // Reuse RMO reopen mechanics (status reopened + ownership reset) under president actor.
+        return $this->officerTickets->reopen($ticket, $user, $input);
+    }
+
     public function recordDecision(RiskTicket $ticket, User $user, array $input = []): RiskTicket
     {
         if ($user->role !== 'president') {
@@ -37,14 +68,13 @@ class PresidentTicketService
         $payload = is_array($ticket->payload) ? $ticket->payload : [];
         $presidentReviewPhase = $payload['presidentReviewPhase'] ?? null;
 
-        $isFinalPhase = $ticket->status === 'pending_president_final' || $presidentReviewPhase === 'final';
-        $isActionPlanPhase = $isFinalPhase
-            ? false
-            : ($ticket->status === 'pending_president' || $this->needsActionPlanDecision($ticket));
+        $isFinalPhase = $ticket->status === 'pending_president_final'
+            || ($presidentReviewPhase === 'final' && $ticket->status === 'pending_president_final');
+        $isActionPlanPhase = $ticket->status === 'pending_president';
 
         if (! $isFinalPhase && ! $isActionPlanPhase) {
             throw ValidationException::withMessages([
-                'status' => ['This ticket is not awaiting a presidential decision.'],
+                'status' => ['This ticket is not awaiting a presidential decision (expected pending_president or pending_president_final).'],
             ]);
         }
 
@@ -144,8 +174,13 @@ class PresidentTicketService
 
         $ticket->fill($updates);
         $ticket->save();
+        $fresh = $ticket->fresh();
+        $this->workflowNotifications->presidentDecision($fresh, $normalizedDecision, $user);
+        if ($status === 'closed') {
+            $this->workflowNotifications->ticketClosed($fresh, $user);
+        }
 
-        return $ticket->fresh();
+        return $fresh;
     }
 
     private function isPresidentVisible(RiskTicket $ticket): bool

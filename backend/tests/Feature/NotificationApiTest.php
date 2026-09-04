@@ -38,11 +38,17 @@ class NotificationApiTest extends TestCase
             'password' => 'rmo2026',
             'role' => Roles::RM_OFFICER,
         ]);
+        User::factory()->create([
+            'username' => 'sys-admin',
+            'password' => 'a3c2026',
+            'role' => Roles::ADMIN,
+        ]);
 
         $reporterToken = $this->token('reporter', 'a3c2026');
         $officerToken = $this->token('rmo', 'rmo2026');
+        $adminToken = $this->token('sys-admin', 'a3c2026');
 
-        $this->withToken($reporterToken)
+        $this->withToken($adminToken)
             ->postJson('/v1/notifications', [
                 'recipientUsername' => 'reporter',
                 'type' => 'ticket_update',
@@ -54,7 +60,7 @@ class NotificationApiTest extends TestCase
             ->assertJsonPath('notification.recipientUsername', 'reporter')
             ->assertJsonPath('notification.read', false);
 
-        $this->withToken($reporterToken)
+        $this->withToken($adminToken)
             ->postJson('/v1/notifications', [
                 'recipientRole' => 'rm_officer',
                 'type' => 'ticket_submitted',
@@ -96,10 +102,16 @@ class NotificationApiTest extends TestCase
             'password' => 'a3c2026',
             'role' => Roles::SUPERVISOR,
         ]);
+        User::factory()->create([
+            'username' => 'sys-admin',
+            'password' => 'a3c2026',
+            'role' => Roles::ADMIN,
+        ]);
         $token = $this->token('reporter', 'a3c2026');
+        $adminToken = $this->token('sys-admin', 'a3c2026');
 
         foreach (['A', 'B', 'C'] as $n) {
-            $this->withToken($token)->postJson('/v1/notifications', [
+            $this->withToken($adminToken)->postJson('/v1/notifications', [
                 'recipientUsername' => 'reporter',
                 'type' => 'ping',
                 'title' => "Note {$n}",
@@ -117,7 +129,7 @@ class NotificationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('unread', 0);
 
-        $this->withToken($token)
+        $this->withToken($adminToken)
             ->postJson('/v1/report-logs', [
                 'ticketRef' => 'RISK-2026-00001',
                 'title' => 'Ticket closed',
@@ -138,6 +150,23 @@ class NotificationApiTest extends TestCase
     public function test_create_requires_recipient(): void
     {
         User::factory()->create([
+            'username' => 'sys-admin',
+            'password' => 'a3c2026',
+            'role' => Roles::ADMIN,
+        ]);
+        $token = $this->token('sys-admin', 'a3c2026');
+
+        $this->withToken($token)
+            ->postJson('/v1/notifications', [
+                'type' => 'x',
+                'title' => 'No recipient',
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_non_admin_cannot_create_notifications(): void
+    {
+        User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
             'role' => Roles::SUPERVISOR,
@@ -146,9 +175,10 @@ class NotificationApiTest extends TestCase
 
         $this->withToken($token)
             ->postJson('/v1/notifications', [
+                'recipientUsername' => 'reporter',
                 'type' => 'x',
-                'title' => 'No recipient',
+                'title' => 'Nope',
             ])
-            ->assertStatus(422);
+            ->assertForbidden();
     }
 }

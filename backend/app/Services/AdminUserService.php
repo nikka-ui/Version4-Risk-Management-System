@@ -129,8 +129,8 @@ class AdminUserService
 
         $password = (string) ($input['password'] ?? '');
         $confirm = $input['confirmPassword'] ?? $input['confirm_password'] ?? null;
-        if (strlen($password) < 6) {
-            return ['error' => 'Password must be at least 6 characters.'];
+        if (strlen($password) < 8) {
+            return ['error' => 'Password must be at least 8 characters.'];
         }
         if ($confirm !== null && $password !== (string) $confirm) {
             return ['error' => 'Passwords do not match.'];
@@ -287,8 +287,8 @@ class AdminUserService
 
         $password = (string) ($input['password'] ?? '');
         $confirm = $input['confirmPassword'] ?? $input['confirm_password'] ?? null;
-        if (strlen($password) < 6) {
-            return ['error' => 'Password must be at least 6 characters.'];
+        if (strlen($password) < 8) {
+            return ['error' => 'Password must be at least 8 characters.'];
         }
         if ($confirm !== null && $password !== (string) $confirm) {
             return ['error' => 'Passwords do not match.'];

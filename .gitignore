@@ -37,6 +37,10 @@ tmp/
 temp/
 
 # Local debug / session artifacts
-_cookies*.txt
-_rmo_cookies.txt
+*cookies*
+*_cookies*.txt
 _rmo_page.html
+cookies.txt
+_test_cookies.txt
+_cookies_rmo.txt
+_rmo_cookies.txt

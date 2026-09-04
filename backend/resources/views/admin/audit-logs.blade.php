@@ -114,15 +114,26 @@
       btn.addEventListener('click', function() {
         var data = JSON.parse(btn.getAttribute('data-detail'));
         var dlg = document.getElementById('auditDetailDialog');
-        dlg.querySelector('.admin-dialog__body').innerHTML =
-          '<h3>Audit log details</h3>' +
-          '<dl class="detail-dl">' +
-          '<dt>ID</dt><dd>' + (data.id || '') + '</dd>' +
-          '<dt>Time</dt><dd>' + (data.at || '') + '</dd>' +
-          '<dt>User</dt><dd>' + (data.username || '') + '</dd>' +
-          '<dt>Action</dt><dd>' + (data.action || '') + '</dd>' +
-          '<dt>Description</dt><dd>' + (data.description || '') + '</dd>' +
-          '</dl>';
+        dlg.querySelector('.admin-dialog__body').replaceChildren();
+        var h3 = document.createElement('h3');
+        h3.textContent = 'Audit log details';
+        var dl = document.createElement('dl');
+        dl.className = 'detail-dl';
+        function addRow(label, value) {
+          var dt = document.createElement('dt');
+          dt.textContent = label;
+          var dd = document.createElement('dd');
+          dd.textContent = value || '';
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        }
+        addRow('ID', data.id);
+        addRow('Time', data.at);
+        addRow('User', data.username);
+        addRow('Action', data.action);
+        addRow('Description', data.description);
+        dlg.querySelector('.admin-dialog__body').appendChild(h3);
+        dlg.querySelector('.admin-dialog__body').appendChild(dl);
         dlg.showModal();
       });
     });

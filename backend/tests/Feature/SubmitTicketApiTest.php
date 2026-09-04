@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
+use App\Models\RiskAttachment;
 use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,8 +29,18 @@ class SubmitTicketApiTest extends TestCase
         ];
     }
 
-    public function test_submit_moves_draft_to_assigned(): void
+    public function test_submit_moves_draft_to_assigned_when_auto_route_allowed(): void
     {
+        config(['rms.ai_auto_route' => true]);
+
+        Department::query()->create([
+            'external_id' => 'dept-it',
+            'name' => 'Information Technology',
+            'code' => 'IT',
+            'active' => true,
+            'status' => 'active',
+        ]);
+
         User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
@@ -47,6 +59,18 @@ class SubmitTicketApiTest extends TestCase
             ->assertCreated()
             ->json('ticket.reference');
 
+        RiskAttachment::query()->create([
+            'id' => 'att-submit-1',
+            'ticket_ref' => $reference,
+            'original_name' => 'evidence.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 120,
+            'storage_key' => "{$reference}/evidence.pdf",
+            'uploaded_by' => 'reporter',
+            'legacy' => false,
+            'uploaded_at' => now(),
+        ]);
+
         $this->withToken($token)
             ->postJson('/v1/tickets/'.$reference.'/submit')
             ->assertOk()
@@ -61,6 +85,15 @@ class SubmitTicketApiTest extends TestCase
 
     public function test_cannot_submit_non_draft_twice(): void
     {
+        config(['rms.ai_auto_route' => true]);
+        Department::query()->create([
+            'external_id' => 'dept-it',
+            'name' => 'Information Technology',
+            'code' => 'IT',
+            'active' => true,
+            'status' => 'active',
+        ]);
+
         User::factory()->create([
             'username' => 'reporter',
             'password' => 'a3c2026',
@@ -75,6 +108,18 @@ class SubmitTicketApiTest extends TestCase
         $reference = $this->withToken($token)
             ->postJson('/v1/tickets', $this->draftPayload())
             ->json('ticket.reference');
+
+        RiskAttachment::query()->create([
+            'id' => 'att-submit-2',
+            'ticket_ref' => $reference,
+            'original_name' => 'evidence.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 120,
+            'storage_key' => "{$reference}/evidence.pdf",
+            'uploaded_by' => 'reporter',
+            'legacy' => false,
+            'uploaded_at' => now(),
+        ]);
 
         $this->withToken($token)->postJson('/v1/tickets/'.$reference.'/submit')->assertOk();
         $this->withToken($token)->postJson('/v1/tickets/'.$reference.'/submit')->assertStatus(422);

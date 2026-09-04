@@ -106,7 +106,7 @@ class ExecutiveTicketDetailService
                 is_array($ticket->thread_comments) ? $ticket->thread_comments : []
             ),
             'capabilities' => [
-                'canPostComment' => $status !== 'draft',
+                'canPostComment' => false,
             ],
             'stats' => $statsPayload['stats'],
             'activeNav' => 'overview',

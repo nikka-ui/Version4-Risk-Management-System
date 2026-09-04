@@ -108,12 +108,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('/notifications', [NotificationController::class, 'store']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
 
     Route::get('/report-logs', [ReportLogController::class, 'index']);
-    Route::post('/report-logs', [ReportLogController::class, 'store']);
+
+    Route::middleware('rms.admin')->group(function () {
+        Route::post('/notifications', [NotificationController::class, 'store']);
+        Route::post('/report-logs', [ReportLogController::class, 'store']);
+    });
 
     Route::middleware('rms.dept_head')->group(function () {
         Route::post('/tickets/{reference}/accept', [TicketController::class, 'accept']);
@@ -128,10 +131,18 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('rms.president')->group(function () {
         Route::post('/tickets/{reference}/president-decision', [TicketController::class, 'presidentDecision']);
+        Route::post('/tickets/{reference}/reopen', [TicketController::class, 'reopen']);
     });
 
     Route::middleware('rms.officer')->group(function () {
         Route::post('/tickets/{reference}/reopen', [TicketController::class, 'reopen']);
+        Route::post('/tickets/{reference}/ai-route/approve', [TicketController::class, 'approveAiRoute']);
+        Route::post('/tickets/{reference}/review-decision', [TicketController::class, 'reviewDecision']);
+    });
+
+    Route::middleware('rms.governance')->group(function () {
+        Route::post('/tickets/{reference}/accomplishment/validate', [TicketController::class, 'validateAccomplishment']);
+        Route::post('/tickets/{reference}/accomplishment/return', [TicketController::class, 'returnAccomplishment']);
     });
 
     Route::middleware('rms.admin')->group(function () {

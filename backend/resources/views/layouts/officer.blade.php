@@ -20,8 +20,11 @@
     $nav = [
       ['id' => 'dashboard', 'href' => '/officer', 'label' => 'Dashboard'],
       ['id' => 'register', 'href' => '/officer/tickets', 'label' => 'Risk register', 'statKey' => 'total'],
+      ['id' => 'ai-review', 'href' => '/officer/ai-review', 'label' => 'AI routing review'],
+      ['id' => 'action-plans', 'href' => '/officer/action-plans', 'label' => 'Action plans'],
       ['id' => 'overdue', 'href' => '/officer/overdue', 'label' => 'Overdue & SLA', 'statKey' => 'overdueMitigation'],
       ['id' => 'monitoring', 'href' => '/officer/monitoring', 'label' => 'Monitoring', 'statKey' => 'inMitigation'],
+      ['id' => 'final-validation', 'href' => '/officer/final-validation', 'label' => 'Final validation'],
     ];
   @endphp
   <aside class="supervisor-sidebar">

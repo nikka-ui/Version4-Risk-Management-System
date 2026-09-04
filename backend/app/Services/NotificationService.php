@@ -118,7 +118,7 @@ class NotificationService
             $readAt = $createdAt;
         }
 
-        return Notification::query()->updateOrCreate(
+        $notification = Notification::query()->updateOrCreate(
             ['id' => $id],
             [
                 'recipient_username' => $recipientUsername,
@@ -135,6 +135,52 @@ class NotificationService
                 'created_at' => $createdAt,
             ],
         )->fresh();
+
+        $this->maybeEmailCritical($notification);
+
+        return $notification;
+    }
+
+    private function maybeEmailCritical(Notification $notification): void
+    {
+        $critical = [
+            'sla_overdue',
+            'sla_approaching',
+            'pending_president_final',
+            'rmo_escalate',
+            'pending_ai_review',
+            'ticket_assigned',
+        ];
+        if (! in_array((string) $notification->type, $critical, true)) {
+            return;
+        }
+        if (! filter_var(env('RMS_WORKFLOW_EMAIL', false), FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
+
+        try {
+            $query = User::query()->where('active', true)->where('deleted', false);
+            if ($notification->recipient_username) {
+                $query->where('username', $notification->recipient_username);
+            } elseif ($notification->recipient_role) {
+                $query->where('role', $notification->recipient_role);
+            } else {
+                return;
+            }
+            foreach ($query->limit(20)->get() as $user) {
+                if (! $user->email) {
+                    continue;
+                }
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WorkflowAlertMail(
+                    $user->name ?: $user->username,
+                    (string) $notification->title,
+                    (string) $notification->message,
+                    $notification->ticket_ref,
+                ));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('workflow email failed: '.$e->getMessage());
+        }
     }
 
     public function markAllRead(User $user, ?string $ticketRef = null): int
