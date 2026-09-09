@@ -318,7 +318,8 @@ class AdminUserService
     private function nextEmployeeId(): string
     {
         $max = 0;
-        foreach (User::query()->whereNotNull('employee_id')->pluck('employee_id') as $id) {
+        // Only active (non-deleted) users so soft-deleted demos do not advance the sequence.
+        foreach (User::query()->where('deleted', false)->whereNotNull('employee_id')->pluck('employee_id') as $id) {
             if (preg_match('/^EMP-(\d+)$/i', (string) $id, $m)) {
                 $max = max($max, (int) $m[1]);
             }
