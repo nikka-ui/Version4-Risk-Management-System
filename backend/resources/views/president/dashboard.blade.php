@@ -2,6 +2,8 @@
 
 @section('content')
   @php
+    $pendingCount = (int) ($stats['pendingCount'] ?? 0);
+    $pendingTickets = $stats['pendingTickets'] ?? [];
     $flashMsg = match (is_string($flash ?? null) ? $flash : '') {
       'notifications_read' => 'All notifications marked as read.',
       default => is_string($flash ?? null) && $flash !== '' ? $flash : null,

@@ -26,9 +26,15 @@ class LoginBridgeService
             ->where('deleted', false)
             ->first();
 
-        if (! $user || ! Hash::check($password, $user->password)) {
+        if (! $user) {
             throw ValidationException::withMessages([
-                'username' => ['Invalid username or password.'],
+                'username' => ['Invalid username'],
+            ]);
+        }
+
+        if (! Hash::check($password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Invalid Password'],
             ]);
         }
 
