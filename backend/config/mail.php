@@ -113,4 +113,22 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OTP "From" Address (login / password-reset codes)
+    |--------------------------------------------------------------------------
+    |
+    | OTP mailables set Envelope from explicitly so codes always come from the
+    | OTP mailbox even when MAIL_FROM_* differs. Production must use
+    | MAIL_MAILER=smtp (or equivalent) with credentials that can send as this
+    | address — the default log mailer only writes to the log. Local Docker
+    | compose.override points SMTP at Mailpit (not a real inbox).
+    |
+    */
+
+    'otp_from' => [
+        'address' => env('OTP_MAIL_FROM', 'itdepartment.accc@gmail.ph'),
+        'name' => env('OTP_MAIL_FROM_NAME', 'ACCC OTP Service'),
+    ],
+
 ];

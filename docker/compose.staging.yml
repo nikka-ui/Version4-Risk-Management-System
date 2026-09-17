@@ -37,13 +37,17 @@ services:
       USE_LARAVEL_INTERNAL_ORG: "false"
       USE_LARAVEL_EDGE_ROOT: "true"
       USE_LARAVEL_EDGE_UI: "true"
-      # In-app + optional email (Mailpit for controlled review)
+      # In-app + optional email (Mailpit for controlled review — not real SMTP)
       RMS_WORKFLOW_EMAIL: ${RMS_WORKFLOW_EMAIL:-true}
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@rms.staging.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-RMS Staging}
+      OTP_MAIL_FROM: ${OTP_MAIL_FROM:-itdepartment.accc@gmail.ph}
+      OTP_MAIL_FROM_NAME: ${OTP_MAIL_FROM_NAME:-ACCC OTP Service}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-rmsminio}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-rmsminio-dev-change-me}
 
@@ -71,11 +75,15 @@ services:
       CACHE_STORE: redis
       RMS_AI_AUTO_ROUTE: "false"
       RMS_WORKFLOW_EMAIL: ${RMS_WORKFLOW_EMAIL:-true}
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@rms.staging.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-RMS Staging}
+      OTP_MAIL_FROM: ${OTP_MAIL_FROM:-itdepartment.accc@gmail.ph}
+      OTP_MAIL_FROM_NAME: ${OTP_MAIL_FROM_NAME:-ACCC OTP Service}
     secrets:
       - db_password
       - app_key

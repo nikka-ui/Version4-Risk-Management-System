@@ -61,6 +61,9 @@ Route::middleware(['auth'])->get('/dashboard', [DashboardController::class, 'ind
 */
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/login', [LoginController::class, 'store']);
+Route::get('/login/otp', [LoginController::class, 'showOtp'])->name('login.otp');
+Route::post('/login/otp', [LoginController::class, 'verifyOtp']);
+Route::post('/login/otp/resend', [LoginController::class, 'resendOtp'])->name('login.otp.resend');
 Route::get('/forgot-password', [ForgotPasswordController::class, 'showRequest'])->name('password.request');
 Route::post('/forgot-password', [ForgotPasswordController::class, 'send'])->name('password.email');
 Route::get('/forgot-password/reset', [ForgotPasswordController::class, 'showReset'])->name('password.reset');

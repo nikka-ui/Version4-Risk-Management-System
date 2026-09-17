@@ -1,6 +1,6 @@
 # Login and built-in accounts (development)
 
-The Sign In UI is **Laravel Blade** at `/login` (`/laravel/login` still works). Success goes to Laravel `/auth/bridge`. Sign-out is Laravel `GET`/`POST /logout`. Unmatched edge paths (including `/favicon.ico`) are Laravel. A Laravel web session is established at POST `/login`. Blade static `/css` and `/img` are Laravel.
+The Sign In UI is **Laravel Blade** at `/login` (`/laravel/login` still works). Default sign-in is **passwordless**: enter **username** → system emails a 6-digit OTP to the **email on that user account** (Envelope From `OTP_MAIL_FROM`, default `itdepartment.accc@gmail.ph`) → enter OTP → success goes to Laravel `/auth/bridge`. The SMTP sending mailbox is separate from the username the user types. **Admin** sign-in at `/login?as=admin` uses **username + password** (`POST /login` with `mode=password`) via `LoginBridgeService` (no OTP). Sign-out is Laravel `GET`/`POST /logout`. Unmatched edge paths (including `/favicon.ico`) are Laravel. A Laravel web session is established after a successful OTP at `POST /login/otp` or after admin password login at `POST /login`. Blade static `/css` and `/img` are Laravel.
 
 ## Access URL
 
@@ -8,6 +8,27 @@ The Sign In UI is **Laravel Blade** at `/login` (`/laravel/login` still works). 
 |-------------|-----|
 | Docker (default) | http://localhost:8080/login |
 | Legacy Blade path | http://localhost:8080/laravel/login |
+
+## Passwordless web login flow (default)
+
+| Step | Route | What happens |
+|------|-------|----------------|
+| 1 | `GET /login` | Username form only (no password field); link “Login as Admin” → `/login?as=admin` |
+| 2 | `POST /login` | Rate-limited OTP request; username stored in session; redirect to `/login/otp` (same UX whether or not the user exists) |
+| 3 | `GET /login/otp` | OTP input + masked email hint when the account is known |
+| 4 | `POST /login/otp` | Verify OTP → `Auth::login` → session regenerate → bridge code → `/auth/bridge` |
+| Resend | `POST /login/otp/resend` | Request a new code for the session username |
+
+## Admin password web login
+
+| Step | Route | What happens |
+|------|-------|----------------|
+| 1 | `GET /login?as=admin` | Username (prefilled `admin`) + password form; link back to OTP sign-in |
+| 2 | `POST /login` with `mode=password` | Rate-limited `LoginBridgeService::authenticate` → `Auth::login` → bridge code → `/auth/bridge` (no OTP) |
+
+API / Next.js token auth at `POST /v1/auth/token` remains **username + password**. Admin user management can still set/reset passwords. The Blade “Forgot password?” link still uses emailed OTP to reset that API/admin password.
+
+OTP mail uses Envelope From `OTP_MAIL_FROM` (default `itdepartment.accc@gmail.ph`). Local Docker (`compose.override.yml` / staging default) points SMTP at **Mailpit** — open http://127.0.0.1:8025 to read codes; they do **not** reach Gmail or other real inboxes. Non-Docker `backend/.env` defaults to `MAIL_MAILER=log` (messages in the app log). Production must set `MAIL_MAILER=smtp` plus `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` for a mailbox allowed to send as `OTP_MAIL_FROM`.
 
 ## Roles (canonical)
 
@@ -30,7 +51,7 @@ There is **no Audit Officer** console. RMO is **governance oversight only** — 
 
 Defined in Laravel `UserSeed` / `DemoUserSeeder` and merged by `php artisan rms:import-users` when missing from `store.json`. Usernames are case-insensitive at login.
 
-**WARNING: These are development seed passwords. Change all of them before any production deploy. Never treat seed credentials as production secrets.**
+**WARNING: These are development seed passwords for API token auth (`/v1/auth/token`), Blade admin password login (`/login?as=admin`), and admin password fields. The default Blade landing page uses email OTP, not these passwords. Change all of them before any production deploy. Never treat seed credentials as production secrets.**
 
 | Username | Password (dev seed — rotate) | Role |
 |----------|------------------------------|------|

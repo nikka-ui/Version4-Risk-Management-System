@@ -8,6 +8,8 @@ docker/secrets/db_password.txt
 docker/secrets/app_key.txt
 docker/data/store.json
 docker/nginx/certs/
+# Local real-SMTP override (may reference secrets via env; never commit)
+docker/compose.local-smtp.yml
 
 # Dependencies and build output
 node_modules/

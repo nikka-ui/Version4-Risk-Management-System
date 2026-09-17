@@ -21,11 +21,18 @@ services:
       RMS_INTERNAL_SERVICE_TOKEN: ${RMS_INTERNAL_SERVICE_TOKEN:-rms-dev-internal}
       RMS_AI_AUTO_ROUTE: ${RMS_AI_AUTO_ROUTE:-true}
       QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_FROM_ADDRESS: noreply@rms.local
-      MAIL_FROM_NAME: ACCC RMS
+      # Dev default: Mailpit (http://127.0.0.1:8025). Override via root `.env`
+      # (gitignored) or `docker/compose.local-smtp.yml` for real SMTP — never commit passwords.
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SCHEME: ${MAIL_SCHEME:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-noreply@rms.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-ACCC RMS}
+      OTP_MAIL_FROM: ${OTP_MAIL_FROM:-itdepartment.accc@gmail.com}
+      OTP_MAIL_FROM_NAME: ${OTP_MAIL_FROM_NAME:-ACCC OTP Service}
     volumes:
       - ./data/store.json:/import/store.json
 

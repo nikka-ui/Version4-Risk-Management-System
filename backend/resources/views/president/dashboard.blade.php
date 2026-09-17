@@ -149,10 +149,8 @@
       </section>
     @else
       <section class="sup-card sup-card--critical-empty">
-        <div class="sup-card__head"><h2>Pending decisions</h2></div>
-        <div class="sup-card__body">
-          <p class="sup-muted-block">No High or Critical risk tickets are awaiting your decision.</p>
-        </div>
+        <h2>Pending decisions</h2>
+        <p class="sup-muted-block">No High or Critical risk tickets are awaiting your decision.</p>
       </section>
     @endif
   </div>
